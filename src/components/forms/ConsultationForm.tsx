@@ -44,6 +44,7 @@ export function ConsultationForm() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   function validate(): FormErrors {
     const newErrors: FormErrors = {};
@@ -69,7 +70,7 @@ export function ConsultationForm() {
     return newErrors;
   }
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSubmitError(false);
 
@@ -95,14 +96,26 @@ export function ConsultationForm() {
       return;
     }
 
-    // Integration point: connect to email service or API route here.
-    // Example: await fetch('/api/contact', { method: 'POST', body: JSON.stringify(formData) })
+    setIsSubmitting(true);
+
     try {
-      console.info("Consultation request (demo):", formData);
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        setSubmitError(true);
+        return;
+      }
+
       setSubmitted(true);
       setFormData(initialFormData);
     } catch {
       setSubmitError(true);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -322,9 +335,10 @@ export function ConsultationForm() {
 
       <Button
         type="submit"
+        disabled={isSubmitting}
         className="h-12 w-full bg-charcoal text-ivory hover:bg-charcoal/90 sm:w-auto sm:px-10"
       >
-        Request a Consultation
+        {isSubmitting ? "Sending..." : "Request a Consultation"}
       </Button>
     </form>
   );
