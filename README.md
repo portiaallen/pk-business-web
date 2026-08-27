@@ -47,9 +47,39 @@ src/
 └── content/          # Site copy and service data
 ```
 
-## Contact Form Integration
+## Contact Form Email
 
-The consultation form includes client-side validation and a clearly marked integration point in `src/components/forms/ConsultationForm.tsx`. To connect email delivery or a backend API, replace the demo handler in `handleSubmit` with your preferred service (e.g., Resend, SendGrid, or a Next.js API route).
+Consultation requests are emailed to **portiaallen40@gmail.com** using your Gmail account (no Resend or other email service required).
+
+### Why a password is still required
+
+Websites cannot send email on their own. Vercel runs the form handler, but something must authenticate with Gmail's servers. That is a one-time **Google App Password** — not your normal Gmail login.
+
+### Setup (one time)
+
+1. Turn on **2-Step Verification** for portiaallen40@gmail.com
+2. Create an **App Password**: [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+3. Copy the 16-character password
+
+### Local development
+
+```bash
+cp .env.example .env.local
+# Add GMAIL_APP_PASSWORD to .env.local
+npm run dev
+```
+
+### Vercel
+
+Project → **Settings** → **Environment Variables**:
+
+| Variable | Value |
+| -------- | ----- |
+| `GMAIL_USER` | `portiaallen40@gmail.com` |
+| `GMAIL_APP_PASSWORD` | Your Google App Password |
+| `CONTACT_EMAIL` | `portiaallen40@gmail.com` |
+
+Redeploy after saving. Form submissions will arrive in your Gmail inbox with the visitor's email as Reply-To.
 
 ## License
 
