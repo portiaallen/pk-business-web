@@ -73,7 +73,7 @@
   --border: #ddd8d0;
   --input: #ddd8d0;
   --ring: #b8956a;
-  --radius: 0.5rem;
+  --radius: 0.375rem;
   --sidebar: #faf8f5;
   --sidebar-foreground: #1c1c1c;
   --sidebar-primary: #1c1c1c;
@@ -122,5 +122,8 @@
   }
   .gold-accent-line {
     @apply h-px w-12 bg-gold;
+  }
+  .form-select {
+    @apply flex h-11 w-full rounded-lg border border-input bg-background px-3 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50;
   }
 }

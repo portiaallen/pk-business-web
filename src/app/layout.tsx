@@ -21,8 +21,8 @@ const sourceSans = Source_Sans_3({
 
 export const metadata: Metadata = {
   title: {
-    default: `${siteConfig.name} | Bookkeeping & Business Support`,
-    template: `%s | ${siteConfig.name}`,
+    default: "PK Business Services | Bookkeeping & Financial Documentation",
+    template: "%s | PK Business Services",
   },
   description: siteConfig.description,
   keywords: [

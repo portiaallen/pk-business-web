@@ -7,9 +7,12 @@ import { services } from "@/content/services";
 import { siteConfig } from "@/content/site";
 
 export const metadata: Metadata = {
-  title: "Services",
+  title: {
+    absolute:
+      "Bookkeeping & Financial Documentation Services | PK Business Services",
+  },
   description:
-    "Bookkeeping cleanup, tax-ready bookkeeping, monthly support, and income verification documentation services for small businesses and self-employed professionals.",
+    "QuickBooks cleanup, tax-ready bookkeeping, monthly support, and income verification documentation for small businesses and self-employed professionals.",
 };
 
 export default function ServicesPage() {
@@ -17,7 +20,7 @@ export default function ServicesPage() {
     <>
       <PageHero
         title="Services Designed to Keep You Organized"
-        subtitle="From bookkeeping cleanup to ongoing support and financial documentation, PK Business Services helps clients bring organization and clarity to the records that matter."
+        subtitle="Focused bookkeeping and documentation support — structured to help you understand what you need and what comes next."
       />
       <Section>
         <div className="space-y-0">
@@ -25,7 +28,7 @@ export default function ServicesPage() {
             <ServiceDetail key={service.id} service={service} />
           ))}
         </div>
-        <p className="mt-12 rounded-lg border border-border bg-cream p-5 text-sm leading-relaxed text-muted-gray">
+        <p className="mt-14 border-t border-border pt-8 text-sm leading-relaxed text-muted-gray">
           {siteConfig.pricingNote}
         </p>
       </Section>
