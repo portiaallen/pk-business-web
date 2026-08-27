@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { serviceOptions } from "@/content/services";
+import { siteConfig } from "@/content/site";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +36,15 @@ const initialFormData: FormData = {
   contactMethod: "email",
 };
 
+const contactMethodOptions = [
+  { value: "email", label: "Email" },
+  { value: "phone", label: "Phone" },
+  { value: "either", label: "Either" },
+];
+
+const selectClassName =
+  "flex h-11 w-full rounded-lg border border-input bg-background px-3 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+
 function validateEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
@@ -64,7 +74,7 @@ export function ConsultationForm() {
     }
 
     if (!formData.description.trim()) {
-      newErrors.description = "Please provide a brief description.";
+      newErrors.description = "Please tell us what you need help with.";
     }
 
     return newErrors;
@@ -137,7 +147,7 @@ export function ConsultationForm() {
     return (
       <div
         role="status"
-        className="rounded-xl border border-gold/30 bg-gold/5 p-8 text-center"
+        className="rounded-lg border border-gold/30 bg-gold/5 p-8 text-center"
       >
         <h2 className="font-heading text-2xl font-semibold text-charcoal">
           Thank You for Your Request
@@ -149,7 +159,7 @@ export function ConsultationForm() {
         <Button
           type="button"
           variant="outline"
-          className="mt-6"
+          className="mt-6 min-h-11"
           onClick={() => setSubmitted(false)}
         >
           Submit Another Request
@@ -193,6 +203,7 @@ export function ConsultationForm() {
             aria-describedby={errors.fullName ? "fullName-error" : undefined}
             className="h-11"
             autoComplete="name"
+            required
           />
           {errors.fullName && (
             <p id="fullName-error" className="text-sm text-destructive">
@@ -215,6 +226,7 @@ export function ConsultationForm() {
             aria-describedby={errors.email ? "email-error" : undefined}
             className="h-11"
             autoComplete="email"
+            required
           />
           {errors.email && (
             <p id="email-error" className="text-sm text-destructive">
@@ -239,7 +251,7 @@ export function ConsultationForm() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="businessName">Business Name (optional)</Label>
+          <Label htmlFor="businessName">Business Name</Label>
           <Input
             id="businessName"
             name="businessName"
@@ -263,9 +275,10 @@ export function ConsultationForm() {
           aria-invalid={!!errors.service}
           aria-describedby={errors.service ? "service-error" : undefined}
           className={cn(
-            "flex h-11 w-full rounded-lg border border-input bg-transparent px-3 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+            selectClassName,
             errors.service && "border-destructive ring-destructive/20"
           )}
+          required
         >
           <option value="">Select a service...</option>
           {serviceOptions.map((option) => (
@@ -283,7 +296,8 @@ export function ConsultationForm() {
 
       <div className="space-y-2">
         <Label htmlFor="description">
-          Brief Description <span className="text-destructive">*</span>
+          Briefly Tell Us What You Need Help With{" "}
+          <span className="text-destructive">*</span>
         </Label>
         <Textarea
           id="description"
@@ -295,8 +309,9 @@ export function ConsultationForm() {
             errors.description ? "description-error" : undefined
           }
           rows={5}
-          placeholder="Tell us about your situation and what you need help with..."
-          className="min-h-[120px] resize-y"
+          placeholder="Share a brief overview of your situation and what you're hoping to accomplish..."
+          className="min-h-[140px] resize-y"
+          required
         />
         {errors.description && (
           <p id="description-error" className="text-sm text-destructive">
@@ -305,40 +320,39 @@ export function ConsultationForm() {
         )}
       </div>
 
-      <fieldset className="space-y-3">
-        <legend className="text-sm font-medium">Preferred Contact Method</legend>
-        <div className="flex flex-wrap gap-4">
-          {[
-            { value: "email", label: "Email" },
-            { value: "phone", label: "Phone" },
-            { value: "either", label: "Either" },
-          ].map((option) => (
-            <label
-              key={option.value}
-              className="flex cursor-pointer items-center gap-2 text-sm"
-            >
-              <input
-                type="radio"
-                name="contactMethod"
-                value={option.value}
-                checked={formData.contactMethod === option.value}
-                onChange={(e) =>
-                  updateField("contactMethod", e.target.value)
-                }
-                className="size-4 accent-charcoal"
-              />
+      <div className="space-y-2">
+        <Label htmlFor="contactMethod">Preferred Contact Method</Label>
+        <select
+          id="contactMethod"
+          name="contactMethod"
+          value={formData.contactMethod}
+          onChange={(e) => updateField("contactMethod", e.target.value)}
+          className={selectClassName}
+        >
+          {contactMethodOptions.map((option) => (
+            <option key={option.value} value={option.value}>
               {option.label}
-            </label>
+            </option>
           ))}
-        </div>
-      </fieldset>
+        </select>
+      </div>
+
+      <div
+        className="rounded-lg border border-border bg-cream px-4 py-3 text-sm leading-relaxed text-muted-gray"
+        role="note"
+      >
+        <strong className="font-medium text-charcoal">Please note:</strong> Do
+        not submit Social Security numbers, bank account numbers, passwords,
+        account credentials, or other highly sensitive financial information
+        through this initial form.
+      </div>
 
       <Button
         type="submit"
         disabled={isSubmitting}
-        className="h-12 w-full bg-charcoal text-ivory hover:bg-charcoal/90 sm:w-auto sm:px-10"
+        className="h-12 min-h-11 w-full bg-charcoal text-ivory hover:bg-charcoal/90 sm:w-auto sm:px-10"
       >
-        {isSubmitting ? "Sending..." : "Request a Consultation"}
+        {isSubmitting ? "Sending..." : siteConfig.cta.label}
       </Button>
     </form>
   );

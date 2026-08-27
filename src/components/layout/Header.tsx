@@ -51,7 +51,7 @@ export function Header() {
         <div className="hidden md:block">
           <Button
             render={<Link href={siteConfig.cta.href} />}
-            className="h-10 bg-charcoal px-5 text-ivory hover:bg-charcoal/90"
+            className="h-10 min-h-11 bg-charcoal px-5 text-ivory hover:bg-charcoal/90"
           >
             {siteConfig.cta.label}
           </Button>
