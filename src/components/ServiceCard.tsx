@@ -11,25 +11,26 @@ export function ServiceCard({ service, className }: ServiceCardProps) {
   return (
     <article
       className={cn(
-        "group flex flex-col rounded-xl border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md sm:p-8",
+        "group flex h-full flex-col rounded-lg border border-border bg-card p-6 transition-shadow hover:shadow-md sm:p-8",
         className
       )}
     >
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <h3 className="font-heading text-xl font-semibold text-charcoal sm:text-2xl">
-          {service.shortName}
-        </h3>
-      </div>
-      <p className="mb-2 text-sm font-medium text-gold">{service.price}</p>
-      <p className="mb-6 flex-1 text-sm leading-relaxed text-muted-gray sm:text-base">
+      <h3 className="font-heading text-xl font-semibold text-charcoal sm:text-2xl">
+        {service.shortName}
+      </h3>
+      <p className="mt-2 text-sm font-medium text-gold">{service.price}</p>
+      <p className="mt-4 flex-1 text-sm leading-relaxed text-muted-gray sm:text-base">
         {service.shortDescription}
       </p>
       <Link
         href={service.href}
-        className="inline-flex items-center gap-1 text-sm font-semibold text-charcoal transition-colors group-hover:text-gold"
+        className="mt-6 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-charcoal transition-colors group-hover:text-gold"
       >
         Learn More
-        <span aria-hidden="true" className="transition-transform group-hover:translate-x-0.5">
+        <span
+          aria-hidden="true"
+          className="transition-transform group-hover:translate-x-0.5"
+        >
           →
         </span>
       </Link>
