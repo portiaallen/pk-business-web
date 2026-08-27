@@ -17,7 +17,7 @@ export const siteConfig = {
   disclaimer:
     "Information provided on this website is for general service information and does not constitute legal, financial, or tax advice.",
   incomeVerificationDisclosure:
-    "PK Business Services works only with authentic, client-provided financial information and legitimate documentation. We do not create, alter, fabricate, or misrepresent financial records or proof of income.",
+    "PK Business Services works only with authentic, client-provided financial information and legitimate documentation. We do not create, alter, fabricate, backdate, or misrepresent financial records or proof of income.",
   pricingNote:
     "Starting prices are provided for general guidance. Final pricing may vary based on scope, transaction volume, complexity, number of accounts, and condition of records.",
 } as const;

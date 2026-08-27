@@ -8,11 +8,13 @@ export interface Service {
   id: ServiceId;
   name: string;
   shortName: string;
+  headline: string;
   price: string;
   shortDescription: string;
   description: string;
   scope: string[];
   bestFor: string[];
+  scopeNote?: string;
   href: string;
 }
 
@@ -21,23 +23,22 @@ export const services: Service[] = [
     id: "quickbooks-cleanup",
     name: "QuickBooks Cleanup",
     shortName: "QuickBooks Cleanup",
+    headline: "A cleaner starting point for your books.",
     price: "Starting at $250",
     shortDescription:
-      "Organize and clean up existing QuickBooks records when your books have fallen behind or become difficult to manage.",
+      "Behind on your books? PK helps organize existing QuickBooks records, review transaction categorization, identify items requiring clarification, and create a cleaner starting point.",
     description:
-      "Help business owners organize and clean up existing QuickBooks records when their books have fallen behind or become difficult to manage.",
+      "If your QuickBooks file has fallen behind or become difficult to manage, PK can help organize existing records and identify areas requiring attention.",
     scope: [
       "Transaction organization",
       "Categorization review",
-      "Identifying items requiring client clarification",
+      "Identification of items requiring client clarification",
       "Bookkeeping organization",
-      "Reviewing outstanding cleanup needs",
-      "Preparing records for ongoing maintenance",
+      "Review of outstanding cleanup needs",
+      "Preparation for ongoing bookkeeping",
     ],
     bestFor: [
-      "Small business owners with backlogged QuickBooks files",
-      "Self-employed professionals whose records need reorganization",
-      "Entrepreneurs preparing for ongoing bookkeeping support",
+      "Business owners who need a defined bookkeeping cleanup project.",
     ],
     href: "/services#quickbooks-cleanup",
   },
@@ -45,24 +46,22 @@ export const services: Service[] = [
     id: "tax-ready-bookkeeping",
     name: "Tax-Ready Bookkeeping",
     shortName: "Tax-Ready Bookkeeping",
+    headline: "Get organized before tax time.",
     price: "Starting at $400",
     shortDescription:
-      "Organize your bookkeeping records before providing them to your tax professional for a smoother tax-time handoff.",
+      "Get your business records organized before providing them to your tax professional. PK helps bring structure to existing bookkeeping records and supporting documentation.",
     description:
-      "Help business owners organize their existing bookkeeping records before providing them to their tax professional.",
+      "PK helps business owners organize existing bookkeeping records and supporting documentation before providing them to their tax professional.",
     scope: [
       "Transaction organization",
       "Categorization",
       "Reconciliation support where appropriate",
       "Identifying missing information",
-      "Identifying questionable transactions for client clarification",
       "Organizing supporting documentation",
-      "Preparing organized records for tax-time handoff",
+      "Preparing records for tax-time handoff",
     ],
     bestFor: [
-      "Business owners approaching tax season",
-      "Self-employed professionals preparing records for their CPA",
-      "Entrepreneurs who need organized books before filing",
+      "Business owners who want to approach tax preparation with cleaner, more organized records.",
     ],
     href: "/services#tax-ready-bookkeeping",
   },
@@ -70,49 +69,49 @@ export const services: Service[] = [
     id: "monthly-bookkeeping",
     name: "Monthly Bookkeeping Support",
     shortName: "Monthly Bookkeeping Support",
+    headline: "Stay organized throughout the year.",
     price: "Starting at $300/month",
     shortDescription:
-      "Ongoing bookkeeping organization and support to help keep your financial records current and well-maintained.",
+      "Ongoing bookkeeping support designed to help small-business owners maintain organized records and avoid falling behind.",
     description:
-      "Ongoing bookkeeping organization and support for small businesses. Final pricing depends on transaction volume, complexity, number of accounts, and scope.",
+      "Ongoing bookkeeping support designed to help small-business owners maintain organized financial records instead of repeatedly falling behind.",
     scope: [
       "Monthly transaction categorization",
       "Bookkeeping maintenance",
       "Reconciliation support",
       "Review of outstanding bookkeeping items",
       "Client communication regarding missing information",
-      "Maintaining organized financial records",
     ],
-    bestFor: [
-      "Small businesses needing consistent monthly support",
-      "Growing companies that want organized records year-round",
-      "Self-employed professionals who prefer outsourced bookkeeping maintenance",
-    ],
+    scopeNote:
+      "Monthly pricing may vary based on transaction volume, complexity, number of accounts, and scope.",
+    bestFor: ["Business owners who want continuing bookkeeping support."],
     href: "/services#monthly-bookkeeping",
   },
   {
     id: "income-verification",
-    name: "Income Verification & Documentation Services",
+    name: "Income Verification & Documentation",
     shortName: "Income Verification & Documentation",
+    headline: "Organize the income information you already have.",
     price: "Consultation-based pricing",
     shortDescription:
-      "We organize and document the income information you already have — helping you prepare professional documentation from legitimate records.",
+      "Professional organization of authentic income records and supporting financial documentation for individuals, self-employed professionals, and businesses.",
     description:
-      "Helping clients organize and document authentic financial information they already possess. We organize and document the income information you already have.",
+      "PK Business Services helps individuals, self-employed professionals, and businesses organize authentic income records and supporting financial documentation into clear, professional documentation packages.",
     scope: [
-      "Organizing client-provided income records",
-      "Reviewing documents for completeness and consistency",
-      "Creating income documentation summaries based on supplied records",
-      "Organizing pay stubs, W-2s, 1099s, bank statements, and invoices",
-      "Organizing other legitimate supporting financial documentation",
-      "Preparing professional documentation packets",
-      "Helping self-employed clients organize legitimate income records when they do not receive traditional payroll documentation",
-      "Authorized administrative verification support",
+      "Organizing pay statements",
+      "Organizing W-2s",
+      "Organizing 1099s",
+      "Organizing invoices",
+      "Organizing bank statements",
+      "Organizing other legitimate financial records",
+      "Reviewing documentation for completeness and consistency",
+      "Creating summaries based on client-provided information",
+      "Organizing documentation packets",
+      "Helping self-employed individuals organize income records when they do not receive traditional payroll documentation",
+      "Authorized administrative verification support when appropriate",
     ],
     bestFor: [
-      "Self-employed individuals organizing income documentation",
-      "Clients preparing legitimate financial records for third-party review",
-      "Individuals who need help organizing scattered income-related documents",
+      "Individuals and self-employed professionals organizing legitimate income documentation for third-party review.",
     ],
     href: "/services#income-verification",
   },
