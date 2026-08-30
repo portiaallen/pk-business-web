@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { toErrorResponse } from "@pk/server/errors/api-error";
+import { toErrorResponse } from "@/server/errors/api-error";
 import { getInventoryApiContext } from "@/lib/api-context";
 import {
   getInventorySummaryReport,
   toCsv,
-} from "@pk/server/inventory/reports";
+} from "@/server/inventory/reports";
 
 export async function GET(request: Request) {
   try {
