@@ -1,0 +1,635 @@
+// PK Business Services — platform schema (development/demo)
+// See DATABASE.md for documentation.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  CLIENT
+  STAFF
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING
+}
+
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum ServiceStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum VerificationRequestStatus {
+  DRAFT
+  SUBMITTED
+  DOCUMENTS_REQUIRED
+  UNDER_REVIEW
+  VERIFICATION_IN_PROGRESS
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+enum DocumentCategory {
+  IDENTITY
+  INCOME
+  EMPLOYMENT
+  BUSINESS
+  TAX
+  BANKING
+  OTHER
+}
+
+enum DocumentUploadStatus {
+  PENDING
+  UPLOADED
+  FAILED
+}
+
+enum DocumentReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  NEEDS_REVISION
+}
+
+enum DocumentRetentionStatus {
+  ACTIVE
+  SCHEDULED_FOR_DELETION
+  DELETED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  STRIPE
+  CASH_APP
+  ZELLE
+  MANUAL
+}
+
+enum NotificationChannel {
+  EMAIL
+  IN_APP
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum AuditAction {
+  LOGIN
+  LOGOUT
+  USER_CREATED
+  CLIENT_CREATED
+  REQUEST_CREATED
+  REQUEST_STATUS_CHANGED
+  REQUEST_ASSIGNED
+  DOCUMENT_UPLOADED
+  DOCUMENT_REVIEWED
+  DOCUMENT_DELETED
+  INTERNAL_NOTE_ADDED
+  REPORT_GENERATED
+  ADMIN_ACTION
+  PASSWORD_RESET_REQUESTED
+  PASSWORD_RESET_COMPLETED
+  FORM_STARTED
+  FORM_SAVED
+  FORM_SUBMITTED
+  DOCUMENT_REQUESTED
+  CHANGES_REQUESTED
+  DELIVERABLE_UPLOADED
+  PAYMENT_CREATED
+  PAYMENT_STATUS_CHANGED
+  LOGIN_FAILED
+}
+
+enum FormSubmissionStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+  UNDER_REVIEW
+  CHANGES_REQUESTED
+  COMPLETED
+}
+
+enum DocumentRequestStatus {
+  REQUESTED
+  UPLOADED
+  UNDER_REVIEW
+  ACCEPTED
+  CHANGES_REQUESTED
+  COMPLETED
+}
+
+// ─── Users & auth ──────────────────────────────────────────────────────────────
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String
+  phone        String?
+  passwordHash String
+  role         UserRole   @default(CLIENT)
+  status       UserStatus @default(ACTIVE)
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  client              Client?
+  sessions            Session[]
+  passwordResetTokens PasswordResetToken[]
+  assignedRequests    VerificationRequest[] @relation("AssignedStaff")
+  reviewedDocuments   Document[]            @relation("DocumentReviewer")
+  internalNotes       InternalNote[]
+  auditLogs           AuditLog[]            @relation("AuditActor")
+  notifications       Notification[]
+  clientMessages      ClientMessage[]
+  uploadedDeliverables Deliverable[] @relation("DeliverableUploader")
+  inventoryMembers    InventoryMember[]
+  inventoryTransactions InventoryTransaction[] @relation("InventoryTransactionPerformer")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─── Clients ───────────────────────────────────────────────────────────────────
+
+model Client {
+  id        String       @id @default(cuid())
+  userId    String       @unique
+  status    ClientStatus @default(ACTIVE)
+  notes     String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verificationRequests VerificationRequest[]
+  invoices             Invoice[]
+  payments             Payment[]
+  inventoryMembers     InventoryMember[]
+  inventoryLocations   InventoryLocation[]
+  inventoryProducts    InventoryProduct[]
+  inventoryTransactions InventoryTransaction[]
+}
+
+// ─── Service catalog ───────────────────────────────────────────────────────────
+
+model Service {
+  id                    String        @id @default(cuid())
+  slug                  String        @unique
+  name                  String
+  shortName             String
+  description           String
+  shortDescription      String
+  priceDisplay          String
+  priceCents            Int?
+  processingExpectation String?
+  requiredDocuments     String        @default("[]") // JSON array of DocumentCategory values
+  status                ServiceStatus @default(ACTIVE)
+  sortOrder             Int           @default(0)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  verificationRequests VerificationRequest[]
+  invoices             Invoice[]
+}
+
+// ─── Verification requests ─────────────────────────────────────────────────────
+
+model VerificationRequest {
+  id              String                    @id @default(cuid())
+  clientId        String
+  serviceId       String
+  requestType     String
+  status          VerificationRequestStatus @default(DRAFT)
+  requesterName   String?
+  requesterEmail  String?
+  requesterPhone  String?
+  subjectName     String?
+  subjectEmail    String?
+  subjectPhone    String?
+  clientNotes     String?
+  assignedStaffId String?
+  submittedAt     DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  client        Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  service       Service        @relation(fields: [serviceId], references: [id])
+  assignedStaff User?          @relation("AssignedStaff", fields: [assignedStaffId], references: [id], onDelete: SetNull)
+  documents        Document[]
+  internalNotes    InternalNote[]
+  findings         VerificationFinding[]
+  result           VerificationResult?
+  invoices         Invoice[]
+  payments         Payment[]
+  formSubmissions  FormSubmission[]
+  documentRequests DocumentRequest[]
+  clientMessages   ClientMessage[]
+  deliverables     Deliverable[]
+
+  @@index([clientId])
+  @@index([serviceId])
+  @@index([status])
+  @@index([assignedStaffId])
+}
+
+model InternalNote {
+  id        String   @id @default(cuid())
+  requestId String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  request VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  author  User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+}
+
+model VerificationFinding {
+  id          String   @id @default(cuid())
+  requestId   String
+  title       String
+  description String
+  createdAt   DateTime @default(now())
+
+  request VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+}
+
+model VerificationResult {
+  id          String   @id @default(cuid())
+  requestId   String   @unique
+  summary     String
+  reportPath  String?
+  generatedAt DateTime @default(now())
+
+  request VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+}
+
+// ─── Documents ─────────────────────────────────────────────────────────────────
+
+model Document {
+  id              String                  @id @default(cuid())
+  requestId       String
+  category        DocumentCategory
+  fileName        String
+  mimeType        String
+  fileSizeBytes   Int
+  storageKey      String
+  uploadStatus    DocumentUploadStatus    @default(PENDING)
+  reviewStatus    DocumentReviewStatus    @default(PENDING)
+  retentionStatus DocumentRetentionStatus @default(ACTIVE)
+  uploadedAt      DateTime?
+  reviewedAt      DateTime?
+  reviewerId      String?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  request         VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  reviewer        User?               @relation("DocumentReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  documentRequest DocumentRequest?
+
+  @@index([requestId])
+  @@index([category])
+}
+
+// ─── Client paperwork ──────────────────────────────────────────────────────────
+
+model FormSubmission {
+  id          String               @id @default(cuid())
+  requestId   String
+  formKey     String
+  status      FormSubmissionStatus @default(NOT_STARTED)
+  data        String               @default("{}")
+  currentStep Int                  @default(0)
+  lastSavedAt DateTime?
+  submittedAt DateTime?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  request VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, formKey])
+  @@index([requestId])
+  @@index([status])
+}
+
+model DocumentRequest {
+  id                String                @id @default(cuid())
+  requestId         String
+  title             String
+  description       String?
+  required          Boolean               @default(true)
+  status            DocumentRequestStatus @default(REQUESTED)
+  clientInstruction String?
+  documentId        String?               @unique
+  requestedAt       DateTime              @default(now())
+  reviewedAt        DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  request  VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  document Document?           @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([requestId])
+  @@index([status])
+}
+
+model ClientMessage {
+  id          String   @id @default(cuid())
+  requestId   String
+  authorId    String
+  body        String
+  isFromStaff Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  request VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  author  User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([createdAt])
+}
+
+model Deliverable {
+  id            String   @id @default(cuid())
+  requestId     String
+  title         String
+  fileName      String
+  mimeType      String
+  fileSizeBytes Int
+  storageKey    String
+  uploadedById  String?
+  uploadedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  request    VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  uploadedBy User?               @relation("DeliverableUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([requestId])
+}
+
+// ─── Intake (public contact form persistence) ──────────────────────────────────
+
+model IntakeSubmission {
+  id            String   @id @default(cuid())
+  fullName      String
+  email         String
+  phone         String?
+  businessName  String?
+  serviceSlug   String
+  description   String
+  contactMethod String   @default("email")
+  processed     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([email])
+  @@index([createdAt])
+}
+
+// ─── Notifications ─────────────────────────────────────────────────────────────
+
+model Notification {
+  id        String              @id @default(cuid())
+  userId    String?
+  channel   NotificationChannel @default(EMAIL)
+  status    NotificationStatus  @default(PENDING)
+  subject   String
+  body      String
+  metadata  String              @default("{}")
+  sentAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+}
+
+// ─── Payments ───────────────────────────────────────────────────────────────────
+
+model Invoice {
+  id          String        @id @default(cuid())
+  clientId    String
+  requestId   String?
+  serviceId   String?
+  description String?
+  amountCents Int
+  currency    String        @default("USD")
+  status      PaymentStatus @default(UNPAID)
+  dueAt       DateTime?
+  paidAt      DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  client  Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  request VerificationRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  service Service?             @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  payments Payment[]
+
+  @@index([clientId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Payment {
+  id                   String        @id @default(cuid())
+  clientId             String
+  invoiceId            String
+  requestId            String?
+  amountCents          Int
+  currency             String        @default("USD")
+  status               PaymentStatus @default(PENDING)
+  method               PaymentMethod
+  transactionReference String?
+  notes                String?
+  internalNotes        String?
+  providerReference    String?
+  paidAt               DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  client  Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  invoice Invoice              @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  request VerificationRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+
+  @@index([clientId])
+  @@index([invoiceId])
+  @@index([requestId])
+  @@index([status])
+  @@index([method])
+  @@index([createdAt])
+}
+
+// ─── Audit logging ─────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  actorId    String?
+  action     AuditAction
+  resource   String
+  resourceId String?
+  metadata   String      @default("{}")
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime    @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([action])
+  @@index([resource, resourceId])
+  @@index([createdAt])
+}
+
+// ─── Inventory Tracker (multi-tenant by Client) ───────────────────────────────
+
+enum InventoryMemberRole {
+  OWNER
+  STAFF
+  VIEWER
+}
+
+enum InventoryTransactionType {
+  STOCK_IN
+  STOCK_OUT
+  ADJUSTMENT
+  CORRECTION
+}
+
+model InventoryMember {
+  id        String              @id @default(cuid())
+  clientId  String
+  userId    String
+  role      InventoryMemberRole @default(STAFF)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, userId])
+  @@index([clientId])
+  @@index([userId])
+}
+
+model InventoryLocation {
+  id          String   @id @default(cuid())
+  clientId    String
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  client   Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  products InventoryProduct[]
+
+  @@unique([clientId, name])
+  @@index([clientId])
+  @@index([isActive])
+}
+
+model InventoryProduct {
+  id               String   @id @default(cuid())
+  clientId         String
+  name             String
+  sku              String
+  description      String?
+  category         String?
+  unit             String   @default("each")
+  currentQuantity  Int      @default(0)
+  reorderThreshold Int      @default(0)
+  locationId       String?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  client       Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  location     InventoryLocation?     @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  transactions InventoryTransaction[]
+
+  @@unique([clientId, sku])
+  @@index([clientId])
+  @@index([locationId])
+  @@index([isActive])
+  @@index([category])
+}
+
+model InventoryTransaction {
+  id              String                   @id @default(cuid())
+  clientId        String
+  productId       String
+  transactionType InventoryTransactionType
+  quantityChange  Int
+  quantityBefore  Int
+  quantityAfter   Int
+  reason          String?
+  notes           String?
+  performedById   String
+  createdAt       DateTime                 @default(now())
+
+  client      Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  product     InventoryProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  performedBy User             @relation("InventoryTransactionPerformer", fields: [performedById], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([productId])
+  @@index([performedById])
+  @@index([transactionType])
+  @@index([createdAt])
+}
