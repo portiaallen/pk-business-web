@@ -16,6 +16,8 @@
 # next.js
 /.next/
 /out/
+apps/inventory-tracker/.next/
+apps/inventory-tracker/node_modules/
 
 # production
 /build
@@ -39,3 +41,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma
+.storage/
+prisma/dev.db
+prisma/dev.db-journal
+
+# Prisma auto-installed skills
+.agents/
+.claude/skills/
+.windsurf/skills/
+skills-lock.json
