@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { requireInventorySession } from "@/lib/auth-server";
-import { getInventoryDashboard } from "@pk/server/inventory/dashboard";
+import { getInventoryDashboard } from "@/server/inventory/dashboard";
 import {
   formatStockStatus,
   stockStatusClassName,
-} from "@pk/server/inventory/stock-status";
-import { Button } from "@pk/components/ui/button";
+} from "@/server/inventory/stock-status";
+import { Button } from "@/components/ui/button";
 
 export const metadata = { title: "Dashboard" };
 

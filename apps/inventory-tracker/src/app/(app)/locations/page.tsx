@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireInventorySession } from "@/lib/auth-server";
-import { listLocations } from "@pk/server/inventory/locations";
+import { listLocations } from "@/server/inventory/locations";
 import { LocationForm } from "@/components/LocationForm";
 
 export const metadata = { title: "Locations" };

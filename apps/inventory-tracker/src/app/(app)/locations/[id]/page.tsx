@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireInventorySession } from "@/lib/auth-server";
-import { getLocation } from "@pk/server/inventory/locations";
+import { getLocation } from "@/server/inventory/locations";
 import {
   formatStockStatus,
   getStockStatus,
   stockStatusClassName,
-} from "@pk/server/inventory/stock-status";
-import { Button } from "@pk/components/ui/button";
+} from "@/server/inventory/stock-status";
+import { Button } from "@/components/ui/button";
 
 export async function generateMetadata({
   params,

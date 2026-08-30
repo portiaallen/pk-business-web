@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { requireInventorySession } from "@/lib/auth-server";
-import { listProducts } from "@pk/server/inventory/products";
+import { listProducts } from "@/server/inventory/products";
 import {
   formatStockStatus,
   stockStatusClassName,
-} from "@pk/server/inventory/stock-status";
+} from "@/server/inventory/stock-status";
 
 export const metadata = { title: "Alerts" };
 
