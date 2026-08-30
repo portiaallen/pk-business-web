@@ -1,0 +1,4 @@
+{
+  "framework": "nextjs",
+  "ignoreCommand": "echo 'Inventory deploy paused until the app can build standalone' && exit 0"
+}
