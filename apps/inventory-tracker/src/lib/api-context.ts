@@ -1,10 +1,10 @@
 import { cookies } from "next/headers";
-import { SESSION_COOKIE } from "@pk/server/auth/constants";
+import { SESSION_COOKIE } from "@/server/auth/constants";
 import {
   requireInventoryContextFromToken,
   type InventoryContext,
-} from "@pk/server/inventory/auth";
-import type { InventoryMemberRole } from "@pk/generated/prisma/client";
+} from "@/server/inventory/auth";
+import type { InventoryMemberRole } from "@/generated/prisma/client";
 
 export async function getInventoryApiContext(
   minimumRole: InventoryMemberRole = "VIEWER"

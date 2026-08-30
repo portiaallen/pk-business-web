@@ -2,10 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button } from "@pk/components/ui/button";
-import { Input } from "@pk/components/ui/input";
-import { Label } from "@pk/components/ui/label";
-import { Textarea } from "@pk/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export function LocationForm() {
   const router = useRouter();
@@ -77,7 +77,7 @@ export function LocationForm() {
         disabled={loading}
         className="min-h-11 bg-charcoal text-ivory hover:bg-charcoal/90"
       >
-        {loading ? "Adding…" : "Add Location"}
+        {loading ? "Adding\u2026" : "Add Location"}
       </Button>
     </form>
   );

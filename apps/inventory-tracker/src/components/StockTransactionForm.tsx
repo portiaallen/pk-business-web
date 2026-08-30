@@ -2,10 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button } from "@pk/components/ui/button";
-import { Input } from "@pk/components/ui/input";
-import { Label } from "@pk/components/ui/label";
-import { Textarea } from "@pk/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 const TRANSACTION_TYPES = [
   { value: "STOCK_IN", label: "Stock In" },
@@ -162,7 +162,7 @@ export function StockTransactionForm({
         disabled={loading}
         className="min-h-11 bg-charcoal text-ivory hover:bg-charcoal/90"
       >
-        {loading ? "Recording…" : "Record Transaction"}
+        {loading ? "Recording\u2026" : "Record Transaction"}
       </Button>
     </form>
   );

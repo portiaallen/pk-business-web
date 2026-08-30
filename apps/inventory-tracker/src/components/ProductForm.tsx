@@ -2,10 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button } from "@pk/components/ui/button";
-import { Input } from "@pk/components/ui/input";
-import { Label } from "@pk/components/ui/label";
-import { Textarea } from "@pk/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type LocationOption = { id: string; name: string };
 
@@ -194,7 +194,7 @@ export function ProductForm({
 
       <div className="flex gap-3">
         <Button type="submit" disabled={loading} className="min-h-11 bg-charcoal text-ivory hover:bg-charcoal/90">
-          {loading ? "Saving…" : isEdit ? "Update Product" : "Create Product"}
+          {loading ? "Saving\u2026" : isEdit ? "Update Product" : "Create Product"}
         </Button>
         <Button
           type="button"

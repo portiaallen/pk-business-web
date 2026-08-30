@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@pk/lib/utils";
-import { Button } from "@pk/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { getMainAppUrl } from "@/lib/urls";
-import type { SessionUser } from "@pk/server/auth/session";
+import type { SessionUser } from "@/server/auth/session";
 
 type NavItem = { label: string; href: string; external?: boolean };
 
