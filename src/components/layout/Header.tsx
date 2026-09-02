@@ -48,7 +48,13 @@ export function Header() {
           ))}
         </nav>
 
-        <div className="hidden md:block">
+        <div className="hidden items-center gap-4 md:flex">
+          <Link
+            href="/portal/login"
+            className="text-sm font-medium text-muted-gray transition-colors hover:text-gold"
+          >
+            Client Portal
+          </Link>
           <Button
             render={<Link href={siteConfig.cta.href} />}
             className="h-10 min-h-11 bg-charcoal px-5 text-ivory hover:bg-charcoal/90"
