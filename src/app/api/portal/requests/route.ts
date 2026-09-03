@@ -45,8 +45,10 @@ export async function POST(request: Request) {
     if (!serviceSlug) throw ApiError.badRequest("Service is required");
     if (!description) throw ApiError.badRequest("Description is required");
 
-    const service = await prisma.service.findUnique({
-      where: { slug: serviceSlug },
+    // Only ACTIVE services may be selected — a client cannot manipulate the
+    // payload to pick an inactive/unreleased service from the catalog.
+    const service = await prisma.service.findFirst({
+      where: { slug: serviceSlug, status: "ACTIVE" },
     });
     if (!service) throw ApiError.badRequest("Invalid service");
 

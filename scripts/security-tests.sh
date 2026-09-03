@@ -106,6 +106,47 @@ else
   echo "WARN could not create new request for ownership check"
 fi
 
+# ─── SERVICE CATALOG TESTS ────────────────────────────────────────────────
+echo "== Service catalog =="
+# Active services are visible to authorized clients
+body=$(curl -s -H "Cookie: $OWNA" "$BASE/api/portal/services")
+if echo "$body" | grep -q '"slug":"quickbooks-cleanup"'; then
+  PASS=$((PASS+1)); echo "PASS active service visible in client catalog"
+else
+  FAIL=$((FAIL+1)); FAILED_NAMES+=("active service in catalog"); echo "FAIL active service missing from client catalog"
+fi
+# Inactive/unreleased services must NOT appear in the client catalog
+if echo "$body" | grep -q 'inventory-support'; then
+  FAIL=$((FAIL+1)); FAILED_NAMES+=("inactive service leaked"); echo "FAIL inactive service leaked to client catalog"
+else
+  PASS=$((PASS+1)); echo "PASS inactive service not in client catalog"
+fi
+# Client cannot select an inactive service via payload manipulation
+c=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Cookie: $OWNA" -H "Content-Type: application/json" \
+  -d '{"serviceSlug":"inventory-support","description":"inactive service attempt"}' "$BASE/api/portal/requests"); expect_reject "client selects INACTIVE service" "$c"
+# Client can select another active service, and the service is stored on the request
+RESP=$(curl -s -X POST -H "Cookie: $OWNA" -H "Content-Type: application/json" \
+  -d '{"serviceSlug":"monthly-bookkeeping","description":"second active service selection test"}' "$BASE/api/portal/requests")
+NEWREQ=$(echo "$RESP" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
+if [ -n "$NEWREQ" ]; then
+  PASS=$((PASS+1)); echo "PASS client selects another active service"
+  detail=$(curl -s -H "Cookie: $OWNA" "$BASE/api/portal/requests/$NEWREQ")
+  if echo "$detail" | grep -q "Monthly Bookkeeping"; then
+    PASS=$((PASS+1)); echo "PASS selected service stored on request"
+  else
+    FAIL=$((FAIL+1)); FAILED_NAMES+=("service stored on request"); echo "FAIL selected service not stored on request"
+  fi
+else
+  FAIL=$((FAIL+1)); FAILED_NAMES+=("second active service selection"); echo "FAIL second active service selection: $RESP"
+fi
+# Admin sees the selected service on requests
+body=$(curl -s -H "Cookie: $ADMIN" "$BASE/api/admin/requests")
+if echo "$body" | grep -q "Monthly Bookkeeping"; then
+  PASS=$((PASS+1)); echo "PASS admin sees selected service"
+else
+  FAIL=$((FAIL+1)); FAILED_NAMES+=("admin sees service"); echo "FAIL admin does not see selected service"
+fi
+
 # ─── ROLE TESTS ─────────────────────────────────────────────────────────────
 echo "== Roles (Business A) =="
 # VIEWER read allowed
@@ -126,6 +167,8 @@ c=$(curl -s -o /dev/null -w "%{http_code}" -H "Cookie: $STAFFB" "$BASE/api/admin
 # ─── DOCUMENT SECURITY TESTS ───────────────────────────────────────────────
 echo "== Document security =="
 DOC_PW="TestPK2026!"
+# Fixture file used by upload tests below — must exist before the first upload
+echo "attack test" > /tmp/attack.txt
 DOCA=$(login ownera@sectest.test "$DOC_PW")
 VIEWB=$(login viewerb@sectest.test "$DOC_PW")
 
@@ -143,7 +186,6 @@ c=$(curl -s -o /dev/null -w "%{http_code}" -H "Cookie: $UP_B" "$BASE/api/portal/
 c=$(curl -s -o /dev/null -w "%{http_code}" -H "Cookie: $DOCA" "$BASE/api/portal/documents/cmdocguess999"); expect_reject "A guesses unknown document id" "$c"
 
 # 3. clientId manipulation on upload: A uploads into B's request
-echo "attack test" > /tmp/attack.txt
 c=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Cookie: $DOCA" \
   -F "file=@/tmp/attack.txt;type=text/plain" -F "requestId=sectest_req_b" -F "category=OTHER" \
   "$BASE/api/portal/documents/upload"); expect_reject "A uploads into B request" "$c"

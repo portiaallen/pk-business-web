@@ -1,9 +1,17 @@
+import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaLibSql } from "@prisma/adapter-libsql";
 import bcrypt from "bcryptjs";
 
 process.env.DATABASE_URL = process.env.DATABASE_URL || "file:./prisma/dev.db";
-const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL });
+const dbUrl = process.env.DATABASE_URL;
+const adapter = dbUrl.startsWith("libsql:")
+  ? new PrismaLibSql({
+      url: dbUrl,
+      authToken: process.env.DATABASE_AUTH_TOKEN?.trim(),
+    })
+  : new PrismaBetterSqlite3({ url: dbUrl });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
@@ -79,8 +87,20 @@ async function main() {
   });
   console.log(`✓ Client membership created`);
 
-  // Services
-  const serviceData = [
+  // Services — status is configured here (ACTIVE services appear in the client
+  // catalog; INACTIVE services exist for later activation but are never
+  // selectable by clients). Inventory Support is intentionally INACTIVE.
+  const serviceData: {
+    slug: string;
+    name: string;
+    shortName: string;
+    description: string;
+    shortDescription: string;
+    priceDisplay: string;
+    priceCents: number | null;
+    status: "ACTIVE" | "INACTIVE";
+    sortOrder: number;
+  }[] = [
     {
       slug: "quickbooks-cleanup",
       name: "QuickBooks Cleanup",
@@ -89,6 +109,7 @@ async function main() {
       shortDescription: "Behind on your books? PK helps organize existing QuickBooks records.",
       priceDisplay: "Starting at $250",
       priceCents: 25000,
+      status: "ACTIVE",
       sortOrder: 1,
     },
     {
@@ -99,6 +120,7 @@ async function main() {
       shortDescription: "Get your records organized before tax time.",
       priceDisplay: "Starting at $400",
       priceCents: 40000,
+      status: "ACTIVE",
       sortOrder: 2,
     },
     {
@@ -109,6 +131,7 @@ async function main() {
       shortDescription: "Stay organized throughout the year.",
       priceDisplay: "Starting at $300/month",
       priceCents: 30000,
+      status: "ACTIVE",
       sortOrder: 3,
     },
     {
@@ -119,7 +142,19 @@ async function main() {
       shortDescription: "Organize the income information you already have.",
       priceDisplay: "Consultation-based pricing",
       priceCents: null,
+      status: "ACTIVE",
       sortOrder: 4,
+    },
+    {
+      slug: "inventory-support",
+      name: "Inventory Support",
+      shortName: "Inventory Support",
+      description: "Inventory tracking support for businesses (not yet available).",
+      shortDescription: "Not yet available.",
+      priceDisplay: "Not yet available",
+      priceCents: null,
+      status: "INACTIVE",
+      sortOrder: 5,
     },
   ];
 

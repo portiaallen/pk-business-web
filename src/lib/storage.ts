@@ -20,7 +20,19 @@ const STORAGE_ROOT = process.env.STORAGE_DIR || path.join(process.cwd(), ".stora
  * document this in the deploy checklist.
  */
 function useR2(): boolean {
-  return isR2Configured();
+  if (isR2Configured()) return true;
+
+  // Fail closed: never silently write client documents to the local
+  // filesystem in production, and fail loudly when S3 storage was
+  // explicitly requested but is missing required env vars.
+  const provider = process.env.STORAGE_PROVIDER?.trim().toLowerCase();
+  const inProduction = process.env.NODE_ENV === "production";
+  if (inProduction || provider === "s3") {
+    throw new Error(
+      "Document storage is not configured for this environment. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME (or the legacy S3_* equivalents) before enabling document uploads."
+    );
+  }
+  return false;
 }
 
 /** Allowed upload MIME types for client documents */
