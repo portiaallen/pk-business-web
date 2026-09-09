@@ -14,16 +14,20 @@ import {
   Menu,
   X,
   LogOut,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AdminInstallButton } from "@/components/AdminInstallPrompt";
 
 const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/clients", label: "Clients", icon: Users },
   { href: "/admin/requests", label: "Requests", icon: FileText },
+  { href: "/admin/requests/cmtucijv50004fv0f9r26yy2w/qb-review", label: "QB Initial Review", icon: ClipboardCheck },
   { href: "/admin/documents", label: "Documents", icon: FolderOpen },
   { href: "/admin/services", label: "Services", icon: Briefcase },
   { href: "/admin/activity", label: "Activity", icon: Activity },
+  { href: "/admin/team", label: "Team", icon: Users },
 ];
 
 export default function AdminLayout({
@@ -133,6 +137,9 @@ export default function AdminLayout({
                 </Link>
               );
             })}
+            <div className="mt-2 border-t border-border pt-2">
+              <AdminInstallButton variant="sidebar" />
+            </div>
           </nav>
         </aside>
 
@@ -184,6 +191,7 @@ export default function AdminLayout({
 
         {/* Main content */}
         <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
+          <AdminInstallButton variant="banner" />
           {children}
         </main>
       </div>

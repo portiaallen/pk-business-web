@@ -148,6 +148,46 @@ enum FormSubmissionStatus {
   COMPLETED
 }
 
+enum QbReviewStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  READY_FOR_CLEANUP
+  ON_HOLD
+  COMPLETED
+}
+
+enum QbCheckItemStatus {
+  NOT_REVIEWED
+  REVIEWED
+  LOOKS_GOOD
+  NEEDS_INVESTIGATION
+  CLEANUP
+  CRITICAL
+  NOT_APPLICABLE
+}
+
+enum QbQuestionStatus {
+  OPEN
+  SENT
+  ANSWERED
+  RESOLVED
+}
+
+enum QbDocType {
+  QBO_REPORT
+  QBO_EXPORT
+  BANK_STATEMENT
+  CREDIT_CARD_STATEMENT
+  RECONCILIATION_REPORT
+  TRANSACTION_DETAIL
+  GENERAL_LEDGER
+  P_AND_L
+  BALANCE_SHEET
+  TRIAL_BALANCE
+  SUPPORTING_DOC
+  OTHER
+}
+
 enum DocumentRequestStatus {
   REQUESTED
   UPLOADED
@@ -182,6 +222,8 @@ model User {
   clientMessages       ClientMessage[]
   messageReads         ClientMessageRead[]
   uploadedDeliverables Deliverable[]         @relation("DeliverableUploader")
+  timeEntries          TimeEntry[]           @relation("TimeEntryUser")
+  qbCleanupReviews     QbCleanupReview[]     @relation("QbReviewer")
   inventoryMembers     InventoryMember[]
   inventoryTransactions InventoryTransaction[] @relation("InventoryTransactionPerformer")
 }
@@ -306,6 +348,8 @@ model VerificationRequest {
   documentRequests DocumentRequest[]
   clientMessages  ClientMessage[]
   deliverables    Deliverable[]
+  timeEntries     TimeEntry[]
+  qbCleanupReview QbCleanupReview?
 
   @@index([clientId])
   @@index([serviceId])
@@ -466,8 +510,6 @@ model Deliverable {
   @@index([requestId])
 }
 
-// ─── Intake (public contact form persistence) ──────────────────────────────────
-
 model IntakeSubmission {
   id            String   @id @default(cuid())
   fullName      String
@@ -561,6 +603,151 @@ model Payment {
 // ─── Audit logging ─────────────────────────────────────────────────────────────
 
 /// Persistent login rate-limiting state (per-email). Survives restarts.
+
+// ─── Time tracking (hourly billing) ───────────────────────────────────────────
+
+model TimeEntry {
+  id          String        @id @default(cuid())
+  requestId   String
+  userId      String
+  category    String        // Work category
+  note        String?       // Optional internal note
+  startedAt   DateTime
+  stoppedAt   DateTime?     // Null = timer still running
+  durationSeconds Int       @default(0) // Stored duration on stop (null if running)
+  isManual    Boolean       @default(false) // True if manually entered
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  request VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  user    User               @relation("TimeEntryUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([userId])
+  @@index([requestId, startedAt])
+}
+
+model QbCleanupReview {
+  id              String       @id @default(cuid())
+  requestId       String       @unique
+  status          QbReviewStatus @default(NOT_STARTED)
+  reviewerId      String
+  completedAt     DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  request  VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  reviewer User                @relation("QbReviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+  checklistItems    QbCleanupChecklistItem[] @relation("QbReviewChecklistItems")
+  checklists        QbCleanupChecklist[]     @relation("QbChecklistReview")
+  findings          QbCleanupFinding[]      @relation("QbReviewFindings")
+  questions         QbCleanupQuestion[]     @relation("QbReviewQuestions")
+  docLogs           QbCleanupDocLog[]       @relation("QbReviewDocLogs")
+  notes             String?                 @default("")
+
+  @@index([requestId])
+  @@index([status])
+  @@index([reviewerId])
+}
+
+model QbCleanupChecklist {
+  id          String   @id @default(cuid())
+  reviewId    String
+  category    String
+  itemKey     String
+  title       String
+  description String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  review QbCleanupReview @relation("QbChecklistReview", fields: [reviewId], references: [id], onDelete: Cascade)
+  items  QbCleanupChecklistItem[] @relation("QbChecklistItemList")
+
+  @@unique([reviewId, category, itemKey])
+  @@index([reviewId])
+}
+
+model QbCleanupChecklistItem {
+  id              String          @id @default(cuid())
+  checklistId     String
+  reviewId        String
+  status          QbCheckItemStatus @default(NOT_REVIEWED)
+  notes          String?
+  isFollowUp     Boolean         @default(false)
+  isDocumentationNeeded Boolean    @default(false)
+  isCompleted    Boolean         @default(false)
+  notApplicable   Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  checklist QbCleanupChecklist @relation("QbChecklistItemList", fields: [checklistId], references: [id], onDelete: Cascade)
+  review    QbCleanupReview    @relation("QbReviewChecklistItems", fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@unique([checklistId])
+  @@index([checklistId])
+  @@index([reviewId])
+}
+
+model QbCleanupFinding {
+  id              String          @id @default(cuid())
+  reviewId        String
+  checklistItemId String?
+  category        String
+  finding        String
+  status          QbCheckItemStatus @default(NEEDS_INVESTIGATION)
+  notes          String?
+  isFollowUp     Boolean         @default(false)
+  isDocumentationNeeded Boolean    @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  review QbCleanupReview @relation("QbReviewFindings", fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId])
+  @@index([checklistItemId])
+  @@index([status])
+}
+
+model QbCleanupQuestion {
+  id            String        @id @default(cuid())
+  reviewId      String
+  findingId     String?
+  question      String
+  status        QbQuestionStatus @default(OPEN)
+  clientResponse String?
+  internalNotes String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  review QbCleanupReview @relation("QbReviewQuestions", fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId])
+  @@index([findingId])
+  @@index([status])
+}
+
+model QbCleanupDocLog {
+  id           String      @id @default(cuid())
+  reviewId     String
+  name         String
+  docType      QbDocType
+  dateOrPeriod String?
+  description  String?
+  checklistItemId String?
+  notes        String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  review QbCleanupReview @relation("QbReviewDocLogs", fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId])
+  @@index([checklistItemId])
+  @@index([docType])
+}
+
+// ─── Time tracking (hourly billing) ───────────────────────────────────────────
+
 model LoginRateLimit {
   id           String    @id @default(cuid())
   email        String    @unique

@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Source_Sans_3 } from "next/font/google";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { siteConfig } from "@/content/site";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -25,6 +26,16 @@ export const metadata: Metadata = {
     template: "%s | PK Business Services",
   },
   description: siteConfig.description,
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "PK Admin",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/icon-192.png",
+  },
   keywords: [
     "bookkeeping services",
     "QuickBooks cleanup",
@@ -46,6 +57,10 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: "#1c1917",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -57,6 +72,7 @@ export default function RootLayout({
       className={`${cormorant.variable} ${sourceSans.variable} h-full scroll-smooth antialiased`}
     >
       <body className="flex min-h-full flex-col font-sans">
+        <ServiceWorkerRegister />
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />

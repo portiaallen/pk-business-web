@@ -2,6 +2,24 @@
 
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
+import { Upload, Download, Play, Square, Pause, RotateCcw, Clock, Timer, ClipboardCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+
+const TIME_CATEGORIES = [
+  "Initial QuickBooks File Review",
+  "Account/Reconciliation Review",
+  "Personal Credit Card Transaction Review",
+  "Transaction Classification/Reclassification",
+  "Bank & Credit Card Reconciliation",
+  "Cleanup/Adjustments",
+  "Financial Statement Review",
+  "Supporting Documentation/Workpapers",
+  "Final Quality Review",
+  "Final Report Preparation",
+  "Client Communication",
+  "Administrative/Engagement Management",
+];
 
 type Detail = {
   id: string;
@@ -16,6 +34,26 @@ type Detail = {
   documentRequests: { id: string; title: string; status: string; required: boolean }[];
   messages: { id: string; body: string; isFromStaff: boolean; authorName: string; createdAt: string }[];
   internalNotes: { id: string; content: string; authorName: string; createdAt: string }[];
+  deliverables: { id: string; title: string; fileName: string; createdAt: string }[];
+  timeEntries: Array<{
+    id: string;
+    userName: string;
+    category: string;
+    note: string | null;
+    startedAt: string;
+    stoppedAt: string | null;
+    durationSeconds: number;
+    durationDisplay: string;
+    isManual: boolean;
+    isRunning: boolean;
+  }>;
+  timeTotals: {
+    totalSeconds: number;
+    totalDisplay: string;
+    totalHours: number;
+    totalBillable: number;
+  };
+  timeCategories: string[];
 };
 
 type Staff = { id: string; name: string; email: string; role: string };
@@ -40,11 +78,173 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
     if (res.ok) setDetail(await res.json());
   }
 
+  async function loadTimeEntries() {
+    const res = await fetch(`/api/admin/requests/${id}/time-entries`);
+    if (res.ok) {
+      const data = await res.json();
+      setTimeEntries(data.entries || []);
+      setTimeTotals(data.totals || { totalSeconds: 0, totalDisplay: "0:00:00", totalHours: 0, totalBillable: 0 });
+      setTimeCategories(data.categories || TIME_CATEGORIES);
+    }
+  }
+
   useEffect(() => {
     load();
+    loadTimeEntries();
     fetch("/api/admin/staff").then((r) => (r.ok ? r.json() : [])).then(setStaff).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Timer state
+  const [timeEntries, setTimeEntries] = useState<Detail["timeEntries"]>([]);
+  const [timeTotals, setTimeTotals] = useState<Detail["timeTotals"]>({ totalSeconds: 0, totalDisplay: "0:00:00", totalHours: 0, totalBillable: 0 });
+  const [timeCategories, setTimeCategories] = useState<string[]>(TIME_CATEGORIES);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [timerCategory, setTimerCategory] = useState("");
+  const [timerNote, setTimerNote] = useState("");
+  const [timerActiveId, setTimerActiveId] = useState<string | null>(null);
+  const [timerError, setTimerError] = useState("");
+
+  let timerInterval: ReturnType<typeof setInterval> | null = null;
+
+  function startTimerInterval() {
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      setTimerSeconds((s) => s + 1);
+    }, 1000);
+  }
+
+  function stopTimerInterval() {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  }
+
+  async function startTimer() {
+    if (!timerCategory) {
+      setTimerError("Please select a category.");
+      return;
+    }
+    setTimerError("");
+    try {
+      const res = await fetch(`/api/admin/requests/${id}/time-entries`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category: timerCategory, note: timerNote }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTimerActiveId(data.id);
+        setTimerRunning(true);
+        startTimerInterval();
+        setTimerSeconds(0);
+        await loadTimeEntries();
+      } else {
+        const j = await res.json().catch(() => ({}));
+        setTimerError(j.error || "Failed to start timer");
+      }
+    } catch {
+      setTimerError("Failed to start timer");
+    }
+  }
+
+  async function stopTimer() {
+    if (!timerActiveId) return;
+    stopTimerInterval();
+    setTimerRunning(false);
+    try {
+      const res = await fetch(`/api/admin/requests/${id}/time-entries`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stop: true }),
+      });
+      if (res.ok) {
+        setTimerActiveId(null);
+        setTimerSeconds(0);
+        setTimerNote("");
+        await loadTimeEntries();
+      }
+    } catch {
+      setTimerRunning(false);
+      setTimerActiveId(null);
+      setTimerSeconds(0);
+      await loadTimeEntries();
+    }
+  }
+
+  async function addManualEntry(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    const category = data.get("manualCategory") as string;
+    const note = data.get("manualNote") as string;
+    const hours = parseFloat(data.get("manualHours") as string) || 0;
+    const minutes = parseFloat(data.get("manualMinutes") as string) || 0;
+    const durationSeconds = Math.round((hours * 3600) + (minutes * 60));
+
+    if (!category) {
+      setTimerError("Please select a category.");
+      return;
+    }
+    if (durationSeconds <= 0) {
+      setTimerError("Please enter a positive duration.");
+      return;
+    }
+    setTimerError("");
+    try {
+      const res = await fetch(`/api/admin/requests/${id}/time-entries`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category, note, isManual: true, durationSeconds }),
+      });
+      if (res.ok) {
+        form.reset();
+        await loadTimeEntries();
+      }
+    } finally {
+      setTimerError("");
+    }
+  }
+
+  async function deleteTimeEntry(entryId: string) {
+    if (!confirm("Delete this time entry? This cannot be undone.")) return;
+    try {
+      const res = await fetch(`/api/admin/requests/${id}/time-entries`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: entryId }),
+      });
+      if (res.ok) await loadTimeEntries();
+    } catch {}
+  }
+
+  function formatTimerDisplay(seconds: number) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  }
+
+  async function uploadDeliverable(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/requests/${id}/deliverables`, {
+        method: "POST",
+        body: data,
+      });
+      if (res.ok) {
+        form.reset();
+        await load();
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function patch(data: Record<string, unknown>) {
     setSaving(true);
@@ -119,6 +319,20 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
 
       {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 border border-red-200">{error}</p>}
 
+      {/* Initial Review entry (QuickBooks Cleanup engagements) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
+        <div>
+          <h2 className="font-medium flex items-center gap-2"><ClipboardCheck className="size-4" /> Initial Review</h2>
+          <p className="text-sm text-muted-foreground">20-category QB Cleanup review checklist — records what was discovered (not cleanup itself).</p>
+        </div>
+        <a
+          href={`/admin/requests/${id}/qb-review`}
+          className="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          Open Initial Review →
+        </a>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-lg border bg-card p-4 space-y-3">
           <h2 className="font-medium">Manage</h2>
@@ -185,6 +399,191 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
               Add
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Deliverables (admin uploads) */}
+      <div className="rounded-lg border bg-card p-4">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <h2 className="font-medium">Deliverables</h2>
+          <form onSubmit={uploadDeliverable} className="flex gap-2">
+            <input type="file" name="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.png,.jpg,.webp" className="text-sm" />
+            <input
+              name="title"
+              placeholder="Title (e.g. Cleanup Report)"
+              className="flex-1 rounded-md border bg-background px-3 py-2 text-sm"
+              required
+            />
+            <Button type="submit" disabled={saving} className="min-h-10">
+              <Upload className="size-3.5" /> Upload
+            </Button>
+          </form>
+        </div>
+        {detail.deliverables.length === 0 ? (
+          <p className="px-4 py-3 text-sm text-muted-foreground">No deliverables uploaded yet.</p>
+        ) : (
+          <ul className="space-y-1">
+            {detail.deliverables.map((d) => (
+              <li key={d.id} className="flex items-center justify-between rounded-md bg-muted/50 px-4 py-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-charcoal truncate">{d.title}</p>
+                  <p className="text-xs text-muted-gray">{d.fileName}</p>
+                </div>
+                <a
+                  href={`/api/admin/requests/${id}/deliverables/${d.id}`}
+                  target="_blank"
+                  rel="noopener"
+                  className="text-muted-gray hover:text-charcoal"
+                >
+                  <Download className="size-4" />
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* === Time tracking (admin only) === */}
+      <div className="rounded-lg border bg-card p-4 space-y-4">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <h2 className="font-medium flex items-center gap-2">
+            <Timer className="size-4" /> Engagement time tracking
+          </h2>
+          {timeTotals.totalHours > 0 && (
+            <div className="text-right text-xs">
+              <div className="text-muted-foreground">Actual / Estimated</div>
+              <div className="text-sm font-medium">
+                {timeTotals.totalHours.toFixed(2)}h / 24h
+                {timeTotals.totalHours > 24 && <span className="text-rose-600 ml-1">(exceeded)</span>}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Billable: ${timeTotals.totalBillable.toFixed(2)} @ $75/hr
+              </div>
+            </div>
+          )}
+        </div>
+
+        {timerError && (
+          <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700 border border-rose-200">{timerError}</p>
+        )}
+
+        {/* Timer controls */}
+        <div className="flex flex-wrap items-center gap-4">
+          <select
+            className="rounded-md border bg-background px-3 py-2 text-sm min-w-[220px]"
+            value={timerCategory}
+            onChange={(e) => setTimerCategory(e.target.value)}
+          >
+            <option value="">Select work category…</option>
+            {timeCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <Button
+            className="min-h-10"
+            disabled={timerRunning || saving}
+            onClick={startTimer}
+          >
+            <Play className="size-3.5 mr-1" /> Start
+          </Button>
+          {timerRunning && (
+            <Button className="min-h-10" variant="destructive" onClick={stopTimer}>
+              <Square className="size-3.5 mr-1" /> Stop
+            </Button>
+          )}
+        </div>
+
+        {/* Active timer display */}
+        {timerRunning && (
+          <div className="rounded-md border border-primary/30 bg-primary/5 px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-muted-foreground">
+                  {timerActiveId ? "Timer running — session in progress" : "Timer running"}
+                </div>
+                <div className="mt-1 flex items-baseline gap-2">
+                  <span className="text-3xl font-mono font-semibold tabular-nums tracking-wider">
+                    {formatTimerDisplay(timerSeconds + (timerActiveId ? (Date.now() - new Date().getTime()) / 1000 : 0))}
+                  </span>
+                  <span className="text-sm text-muted-foreground">elapsed</span>
+                </div>
+              </div>
+              <div className="text-right text-xs text-muted-foreground">
+                Category: <span className="text-foreground">{timerCategory}</span>
+              </div>
+            </div>
+            <input
+              className="mt-3 w-full rounded-md border bg-background px-3 py-2 text-sm"
+              placeholder="Optional work note…"
+              value={timerNote}
+              onChange={(e) => setTimerNote(e.target.value)}
+            />
+          </div>
+        )}
+
+        {/* Manual entry form */}
+        {!timerRunning && (
+          <form onSubmit={addManualEntry} className="rounded-md border border-dashed border-border p-4 space-y-3">
+            <div className="text-sm font-medium">Add manual time entry</div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div>
+                <label className="text-xs text-muted-foreground">Category</label>
+                <select name="manualCategory" className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm">
+                  <option value="">Select…</option>
+                  {timeCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Hours</label>
+                <input type="number" name="manualHours" min="0" step="0.01" defaultValue="0" className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Minutes</label>
+                <input type="number" name="manualMinutes" min="0" step="1" defaultValue="0" className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm" />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Note (optional)</label>
+              <input name="manualNote" className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm" placeholder="What was worked on…" />
+            </div>
+            <Button type="submit" className="min-h-10">
+              <RotateCcw className="size-3.5 mr-1" /> Add manual entry
+            </Button>
+          </form>
+        )}
+
+        {/* Time entries list */}
+        <div className="border-t border-border pt-3">
+          <h3 className="text-sm font-medium mb-2">Time entries</h3>
+          {timeEntries.length === 0 && (
+            <p className="text-sm text-muted-foreground">No time tracked yet.</p>
+          )}
+          <ul className="space-y-2">
+            {timeEntries.map((entry) => (
+              <li key={entry.id} className="flex items-start justify-between gap-3 rounded-md bg-muted/50 px-3 py-2 text-sm">
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium">{entry.category}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {entry.isManual ? "Manual entry" : "Timer session"}
+                    {' '}
+                    · {entry.userName}
+                    {' '}
+                    {entry.isRunning && <span className="text-emerald-600 font-medium">● running</span>}
+                  </div>
+                  {entry.durationDisplay && (
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      Duration: {entry.durationDisplay}
+                    </div>
+                  )}
+                  {entry.note && (
+                    <div className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{entry.note}</div>
+                  )}
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="font-mono text-sm font-medium">{entry.durationDisplay}</div>
+                  {entry.isRunning && <span className="text-xs text-emerald-600">live</span>}
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
 

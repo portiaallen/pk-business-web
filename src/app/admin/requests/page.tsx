@@ -24,6 +24,11 @@ const statusColors: Record<string, string> = {
   CANCELLED: "bg-muted text-muted-foreground",
 };
 
+const STATUSES = [
+  "DRAFT", "SUBMITTED", "DOCUMENTS_REQUIRED", "UNDER_REVIEW",
+  "VERIFICATION_IN_PROGRESS", "COMPLETED", "REJECTED", "CANCELLED",
+];
+
 function formatStatus(status: string) {
   return status
     .replace(/_/g, " ")
@@ -42,6 +47,14 @@ function formatDate(dateStr: string) {
 export default function AdminRequestsPage() {
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
+  const [clientSearch, setClientSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+
+  const filtered = requests.filter((r) => {
+    const matchClient = !clientSearch || r.clientName.toLowerCase().includes(clientSearch.toLowerCase());
+    const matchStatus = !statusFilter || r.status === statusFilter;
+    return matchClient && matchStatus;
+  });
 
   useEffect(() => {
     async function fetchRequests() {
@@ -68,13 +81,32 @@ export default function AdminRequestsPage() {
         <p className="mt-2 text-muted-gray">
           All service requests across all clients.
         </p>
+        <div className="mt-4 flex gap-2">
+          <input
+            type="text"
+            value={clientSearch}
+            onChange={(e) => setClientSearch(e.target.value)}
+            placeholder="Filter by client name..."
+            className="h-10 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/50 max-w-[200px]"
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="h-10 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/50"
+          >
+            <option value="">All statuses</option>
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <p className="text-sm text-muted-gray">Loading requests...</p>
         </div>
-      ) : requests.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="rounded-lg border border-border bg-card py-16 text-center">
           <FileText className="mx-auto size-10 text-muted-gray/40" />
           <h3 className="mt-3 font-heading text-lg font-semibold text-charcoal">
@@ -83,7 +115,7 @@ export default function AdminRequestsPage() {
         </div>
       ) : (
         <div className="divide-y divide-border rounded-lg border border-border bg-card">
-          {requests.map((req) => (
+          {filtered.map((req) => (
             <Link
               key={req.id}
               href={`/admin/requests/${req.id}`}
