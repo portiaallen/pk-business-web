@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   LogOut,
+  CreditCard,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/portal/requests", label: "Requests", icon: FileText },
   { href: "/portal/documents", label: "Documents", icon: FolderOpen },
   { href: "/portal/messages", label: "Messages", icon: MessageSquare },
+  { href: "/portal/payments", label: "Payments", icon: CreditCard },
   { href: "/portal/team", label: "Team", icon: Users },
   { href: "/portal/profile", label: "Account", icon: User },
 ];

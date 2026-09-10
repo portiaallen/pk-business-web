@@ -30,6 +30,14 @@ export function Footer() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <Link
+                  href="/pay"
+                  className="text-sm text-ivory/80 transition-colors hover:text-gold"
+                >
+                  Pay an Invoice
+                </Link>
+              </li>
             </ul>
           </nav>
 

@@ -12,6 +12,7 @@ import {
   AlertCircle,
   Upload,
   Plus,
+  CreditCard,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 
@@ -243,6 +244,13 @@ export default function PortalDashboardPage() {
               >
                 <Upload className="size-4" />
                 Upload Documents
+              </Link>
+              <Link
+                href="/portal/payments"
+                className="flex items-center gap-3 px-6 py-3.5 text-sm font-medium text-muted-gray transition-colors hover:bg-cream/50 hover:text-charcoal"
+              >
+                <CreditCard className="size-4" />
+                Make a Payment
               </Link>
               <Link
                 href="/portal/messages"
