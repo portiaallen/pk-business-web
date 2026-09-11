@@ -84,12 +84,18 @@ enum DocumentRetentionStatus {
 }
 
 enum PaymentStatus {
+  DRAFT
+  SENT
+  VIEWED
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
   UNPAID
   PENDING
-  PAID
   FAILED
   REFUNDED
   CANCELLED
+  VOID
 }
 
 enum PaymentMethod {
@@ -548,27 +554,51 @@ model Notification {
 // ─── Payments ───────────────────────────────────────────────────────────────────
 
 model Invoice {
-  id          String        @id @default(cuid())
-  clientId    String
-  requestId   String?
-  serviceId   String?
-  description String?
-  amountCents Int
-  currency    String        @default("USD")
-  status      PaymentStatus @default(UNPAID)
-  dueAt       DateTime?
-  paidAt      DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id             String        @id @default(cuid())
+  invoiceNumber  String        @unique
+  clientId       String
+  requestId      String?
+  serviceId      String?
+  description    String?
+  lineItems      String        @default("[]")
+  subtotalCents  Int           @default(0)
+  adjustmentCents Int          @default(0)
+  amountCents    Int
+  currency       String        @default("USD")
+  status         PaymentStatus @default(DRAFT)
+  paymentTerms   String?
+  notes          String?
+  paymentInstructions String?
+  dueAt          DateTime?
+  issueAt        DateTime?
+  sentAt         DateTime?
+  viewedAt       DateTime?
+  paidAt         DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   client  Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
   request VerificationRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
   service Service?             @relation(fields: [serviceId], references: [id], onDelete: SetNull)
   payments Payment[]
+  activities InvoiceActivity[]
 
   @@index([clientId])
   @@index([status])
   @@index([createdAt])
+}
+
+model InvoiceActivity {
+  id        String   @id @default(cuid())
+  invoiceId String
+  event     String
+  detail    String?
+  actorId   String?
+  createdAt DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
 }
 
 model Payment {

@@ -15,6 +15,7 @@ import {
   X,
   LogOut,
   ClipboardCheck,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AdminInstallButton } from "@/components/AdminInstallPrompt";
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/admin/clients", label: "Clients", icon: Users },
   { href: "/admin/requests", label: "Requests", icon: FileText },
   { href: "/admin/requests/cmtucijv50004fv0f9r26yy2w/qb-review", label: "QB Initial Review", icon: ClipboardCheck },
+  { href: "/admin/invoices", label: "Invoices", icon: Receipt },
   { href: "/admin/documents", label: "Documents", icon: FolderOpen },
   { href: "/admin/services", label: "Services", icon: Briefcase },
   { href: "/admin/activity", label: "Activity", icon: Activity },

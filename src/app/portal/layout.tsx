@@ -27,6 +27,7 @@ const navItems = [
   { href: "/portal/documents", label: "Documents", icon: FolderOpen },
   { href: "/portal/messages", label: "Messages", icon: MessageSquare },
   { href: "/portal/payments", label: "Payments", icon: CreditCard },
+  { href: "/portal/invoices", label: "Invoices", icon: FileText },
   { href: "/portal/team", label: "Team", icon: Users },
   { href: "/portal/profile", label: "Account", icon: User },
 ];
