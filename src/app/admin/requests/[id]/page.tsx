@@ -34,7 +34,7 @@ type Detail = {
   documentRequests: { id: string; title: string; status: string; required: boolean }[];
   messages: { id: string; body: string; isFromStaff: boolean; authorName: string; createdAt: string }[];
   internalNotes: { id: string; content: string; authorName: string; createdAt: string }[];
-  deliverables: { id: string; title: string; fileName: string; createdAt: string }[];
+  deliverables: { id: string; title: string; fileName: string; createdAt: string; visibility: string }[];
   timeEntries: Array<{
     id: string;
     userName: string;
@@ -246,6 +246,31 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
     }
   }
 
+  async function setDeliverableVisibility(deliverableId: string, visibility: "RELEASED" | "DRAFT") {
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/requests/${id}/deliverables/${deliverableId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visibility }),
+      });
+      if (res.ok) {
+        await load();
+      } else {
+        const data = await res.json().catch(() => null);
+        const reasons: string[] = data?.reasons ?? [];
+        setError(
+          reasons.length > 0
+            ? `Cannot release yet: ${reasons.join(" ")} (${res.status})`
+            : data?.error || `Release failed (${res.status})`
+        );
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function patch(data: Record<string, unknown>) {
     setSaving(true);
     setError("");
@@ -424,19 +449,49 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
         ) : (
           <ul className="space-y-1">
             {detail.deliverables.map((d) => (
-              <li key={d.id} className="flex items-center justify-between rounded-md bg-muted/50 px-4 py-2">
+              <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted/50 px-4 py-2">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-charcoal truncate">{d.title}</p>
                   <p className="text-xs text-muted-gray">{d.fileName}</p>
+                  <p className="mt-0.5 text-xs font-medium">
+                    {d.visibility === "RELEASED" ? (
+                      <span className="text-green-700">● Released to client</span>
+                    ) : (
+                      <span className="text-muted-gray">● Draft — hidden from client</span>
+                    )}
+                  </p>
                 </div>
-                <a
-                  href={`/api/admin/requests/${id}/deliverables/${d.id}`}
-                  target="_blank"
-                  rel="noopener"
-                  className="text-muted-gray hover:text-charcoal"
-                >
-                  <Download className="size-4" />
-                </a>
+                <div className="flex shrink-0 items-center gap-2">
+                  {d.visibility === "RELEASED" ? (
+                    <button
+                      type="button"
+                      onClick={() => setDeliverableVisibility(d.id, "DRAFT")}
+                      disabled={saving}
+                      className="min-h-[44px] rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-charcoal transition-colors hover:bg-muted disabled:opacity-50"
+                    >
+                      Retract
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setDeliverableVisibility(d.id, "RELEASED")}
+                      disabled={saving}
+                      className="min-h-[44px] rounded-md bg-charcoal px-3 py-2 text-sm font-medium text-background transition-colors hover:opacity-90 disabled:opacity-50"
+                    >
+                      Release to client
+                    </button>
+                  )}
+                  <a
+                    href={`/api/admin/requests/${id}/deliverables/${d.id}`}
+                    target="_blank"
+                    rel="noopener"
+                    className="flex min-h-[44px] items-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-charcoal transition-colors hover:bg-muted"
+                  >
+                    <Download className="size-4" aria-hidden="true" />
+                    <span className="sr-only">Download {d.title}</span>
+                    <span aria-hidden="true">Download</span>
+                  </a>
+                </div>
               </li>
             ))}
           </ul>
