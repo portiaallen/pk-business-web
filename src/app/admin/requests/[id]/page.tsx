@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
-import { Upload, Download, Play, Square, Pause, RotateCcw, Clock, Timer, ClipboardCheck } from "lucide-react";
+import { Upload, Download, Play, Square, Pause, RotateCcw, Clock, Timer, ClipboardCheck, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -355,6 +355,20 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
           className="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           Open Initial Review →
+        </a>
+      </div>
+
+      {/* AI Assistant entry */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gold/40 bg-cream p-4">
+        <div>
+          <h2 className="font-medium flex items-center gap-2"><Sparkles className="size-4 text-gold" /> PK AI Assistant</h2>
+          <p className="text-sm text-muted-foreground">Automated initial-review analysis, prioritized findings, scope alerts, and targeted questions — your judgment decides.</p>
+        </div>
+        <a
+          href={`/admin/requests/${id}/ai-assistant`}
+          className="inline-flex min-h-11 items-center gap-2 rounded-md bg-charcoal px-5 text-sm font-medium text-ivory hover:bg-charcoal/90"
+        >
+          Open AI Assistant →
         </a>
       </div>
 

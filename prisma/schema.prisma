@@ -362,6 +362,7 @@ model VerificationRequest {
   deliverables    Deliverable[]
   timeEntries     TimeEntry[]
   qbCleanupReview QbCleanupReview?
+  aiReview        AiReview?
 
   @@index([clientId])
   @@index([serviceId])
@@ -644,6 +645,174 @@ model Payment {
 // ─── Audit logging ─────────────────────────────────────────────────────────────
 
 /// Persistent login rate-limiting state (per-email). Survives restarts.
+
+// ─── PK AI Assistant (Phase 1 MVP) ────────────────────────────────────────────
+
+enum AiFindingStatus {
+  NEEDS_REVIEW
+  REVIEWED_NO_ISSUE
+  NEEDS_INVESTIGATION
+  POTENTIAL_CLEANUP
+  CLIENT_CLARIFICATION
+  OUT_OF_SCOPE
+  DISMISSED
+}
+
+enum AiPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum AiSource {
+  AI_GENERATED
+  SYSTEM_GENERATED
+  HUMAN_CREATED
+}
+
+enum AiScopeAlertStatus {
+  OPEN
+  IGNORED
+  INCLUDED_IN_SCOPE
+  CLIENT_CLARIFICATION
+  SCOPE_EXPANSION
+  OUT_OF_SCOPE
+}
+
+enum AiClarificationStatus {
+  DRAFT
+  READY_TO_SEND
+  SENT
+  CLIENT_RESPONDED
+  RESOLVED
+}
+
+/// One AI initial-review run per engagement (request). Complements the manual
+/// QbCleanupReview — the AI surfaces findings so Portia can decide.
+model AiReview {
+  id          String   @id @default(cuid())
+  requestId   String   @unique
+  status      String   @default("PENDING") // PENDING | RUNNING | COMPLETE | FAILED
+  summary     String?  // Advisor-facing initial review summary (markdown)
+  engine      String   @default("rules") // rules | claude | hybrid
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  request     VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  findings    AiFinding[]
+  scopeAlerts AiScopeAlert[]
+  activities  AiActivityLog[]
+  clarifications AiClarification[] @relation("AiReviewClarifications")
+
+  @@index([requestId])
+  @@index([status])
+}
+
+model AiFinding {
+  id              String          @id @default(cuid())
+  reviewId        String
+  category        String          // e.g. Reconciliation, Personal/Business, Payroll, Scope
+  priority        AiPriority      @default(MEDIUM)
+  status          AiFindingStatus @default(NEEDS_REVIEW)
+  description     String
+  evidence        String?         // JSON: transactions/accounts/reports supporting the finding
+  relatedAccounts String?
+  recommendation  String?         // AI recommendation — NEVER Portia's decision
+  humanDecision   String?         // Portia's recorded decision
+  humanNotes      String?
+  decidedBy       String?
+  decidedAt       DateTime?
+  source          AiSource        @default(SYSTEM_GENERATED)
+  checklistItemKey String?        // Maps to the manual QbCleanup checklist item where relevant
+  estimatedHours  Float?          // For scope findings / work estimates
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  review        AiReview        @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  decisions     AiDecision[]
+  clarifications AiClarification[]
+
+  @@index([reviewId])
+  @@index([status])
+  @@index([priority])
+}
+
+/// Record of every human approval/rejection — the approval gate trail.
+model AiDecision {
+  id              String   @id @default(cuid())
+  findingId       String
+  recommendation  String?  // What the AI proposed (snapshot)
+  humanDecision   String
+  approvedBy      String
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  finding AiFinding @relation(fields: [findingId], references: [id], onDelete: Cascade)
+
+  @@index([findingId])
+}
+
+/// Scope-creep detection: work detected outside the engagement scope.
+model AiScopeAlert {
+  id             String              @id @default(cuid())
+  reviewId       String
+  description    String
+  evidence       String?
+  estimatedHours Float?
+  status         AiScopeAlertStatus  @default(OPEN)
+  resolvedBy     String?
+  resolvedAt     DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  review AiReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId])
+  @@index([status])
+}
+
+/// Client clarification queue (Phase 4 seed — kept modular for portal messaging).
+model AiClarification {
+  id            String               @id @default(cuid())
+  reviewId      String
+  findingId     String?
+  question      String
+  reason        String?
+  relatedTransactions String?
+  relatedAccount String?
+  relatedPeriod String?
+  amountCents   Int?
+  status        AiClarificationStatus @default(DRAFT)
+  clientResponse String?
+  resolvedAt    DateTime?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  review  AiReview   @relation("AiReviewClarifications", fields: [reviewId], references: [id], onDelete: Cascade)
+  finding AiFinding? @relation(fields: [findingId], references: [id], onDelete: SetNull)
+
+  @@index([reviewId])
+  @@index([findingId])
+  @@index([status])
+}
+
+/// AI activity/audit log — distinguishes AI-generated vs human-approved vs system.
+model AiActivityLog {
+  id        String   @id @default(cuid())
+  reviewId  String
+  actorType AiSource @default(SYSTEM_GENERATED)
+  actorId   String?
+  action    String   // ANALYSIS_RUN | FINDING_GENERATED | RECOMMENDATION_GENERATED | DECISION_RECORDED | SCOPE_ALERT | STATUS_CHANGED | CHAT_MESSAGE
+  detail    String?
+  createdAt DateTime @default(now())
+
+  review AiReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId])
+  @@index([action])
+}
 
 // ─── Time tracking (hourly billing) ───────────────────────────────────────────
 

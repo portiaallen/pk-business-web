@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import {
   sendContactEmail,
   type ContactFormPayload,
@@ -70,11 +71,36 @@ export async function POST(request: Request) {
       );
     }
 
-    await sendContactEmail(payload);
+    // Persist first: every valid submission must create a durable record that
+    // shows up in the admin portal, even if the notification email fails.
+    const submission = await prisma.intakeSubmission.create({
+      data: {
+        fullName: payload.fullName,
+        email: payload.email,
+        phone: payload.phone || null,
+        businessName: payload.businessName || null,
+        serviceSlug: payload.service,
+        description: payload.description,
+        contactMethod: payload.contactMethod,
+      },
+    });
 
-    return NextResponse.json({ success: true });
+    let emailSent = false;
+    try {
+      await sendContactEmail(payload);
+      emailSent = true;
+    } catch (emailError) {
+      // The record is safe; surface the email failure without losing the submission.
+      console.error("Contact form email failed:", emailError);
+    }
+
+    return NextResponse.json({
+      success: true,
+      id: submission.id,
+      emailSent,
+    });
   } catch (error) {
-    console.error("Contact form email failed:", error);
+    console.error("Contact form submission failed:", error);
 
     return NextResponse.json(
       {
