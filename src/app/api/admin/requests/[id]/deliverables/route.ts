@@ -75,6 +75,7 @@ export async function POST(
       id: deliverable.id,
       title: deliverable.title,
       fileName: deliverable.fileName,
+      visibility: "DRAFT",
     }, { status: 201 });
   } catch (error) {
     return handleApiError(error);

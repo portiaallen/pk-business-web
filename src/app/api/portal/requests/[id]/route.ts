@@ -53,6 +53,8 @@ export async function GET(
           orderBy: { createdAt: "asc" },
         },
         deliverables: {
+          // Fail closed: only RELEASED deliverables are ever listed for clients.
+          where: { visibility: "RELEASED" },
           select: {
             id: true,
             title: true,

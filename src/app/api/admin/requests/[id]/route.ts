@@ -83,7 +83,7 @@ export async function GET(
         createdAt: n.createdAt.toISOString(),
       })),
       deliverables: req.deliverables.map((d) => ({
-        id: d.id, title: d.title, fileName: d.fileName,
+        id: d.id, title: d.title, fileName: d.fileName, visibility: d.visibility,
         createdAt: d.createdAt.toISOString(),
       })),
     });

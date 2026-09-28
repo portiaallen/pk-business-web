@@ -352,12 +352,20 @@ export default function RequestDetailPage() {
               </div>
               <div className="divide-y divide-border">
                 {req.deliverables.map((del) => (
-                  <div key={del.id} className="flex items-center justify-between px-6 py-3">
+                  <div key={del.id} className="flex items-center justify-between gap-3 px-6 py-3">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-charcoal">{del.title}</p>
                       <p className="text-xs text-muted-gray">{del.fileName}</p>
                     </div>
-                    <Download className="size-4 shrink-0 text-muted-gray" />
+                    <a
+                      href={`/api/portal/requests/${req.id}/deliverables/${del.id}`}
+                      className="flex min-h-[44px] shrink-0 items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-charcoal transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      download
+                    >
+                      <Download className="size-4 shrink-0" aria-hidden="true" />
+                      <span>Download</span>
+                      <span className="sr-only">{del.title}</span>
+                    </a>
                   </div>
                 ))}
               </div>

@@ -77,6 +77,11 @@ enum DocumentReviewStatus {
   NEEDS_REVISION
 }
 
+enum DeliverableVisibility {
+  DRAFT
+  RELEASED
+}
+
 enum DocumentRetentionStatus {
   ACTIVE
   SCHEDULED_FOR_DELETION
@@ -228,6 +233,7 @@ model User {
   clientMessages       ClientMessage[]
   messageReads         ClientMessageRead[]
   uploadedDeliverables Deliverable[]         @relation("DeliverableUploader")
+  releasedDeliverables Deliverable[]         @relation("DeliverableReleaser")
   timeEntries          TimeEntry[]           @relation("TimeEntryUser")
   qbCleanupReviews     QbCleanupReview[]     @relation("QbReviewer")
   inventoryMembers     InventoryMember[]
@@ -506,12 +512,17 @@ model Deliverable {
   mimeType      String
   fileSizeBytes Int
   storageKey    String
+  /** DRAFT (default): hidden from the client portal entirely. RELEASED: downloadable via the portal. */
+  visibility    DeliverableVisibility   @default(DRAFT)
+  releasedAt    DateTime?
+  releasedById  String?
   uploadedById  String?
   uploadedAt    DateTime @default(now())
   createdAt     DateTime @default(now())
 
   request    VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
   uploadedBy User?               @relation("DeliverableUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  releasedBy User?               @relation("DeliverableReleaser", fields: [releasedById], references: [id], onDelete: SetNull)
 
   @@index([requestId])
 }
