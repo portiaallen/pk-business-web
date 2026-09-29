@@ -15,9 +15,12 @@ import {
   PauseCircle,
   AlertCircle,
   Download,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useRouter } from "next/navigation";
+import { confirmDelete } from "@/lib/confirm-delete";
 
 type ClientDetail = {
   id: string;
@@ -116,6 +119,7 @@ function formatAction(action: string) {
 
 export default function AdminClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const [detail, setDetail] = useState<ClientDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -124,6 +128,7 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
   const [showStatusForm, setShowStatusForm] = useState(false);
   const [newStatus, setNewStatus] = useState("");
   const [newNotes, setNewNotes] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   async function load() {
     const res = await fetch(`/api/admin/clients/${id}`);
@@ -179,6 +184,32 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
     }
   }
 
+  async function deleteClient() {
+    if (!detail) return;
+    if (
+      !confirmDelete(
+        `Permanently delete "${detail.name}"?\n\nThis removes the business, its member accounts, all requests, documents, messages, and invoices.\n\nThis cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    setStatusError("");
+    try {
+      const res = await fetch(`/api/admin/clients/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        router.push("/admin/clients");
+      } else {
+        const j = await res.json().catch(() => ({}));
+        setStatusError(j.error || "Delete failed");
+      }
+    } catch {
+      setStatusError("Delete failed");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   if (loading) {
     return <div className="flex items-center justify-center py-20"><p className="text-sm text-muted-gray">Loading client...</p></div>;
   }
@@ -231,6 +262,15 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
                 <Edit className="size-3.5" /> Edit status
               </Button>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={deleting}
+              onClick={deleteClient}
+              className="border-red-200 text-red-800 hover:bg-red-50"
+            >
+              <Trash2 className="size-3.5" /> Delete permanently
+            </Button>
           </div>
         </div>
         {statusOpts && (

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Mail, Phone, Building2, CheckCircle2, Circle } from "lucide-react";
+import { Mail, Phone, Building2, CheckCircle2, Circle, Trash2 } from "lucide-react";
+import { confirmDelete } from "@/lib/confirm-delete";
 
 type Submission = {
   id: string;
@@ -21,6 +22,30 @@ export default function ConsultationsPage() {
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "new">("all");
+  const [deleteError, setDeleteError] = useState("");
+
+  async function deleteSubmission(id: string, name: string) {
+    if (!confirmDelete(`Permanently delete the consultation from ${name}? This cannot be undone.`)) return;
+    setBusyId(id);
+    setDeleteError("");
+    try {
+      const res = await fetch("/api/admin/intake-submissions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) {
+        await load();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setDeleteError(data.error || `Delete failed (${res.status})`);
+      }
+    } catch {
+      setDeleteError("Delete failed");
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   async function load() {
     try {
@@ -101,6 +126,12 @@ export default function ConsultationsPage() {
         </p>
       )}
 
+      {deleteError && (
+        <p role="alert" className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {deleteError}
+        </p>
+      )}
+
       {subs === null ? (
         <p className="text-sm text-muted-gray">Loading consultations…</p>
       ) : visible.length === 0 ? (
@@ -144,25 +175,36 @@ export default function ConsultationsPage() {
                   </p>
                   <p className="mt-2 whitespace-pre-wrap text-sm text-charcoal">{s.description}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => toggleProcessed(s.id, !s.processed)}
-                  disabled={busyId === s.id}
-                  aria-pressed={s.processed}
-                  className="flex min-h-[44px] shrink-0 items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-charcoal transition-colors hover:bg-muted disabled:opacity-50"
-                >
-                  {s.processed ? (
-                    <>
-                      <CheckCircle2 className="size-4 text-green-700" aria-hidden="true" />
-                      Processed
-                    </>
-                  ) : (
-                    <>
-                      <Circle className="size-4 text-gold" aria-hidden="true" />
-                      Mark processed
-                    </>
-                  )}
-                </button>
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleProcessed(s.id, !s.processed)}
+                    disabled={busyId === s.id}
+                    aria-pressed={s.processed}
+                    className="flex min-h-[44px] shrink-0 items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-charcoal transition-colors hover:bg-muted disabled:opacity-50"
+                  >
+                    {s.processed ? (
+                      <>
+                        <CheckCircle2 className="size-4 text-green-700" aria-hidden="true" />
+                        Processed
+                      </>
+                    ) : (
+                      <>
+                        <Circle className="size-4 text-gold" aria-hidden="true" />
+                        Mark processed
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteSubmission(s.id, s.fullName)}
+                    disabled={busyId === s.id}
+                    className="flex min-h-[44px] shrink-0 items-center gap-2 rounded-md border border-red-200 px-4 py-2 text-sm font-medium text-red-800 transition-colors hover:bg-red-50 disabled:opacity-50"
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                    Delete
+                  </button>
+                </div>
               </div>
             </li>
           ))}

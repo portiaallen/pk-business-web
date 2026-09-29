@@ -6,6 +6,11 @@ import {
   hasRole,
 } from "@/lib/auth";
 import { ApiError, handleApiError } from "@/lib/api-error";
+import {
+  deleteRequestCascade,
+  deleteStorageObjects,
+  requireAdminForDelete,
+} from "@/lib/admin-delete";
 
 const VALID_STATUSES = [
   "DRAFT", "SUBMITTED", "DOCUMENTS_REQUIRED", "UNDER_REVIEW",
@@ -87,6 +92,50 @@ export async function GET(
         createdAt: d.createdAt.toISOString(),
       })),
     });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * DELETE — hard-delete a request (engagement) and its children (ADMIN only).
+ * Removes documents/deliverables (incl. stored files), notes, messages, form
+ * submissions, document requests, time entries, QB review, and AI review.
+ * Invoices/payments are detached (SetNull), not deleted.
+ */
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const admin = await requireAdminForDelete(request);
+
+    const existing = await prisma.verificationRequest.findUnique({
+      where: { id },
+      select: { id: true, clientId: true, requestType: true },
+    });
+    if (!existing) throw ApiError.notFound("Request not found");
+
+    const storageKeys = await deleteRequestCascade(id);
+    await deleteStorageObjects(storageKeys);
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: admin.id,
+        clientId: existing.clientId,
+        action: "ADMIN_ACTION",
+        resource: "verification_request",
+        resourceId: id,
+        metadata: JSON.stringify({
+          action: "REQUEST_HARD_DELETED",
+          requestType: existing.requestType,
+          filesRemoved: storageKeys.length,
+        }),
+      },
+    });
+
+    return NextResponse.json({ success: true });
   } catch (error) {
     return handleApiError(error);
   }

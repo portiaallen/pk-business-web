@@ -11,7 +11,9 @@ import {
   CheckCircle2,
   Clock,
   Ban,
+  Trash2,
 } from "lucide-react";
+import { confirmDelete } from "@/lib/confirm-delete";
 
 type Invoice = {
   id: string;
@@ -81,6 +83,25 @@ export default function AdminInvoicesPage() {
       setMessage({ ok: true, text: data.message });
     } else {
       setMessage({ ok: false, text: data.error || `Action failed (${res.status}).` });
+    }
+    await load();
+  }
+
+  async function deleteInvoice(inv: Invoice) {
+    if (
+      !confirmDelete(
+        `Permanently delete invoice ${inv.invoiceNumber}?\n\nOnly draft or void invoices with no payments can be deleted.`
+      )
+    ) {
+      return;
+    }
+    setMessage(null);
+    const res = await fetch(`/api/admin/invoices/${inv.id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      setMessage({ ok: true, text: `Invoice ${inv.invoiceNumber} deleted.` });
+    } else {
+      setMessage({ ok: false, text: data.error || `Delete failed (${res.status}).` });
     }
     await load();
   }
@@ -261,6 +282,17 @@ export default function AdminInvoicesPage() {
                       className="inline-flex min-h-11 items-center rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-800 hover:bg-red-50"
                     >
                       Void
+                    </button>
+                  )}
+                  {(inv.status === "DRAFT" || inv.status === "VOID") && (
+                    <button
+                      type="button"
+                      onClick={() => deleteInvoice(inv)}
+                      aria-label={`Delete invoice ${inv.invoiceNumber}`}
+                      className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-800 hover:bg-red-50"
+                    >
+                      <Trash2 className="size-4" aria-hidden />
+                      Delete
                     </button>
                   )}
                 </div>

@@ -14,6 +14,7 @@ import {
   logActivity,
   INVOICE_PAYMENT_TERMS_PRESETS,
 } from "@/lib/invoices";
+import { readDeleteId, requireAdminForDelete } from "@/lib/admin-delete";
 
 async function requireAdmin(request: Request) {
   const token = getSessionTokenFromRequest(request);
@@ -74,6 +75,115 @@ export async function GET(
         })),
       },
     });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * DELETE — hard-delete a draft/void invoice with no payments (ADMIN only).
+ * Body: { paymentId } deletes a single recorded payment instead (releases the
+ * void guard; use when a payment was entered in error). Body: { id } on the
+ * payments list route is not supported — payments are deleted from here.
+ */
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const admin = await requireAdminForDelete(request);
+    const { id } = await params;
+
+    // Optional body: { paymentId } to delete one recorded payment.
+    const body = (await request.json().catch(() => null)) as {
+      id?: string;
+      paymentId?: string;
+    } | null;
+
+    const invoice = await getInvoiceOr404(id);
+
+    // ── Delete a single payment ──
+    if (body?.paymentId) {
+      const payment = await prisma.payment.findUnique({
+        where: { id: body.paymentId },
+        select: { id: true, invoiceId: true, amountCents: true },
+      });
+      if (!payment || payment.invoiceId !== invoice.id) {
+        throw ApiError.notFound("Payment not found on this invoice");
+      }
+
+      await prisma.payment.delete({ where: { id: payment.id } });
+
+      const paid = await prisma.payment.aggregate({
+        where: { invoiceId: invoice.id, status: "PAID" },
+        _sum: { amountCents: true },
+      });
+      const paidCents = paid._sum.amountCents ?? 0;
+      await prisma.invoice.update({
+        where: { id: invoice.id },
+        data: {
+          status: paidCents > 0 ? "PARTIALLY_PAID" : invoice.status === "PAID" || invoice.status === "PARTIALLY_PAID" ? "SENT" : invoice.status,
+          paidAt: paidCents >= invoice.amountCents ? invoice.paidAt : null,
+        },
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          actorId: admin.id,
+          clientId: invoice.clientId,
+          action: "PAYMENT_STATUS_CHANGED",
+          resource: "payment",
+          resourceId: payment.id,
+          metadata: JSON.stringify({
+            action: "PAYMENT_DELETED",
+            invoiceId: invoice.id,
+            amountCents: payment.amountCents,
+            invoiceNumber: invoice.invoiceNumber,
+          }),
+        },
+      });
+      await logActivity(
+        invoice.id,
+        "PAYMENT_DELETED",
+        `Payment of $${(payment.amountCents / 100).toFixed(2)} deleted by ${admin.name}`,
+        admin.id
+      );
+
+      return NextResponse.json({ success: true, deleted: "payment" });
+    }
+
+    // ── Delete the invoice ──
+    if (invoice.status === "DRAFT" || invoice.status === "VOID") {
+      const paymentCount = await prisma.payment.count({ where: { invoiceId: invoice.id } });
+      if (paymentCount > 0) {
+        throw ApiError.conflict(
+          "This invoice has payments recorded. Delete the payments first if they were recorded in error — financial records are never deleted silently."
+        );
+      }
+
+      await prisma.invoice.delete({ where: { id: invoice.id } });
+
+      await prisma.auditLog.create({
+        data: {
+          actorId: admin.id,
+          clientId: invoice.clientId,
+          action: "ADMIN_ACTION",
+          resource: "invoice",
+          resourceId: invoice.id,
+          metadata: JSON.stringify({
+            action: "INVOICE_HARD_DELETED",
+            invoiceNumber: invoice.invoiceNumber,
+            amountCents: invoice.amountCents,
+          }),
+        },
+      });
+
+      return NextResponse.json({ success: true, deleted: "invoice" });
+    }
+
+    throw ApiError.conflict(
+      `Only draft or void invoices can be deleted. Invoice #${invoice.invoiceNumber} is ${invoice.status.toLowerCase()}. Void it first, or leave it for the record.`
+    );
   } catch (error) {
     return handleApiError(error);
   }

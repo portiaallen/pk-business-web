@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth";
 import { getObject } from "@/lib/storage";
 import { ApiError, handleApiError } from "@/lib/api-error";
+import { deleteStorageObjects, requireAdminForDelete } from "@/lib/admin-delete";
 import { checkReleaseReadiness } from "@/lib/deliverables";
 
 export async function GET(
@@ -42,6 +43,55 @@ export async function GET(
         "X-Content-Type-Options": "nosniff",
       },
     });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * DELETE — permanently remove a deliverable and its stored file (ADMIN only).
+ */
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string; deliverableId: string }> }
+) {
+  try {
+    const { id, deliverableId } = await params;
+    const admin = await requireAdminForDelete(request);
+
+    const deliverable = await prisma.deliverable.findUnique({
+      where: { id: deliverableId },
+      select: {
+        id: true,
+        requestId: true,
+        storageKey: true,
+        title: true,
+        request: { select: { clientId: true } },
+      },
+    });
+    if (!deliverable || deliverable.requestId !== id) {
+      throw ApiError.notFound("Deliverable not found");
+    }
+
+    await prisma.deliverable.delete({ where: { id: deliverable.id } });
+    await deleteStorageObjects([deliverable.storageKey]);
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: admin.id,
+        clientId: deliverable.request.clientId,
+        action: "ADMIN_ACTION",
+        resource: "deliverable",
+        resourceId: deliverable.id,
+        metadata: JSON.stringify({
+          action: "DELIVERABLE_DELETED",
+          requestId: id,
+          title: deliverable.title,
+        }),
+      },
+    });
+
+    return NextResponse.json({ success: true });
   } catch (error) {
     return handleApiError(error);
   }

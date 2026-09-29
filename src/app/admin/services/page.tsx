@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Briefcase } from "lucide-react";
+import { Briefcase, Trash2 } from "lucide-react";
+import { confirmDelete } from "@/lib/confirm-delete";
 
 type Service = {
   id: string;
@@ -16,22 +17,48 @@ type Service = {
 export default function AdminServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  async function fetchServices() {
+    try {
+      const res = await fetch("/api/admin/services");
+      if (res.ok) {
+        setServices(await res.json());
+      }
+    } catch {
+      // empty
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function fetchServices() {
-      try {
-        const res = await fetch("/api/admin/services");
-        if (res.ok) {
-          setServices(await res.json());
-        }
-      } catch {
-        // empty
-      } finally {
-        setLoading(false);
-      }
-    }
     fetchServices();
   }, []);
+
+  async function handleDelete(service: Service) {
+    if (!confirmDelete(`Permanently delete the "${service.name}" service? This cannot be undone.`)) return;
+    setDeletingId(service.id);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/services", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: service.id }),
+      });
+      if (res.ok) {
+        await fetchServices();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || `Delete failed (${res.status})`);
+      }
+    } catch {
+      setError("Delete failed");
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -43,6 +70,12 @@ export default function AdminServicesPage() {
           Manage the services offered by PK Business Services.
         </p>
       </div>
+
+      {error && (
+        <p role="alert" className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {error}
+        </p>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -76,6 +109,16 @@ export default function AdminServicesPage() {
               <div className="mt-4 flex items-center justify-between text-xs text-muted-gray">
                 <span>{service.priceDisplay}</span>
                 <span>{service.requestCount} requests</span>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => handleDelete(service)}
+                  disabled={deletingId === service.id}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-800 transition-colors hover:bg-red-50 disabled:opacity-50"
+                >
+                  <Trash2 className="size-3.5" /> Delete
+                </button>
               </div>
             </div>
           ))}

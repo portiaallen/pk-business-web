@@ -9,9 +9,11 @@ import {
   Filter,
   FileText,
   ChevronDown,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { confirmDelete } from "@/lib/confirm-delete";
 
 type Document = {
   id: string;
@@ -54,6 +56,31 @@ export default function AdminDocumentsPage() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [reviewFilter, setReviewFilter] = useState("");
   const [uploadFilter, setUploadFilter] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState("");
+
+  async function handleDelete(d: Document) {
+    if (!confirmDelete(`Permanently delete "${d.fileName}" and its stored file? This cannot be undone.`)) return;
+    setDeletingId(d.id);
+    setActionError("");
+    try {
+      const res = await fetch("/api/admin/documents", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: d.id }),
+      });
+      if (res.ok) {
+        setDocuments((prev) => prev.filter((x) => x.id !== d.id));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setActionError(data.error || `Delete failed (${res.status})`);
+      }
+    } catch {
+      setActionError("Delete failed");
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   useEffect(() => {
     async function fetchData() {
@@ -147,6 +174,12 @@ export default function AdminDocumentsPage() {
         </Button>
       </div>
 
+      {actionError && (
+        <p role="alert" className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {actionError}
+        </p>
+      )}
+
       {/* Results */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -174,7 +207,7 @@ export default function AdminDocumentsPage() {
                 <th className="px-4 py-3 font-semibold text-charcoal">Status</th>
                 <th className="px-4 py-3 font-semibold text-charcoal">Size</th>
                 <th className="px-4 py-3 font-semibold text-charcoal">Uploaded</th>
-                <th className="px-4 py-3 font-semibold text-charcoal"></th>
+                <th className="px-4 py-3 font-semibold text-charcoal" colSpan={2}></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -229,6 +262,17 @@ export default function AdminDocumentsPage() {
                         <Download className="size-3.5" /> Download
                       </a>
                     )}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(d)}
+                      disabled={deletingId === d.id}
+                      aria-label={`Delete ${d.fileName}`}
+                      className="inline-flex items-center gap-1 rounded-md border border-red-200 px-2.5 py-1.5 text-sm font-medium text-red-800 transition-colors hover:bg-red-50 disabled:opacity-50"
+                    >
+                      <Trash2 className="size-3.5" /> Delete
+                    </button>
                   </td>
                 </tr>
               ))}

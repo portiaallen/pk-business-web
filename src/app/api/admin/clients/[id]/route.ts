@@ -6,6 +6,11 @@ import {
   hasRole,
 } from "@/lib/auth";
 import { ApiError, handleApiError } from "@/lib/api-error";
+import {
+  deleteClientCascade,
+  deleteStorageObjects,
+  requireAdminForDelete,
+} from "@/lib/admin-delete";
 
 async function requireAdmin(request: Request) {
   const token = getSessionTokenFromRequest(request);
@@ -142,6 +147,50 @@ export async function GET(
 }
 
 const VALID_CLIENT_STATUSES = ["ACTIVE", "INACTIVE", "ARCHIVED"] as const;
+
+/**
+ * DELETE — hard-delete a client tenant and everything in it (ADMIN only).
+ * Irreversible: removes requests, documents/deliverables (incl. stored files),
+ * messages, notes, time entries, invoices, memberships, and tenant-only user
+ * accounts. Refused when payments have been recorded.
+ */
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const admin = await requireAdminForDelete(request);
+
+    const existing = await prisma.client.findUnique({
+      where: { id },
+      select: { id: true, name: true },
+    });
+    if (!existing) throw ApiError.notFound("Client not found");
+
+    const result = await deleteClientCascade(id);
+    await deleteStorageObjects(result.storageKeys);
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: admin.id,
+        action: "ADMIN_ACTION",
+        resource: "client",
+        resourceId: id,
+        metadata: JSON.stringify({
+          action: "CLIENT_HARD_DELETED",
+          clientName: existing.name,
+          ...result.counts,
+          removedUserEmails: result.removedUserEmails,
+        }),
+      },
+    });
+
+    return NextResponse.json({ success: true, deleted: result.counts });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
 
 /** PATCH — update client status and/or notes (audit logged) */
 export async function PATCH(

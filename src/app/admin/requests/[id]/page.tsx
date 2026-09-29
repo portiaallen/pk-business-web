@@ -2,9 +2,10 @@
 
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
-import { Upload, Download, Play, Square, Pause, RotateCcw, Clock, Timer, ClipboardCheck, Sparkles } from "lucide-react";
+import { Upload, Download, Play, Square, Pause, RotateCcw, Clock, Timer, ClipboardCheck, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { confirmDelete } from "@/lib/confirm-delete";
 
 const TIME_CATEGORIES = [
   "Initial QuickBooks File Review",
@@ -317,6 +318,105 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
     } finally { setSaving(false); }
   }
 
+  async function deleteRequest() {
+    if (
+      !confirmDelete(
+        "Permanently delete this request and everything in it?\n\nDocuments, deliverables (files removed), messages, notes, time entries, and the QB review will be gone. Invoices stay (detached).\n\nThis cannot be undone."
+      )
+    ) {
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/requests/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        window.location.href = "/admin/requests";
+      } else {
+        const j = await res.json().catch(() => ({}));
+        setError(j.error || `Delete failed (${res.status})`);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteDeliverable(deliverableId: string, title: string) {
+    if (!confirmDelete(`Permanently delete deliverable "${title}" and its file? This cannot be undone.`)) return;
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/requests/${id}/deliverables/${deliverableId}`, { method: "DELETE" });
+      if (res.ok) await load();
+      else {
+        const j = await res.json().catch(() => ({}));
+        setError(j.error || `Delete failed (${res.status})`);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteMessage(messageId: string) {
+    if (!confirmDelete("Permanently delete this message from the thread? This cannot be undone.")) return;
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/requests/${id}/reply`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: messageId }),
+      });
+      if (res.ok) await load();
+      else {
+        const j = await res.json().catch(() => ({}));
+        setError(j.error || `Delete failed (${res.status})`);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteNote(noteId: string) {
+    if (!confirmDelete("Permanently delete this internal note? This cannot be undone.")) return;
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/requests/${id}/notes`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: noteId }),
+      });
+      if (res.ok) await load();
+      else {
+        const j = await res.json().catch(() => ({}));
+        setError(j.error || `Delete failed (${res.status})`);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteDocRequest(docRequestId: string, title: string) {
+    if (!confirmDelete(`Permanently delete document request "${title}"? This cannot be undone.`)) return;
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/requests/${id}/document-requests`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: docRequestId }),
+      });
+      if (res.ok) await load();
+      else {
+        const j = await res.json().catch(() => ({}));
+        setError(j.error || `Delete failed (${res.status})`);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function addDocRequest() {
     if (!docReqTitle.trim()) return;
     setSaving(true);
@@ -334,12 +434,23 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/admin/requests" className="text-sm text-muted-foreground hover:underline">← All requests</Link>
-        <h1 className="mt-2 text-2xl font-semibold">{detail.requestType || detail.service}</h1>
-        <p className="text-sm text-muted-foreground">
-          {detail.client.name} · {detail.service} · Requested by {detail.requesterName || "—"}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <Link href="/admin/requests" className="text-sm text-muted-foreground hover:underline">← All requests</Link>
+          <h1 className="mt-2 text-2xl font-semibold">{detail.requestType || detail.service}</h1>
+          <p className="text-sm text-muted-foreground">
+            {detail.client.name} · {detail.service} · Requested by {detail.requesterName || "—"}
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={saving}
+          onClick={deleteRequest}
+          className="min-h-10 border-red-200 text-red-800 hover:bg-red-50"
+        >
+          <Trash2 className="size-4" /> Delete request
+        </Button>
       </div>
 
       {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 border border-red-200">{error}</p>}
@@ -420,9 +531,20 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
           <h3 className="pt-2 text-sm font-medium">Requested documents</h3>
           <ul className="space-y-1 text-sm">
             {detail.documentRequests.map((dr) => (
-              <li key={dr.id} className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2">
-                <span>{dr.title}{dr.required && <span className="text-red-500"> *</span>}</span>
-                <span className="text-xs text-muted-foreground">{dr.status}</span>
+              <li key={dr.id} className="flex items-center justify-between gap-2 rounded-md bg-muted/50 px-3 py-2">
+                <span className="min-w-0 truncate">{dr.title}{dr.required && <span className="text-red-500"> *</span>}</span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <span className="text-xs text-muted-foreground">{dr.status}</span>
+                  <button
+                    type="button"
+                    onClick={() => deleteDocRequest(dr.id, dr.title)}
+                    disabled={saving}
+                    aria-label={`Delete document request ${dr.title}`}
+                    className="rounded p-1 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </span>
               </li>
             ))}
           </ul>
@@ -476,6 +598,17 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => deleteDeliverable(d.id, d.title)}
+                    disabled={saving}
+                    aria-label={`Delete deliverable ${d.title}`}
+                    className="flex min-h-[44px] items-center rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-800 transition-colors hover:bg-red-50 disabled:opacity-50"
+                  >
+                    <Trash2 className="size-4" />
+                    <span className="sr-only">Delete {d.title}</span>
+                    <span aria-hidden="true">Delete</span>
+                  </button>
                   {d.visibility === "RELEASED" ? (
                     <button
                       type="button"
@@ -649,6 +782,16 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
                 <div className="text-right shrink-0">
                   <div className="font-mono text-sm font-medium">{entry.durationDisplay}</div>
                   {entry.isRunning && <span className="text-xs text-emerald-600">live</span>}
+                  <button
+                    type="button"
+                    onClick={() => deleteTimeEntry(entry.id)}
+                    disabled={saving}
+                    aria-label={`Delete time entry ${entry.category}`}
+                    className="mt-1 inline-flex items-center gap-1 rounded p-1 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+                  >
+                    <Trash2 className="size-3.5" />
+                    <span aria-hidden="true" className="text-xs">Delete</span>
+                  </button>
                 </div>
               </li>
             ))}
@@ -662,8 +805,21 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
           {detail.messages.length === 0 && <li className="text-muted-foreground">No messages.</li>}
           {detail.messages.map((m) => (
             <li key={m.id} className={`rounded-md p-3 ${m.isFromStaff ? "bg-primary/10" : "bg-muted"}`}>
-              <p>{m.body}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{m.authorName} · {new Date(m.createdAt).toLocaleString()}</p>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p>{m.body}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{m.authorName} · {new Date(m.createdAt).toLocaleString()}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => deleteMessage(m.id)}
+                  disabled={saving}
+                  aria-label="Delete message"
+                  className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
             </li>
           ))}
         </ul>
@@ -686,8 +842,21 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
         <ul className="mt-3 space-y-2 text-sm">
           {detail.internalNotes.map((n) => (
             <li key={n.id} className="rounded-md border-l-4 border-amber-400 bg-amber-50 p-3">
-              <p>{n.content}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{n.authorName} · {new Date(n.createdAt).toLocaleString()}</p>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p>{n.content}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{n.authorName} · {new Date(n.createdAt).toLocaleString()}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => deleteNote(n.id)}
+                  disabled={saving}
+                  aria-label="Delete internal note"
+                  className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
             </li>
           ))}
         </ul>

@@ -6,6 +6,7 @@ import {
   hasRole,
 } from "@/lib/auth";
 import { ApiError, handleApiError } from "@/lib/api-error";
+import { readDeleteId, requireAdminForDelete } from "@/lib/admin-delete";
 
 /** POST — add an internal note. NEVER exposed to clients. */
 export async function POST(
@@ -49,6 +50,41 @@ export async function POST(
       authorName: user.name,
       createdAt: note.createdAt.toISOString(),
     });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/** DELETE — permanently remove an internal note (ADMIN only). Body: { id }. */
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const admin = await requireAdminForDelete(request);
+    const noteId = await readDeleteId(request);
+
+    const note = await prisma.internalNote.findUnique({
+      where: { id: noteId },
+      select: { id: true, requestId: true, request: { select: { clientId: true } } },
+    });
+    if (!note || note.requestId !== id) throw ApiError.notFound("Note not found");
+
+    await prisma.internalNote.delete({ where: { id: note.id } });
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: admin.id,
+        clientId: note.request.clientId,
+        action: "ADMIN_ACTION",
+        resource: "internal_note",
+        resourceId: note.id,
+        metadata: JSON.stringify({ action: "INTERNAL_NOTE_DELETED", requestId: id }),
+      },
+    });
+
+    return NextResponse.json({ success: true });
   } catch (error) {
     return handleApiError(error);
   }

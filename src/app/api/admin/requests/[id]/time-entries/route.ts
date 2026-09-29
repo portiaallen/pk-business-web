@@ -319,7 +319,7 @@ export async function PATCH(
   }
 }
 
-/** DELETE — remove a time entry (audit logged) */
+/** DELETE — remove a time entry (audit logged). Body: { id } targets the entry. */
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -328,13 +328,18 @@ export async function DELETE(
     const { id } = await params;
     const admin = await requireAdmin(request);
 
+    const body = (await request.json().catch(() => null)) as { id?: string } | null;
+    const entryId = typeof body?.id === "string" && body.id.trim() ? body.id.trim() : id;
+
     const existing = await prisma.timeEntry.findUnique({
-      where: { id },
+      where: { id: entryId },
       include: { request: { select: { clientId: true } } },
     });
-    if (!existing) throw ApiError.notFound("Time entry not found");
+    if (!existing || existing.requestId !== id) {
+      throw ApiError.notFound("Time entry not found");
+    }
 
-    await prisma.timeEntry.delete({ where: { id } });
+    await prisma.timeEntry.delete({ where: { id: entryId } });
 
     await prisma.auditLog.create({
       data: {
@@ -342,7 +347,7 @@ export async function DELETE(
         clientId: existing.request.clientId,
         action: "ADMIN_ACTION",
         resource: "time_entry",
-        resourceId: id,
+        resourceId: entryId,
         metadata: JSON.stringify({
           action: "time_entry_deleted",
           category: existing.category,

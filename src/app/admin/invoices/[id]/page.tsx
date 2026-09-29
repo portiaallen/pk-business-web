@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Send, DollarSign, Ban, RefreshCw } from "lucide-react";
+import { ArrowLeft, Send, DollarSign, Ban, RefreshCw, Trash2 } from "lucide-react";
+import { confirmDelete } from "@/lib/confirm-delete";
 import { InvoiceDocument } from "@/components/admin/InvoiceDocument";
 
 type LineItem = { description: string; quantity: number; rateCents: number; amountCents: number };
@@ -85,6 +86,52 @@ export default function AdminInvoiceDetailPage() {
       res.ok
         ? { ok: true, text: data.message || "Done." }
         : { ok: false, text: data.error || `Action failed (${res.status}).` }
+    );
+    await load();
+  }
+
+  async function deleteInvoice() {
+    if (!invoice) return;
+    if (
+      !confirmDelete(
+        `Permanently delete invoice ${invoice.invoiceNumber}?\n\nOnly draft or void invoices with no payments can be deleted.`
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setMessage(null);
+    const res = await fetch(`/api/admin/invoices/${id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (res.ok) {
+      router.push("/admin/invoices");
+    } else {
+      setMessage({ ok: false, text: data.error || `Delete failed (${res.status}).` });
+    }
+  }
+
+  async function deletePayment(paymentId: string, amountCents: number) {
+    if (
+      !confirmDelete(
+        `Permanently delete the ${fmt(amountCents)} payment? The invoice balance will be recalculated. Use only if the payment was recorded in error.`
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setMessage(null);
+    const res = await fetch(`/api/admin/invoices/${id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paymentId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setBusy(false);
+    setMessage(
+      res.ok
+        ? { ok: true, text: "Payment deleted — balance recalculated." }
+        : { ok: false, text: data.error || `Delete failed (${res.status}).` }
     );
     await load();
   }
@@ -204,6 +251,16 @@ export default function AdminInvoiceDetailPage() {
               <Ban className="size-4" aria-hidden /> Void
             </button>
           )}
+          {(invoice.status === "DRAFT" || invoice.status === "VOID") && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={deleteInvoice}
+              className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-red-200 px-4 py-2.5 text-sm font-medium text-red-800 hover:bg-red-50 disabled:opacity-50"
+            >
+              <Trash2 className="size-4" aria-hidden /> Delete
+            </button>
+          )}
         </div>
       </div>
 
@@ -314,9 +371,20 @@ export default function AdminInvoiceDetailPage() {
                       {p.paidAt ? ` · ${new Date(p.paidAt).toLocaleDateString()}` : ""}
                     </p>
                   </div>
-                  <span className="rounded-full border border-green-300 bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                    {fmtStatus(p.status)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full border border-green-300 bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                      {fmtStatus(p.status)}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => deletePayment(p.id, p.amountCents)}
+                      aria-label={`Delete payment of ${fmt(p.amountCents)}`}
+                      className="inline-flex size-8 items-center justify-center rounded-md border border-red-200 text-red-800 transition-colors hover:bg-red-50 disabled:opacity-50"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>

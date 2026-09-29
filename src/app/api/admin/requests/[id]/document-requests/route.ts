@@ -6,6 +6,7 @@ import {
   hasRole,
 } from "@/lib/auth";
 import { ApiError, handleApiError } from "@/lib/api-error";
+import { readDeleteId, requireAdminForDelete } from "@/lib/admin-delete";
 
 /** POST — admin requests a document from a client (audit logged). */
 export async function POST(
@@ -46,6 +47,47 @@ export async function POST(
     });
 
     return NextResponse.json({ id: docRequest.id, title: docRequest.title });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/** DELETE — remove a document request (ADMIN only). Body: { id }. */
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const admin = await requireAdminForDelete(request);
+    const docRequestId = await readDeleteId(request);
+
+    const docRequest = await prisma.documentRequest.findUnique({
+      where: { id: docRequestId },
+      select: { id: true, requestId: true, title: true, request: { select: { clientId: true } } },
+    });
+    if (!docRequest || docRequest.requestId !== id) {
+      throw ApiError.notFound("Document request not found");
+    }
+
+    await prisma.documentRequest.delete({ where: { id: docRequest.id } });
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: admin.id,
+        clientId: docRequest.request.clientId,
+        action: "ADMIN_ACTION",
+        resource: "document_request",
+        resourceId: docRequest.id,
+        metadata: JSON.stringify({
+          action: "DOCUMENT_REQUEST_DELETED",
+          requestId: id,
+          title: docRequest.title,
+        }),
+      },
+    });
+
+    return NextResponse.json({ success: true });
   } catch (error) {
     return handleApiError(error);
   }

@@ -2,11 +2,12 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { Users, Search, Plus, Copy, Check } from "lucide-react";
+import { Users, Search, Plus, Copy, Check, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { confirmDelete } from "@/lib/confirm-delete";
 
 type Client = {
   id: string;
@@ -48,6 +49,8 @@ export default function AdminClientsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<CreatedClient | null>(null);
   const [copied, setCopied] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [listError, setListError] = useState("");
 
   async function fetchClients() {
     try {
@@ -105,6 +108,31 @@ export default function AdminClientsPage() {
       setFormError("Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleDeleteClient(client: Client) {
+    if (
+      !confirmDelete(
+        `Permanently delete "${client.name}"?\n\nThis removes the business, its ${client.memberCount} member account(s), all ${client.requestCount} request(s), documents, messages, and invoices.\n\nThis cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setDeletingId(client.id);
+    setListError("");
+    try {
+      const res = await fetch(`/api/admin/clients/${client.id}`, { method: "DELETE" });
+      if (res.ok) {
+        await fetchClients();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setListError(data.error || `Delete failed (${res.status})`);
+      }
+    } catch {
+      setListError("Something went wrong. Please try again.");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -269,6 +297,15 @@ export default function AdminClientsPage() {
         />
       </div>
 
+      {listError && (
+        <p
+          role="alert"
+          className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+        >
+          {listError}
+        </p>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <p className="text-sm text-muted-gray">Loading clients...</p>
@@ -288,29 +325,42 @@ export default function AdminClientsPage() {
       ) : (
         <div className="divide-y divide-border rounded-lg border border-border bg-card">
           {filtered.map((client) => (
-            <Link
+            <div
               key={client.id}
-              href={`/admin/clients/${client.id}`}
               className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-cream/50"
             >
-              <div className="min-w-0">
+              <Link href={`/admin/clients/${client.id}`} className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-charcoal">{client.name}</p>
                 <p className="mt-0.5 text-xs text-muted-gray">
                   {client.memberCount} member{client.memberCount !== 1 ? "s" : ""} ·{" "}
                   {client.requestCount} request{client.requestCount !== 1 ? "s" : ""} · Created{" "}
                   {formatDate(client.createdAt)}
                 </p>
+              </Link>
+              <div className="ml-4 flex shrink-0 items-center gap-2">
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    client.status === "ACTIVE"
+                      ? "bg-green-50 text-green-700 border border-green-200"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {client.status}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={deletingId === client.id}
+                  onClick={() => handleDeleteClient(client)}
+                  className="min-h-10 border-red-200 px-3 text-red-800 hover:bg-red-50"
+                >
+                  <Trash2 className="size-4" />
+                  <span className="sr-only">Delete {client.name}</span>
+                  <span aria-hidden="true">Delete</span>
+                </Button>
               </div>
-              <span
-                className={`ml-4 shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                  client.status === "ACTIVE"
-                    ? "bg-green-50 text-green-700 border border-green-200"
-                    : "bg-muted text-muted-foreground"
-                }`}
-              >
-                {client.status}
-              </span>
-            </Link>
+            </div>
           ))}
         </div>
       )}

@@ -12,9 +12,11 @@ import {
   AlertCircle,
   CheckCircle2,
   PauseCircle,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { confirmDelete } from "@/lib/confirm-delete";
 
 type User = {
   id: string;
@@ -65,6 +67,37 @@ export default function AdminTeamPage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState("");
+
+  async function handleDelete(u: User) {
+    if (
+      !confirmDelete(
+        `Permanently delete the account ${u.name} (${u.email})?\n\nUsers with activity history cannot be deleted — you'll be told why if so.`
+      )
+    ) {
+      return;
+    }
+    setDeletingId(u.id);
+    setActionError("");
+    try {
+      const res = await fetch("/api/admin/team", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: u.id }),
+      });
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setActionError(data.error || `Delete failed (${res.status})`);
+      }
+    } catch {
+      setActionError("Delete failed");
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   useEffect(() => {
     async function fetchData() {
@@ -167,6 +200,12 @@ export default function AdminTeamPage() {
         </div>
       </div>
 
+      {actionError && (
+        <p role="alert" className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {actionError}
+        </p>
+      )}
+
       {/* Users list */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -190,6 +229,7 @@ export default function AdminTeamPage() {
                 <th className="px-4 py-3 font-semibold text-charcoal">Requests</th>
                 <th className="px-4 py-3 font-semibold text-charcoal">Last login</th>
                 <th className="px-4 py-3 font-semibold text-charcoal">Joined</th>
+                <th className="px-4 py-3 font-semibold text-charcoal"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -251,6 +291,17 @@ export default function AdminTeamPage() {
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {formatDate(u.createdAt)}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(u)}
+                      disabled={deletingId === u.id}
+                      aria-label={`Delete ${u.name}`}
+                      className="inline-flex items-center gap-1 rounded-md border border-red-200 px-2.5 py-1.5 text-sm font-medium text-red-800 transition-colors hover:bg-red-50 disabled:opacity-50"
+                    >
+                      <Trash2 className="size-3.5" /> Delete
+                    </button>
                   </td>
                 </tr>
               ))}
