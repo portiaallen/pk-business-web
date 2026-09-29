@@ -113,6 +113,12 @@ export default function LoginPage() {
 
         {/* Help */}
         <p className="mt-6 text-center text-sm text-muted-gray">
+          Forgot your password?{" "}
+          <Link href="/forgot-password" className="font-medium text-charcoal underline-offset-2 hover:underline">
+            Reset it here
+          </Link>
+        </p>
+        <p className="mt-2 text-center text-sm text-muted-gray">
           Need access?{" "}
           <Link href="/contact" className="font-medium text-charcoal underline-offset-2 hover:underline">
             Request a consultation
