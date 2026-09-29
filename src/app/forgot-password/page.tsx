@@ -6,7 +6,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MIN_PASSWORD_LENGTH } from "@/lib/password-reset";
+
+// Client-safe local constant — do not import from @/lib/password-reset here;
+// that module pulls in server-only deps (nodemailer/prisma/crypto).
+const MIN_PASSWORD_LENGTH = 12;
 
 function ForgotPasswordInner() {
   const searchParams = useSearchParams();
