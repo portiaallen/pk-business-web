@@ -80,9 +80,24 @@ export async function requestPasswordReset(
     Date.now() + RESET_TOKEN_TTL_MINUTES * 60 * 1000
   );
 
-  await prisma.passwordResetToken.create({
+  const created = await prisma.passwordResetToken.create({
     data: { userId: user.id, tokenHash: hashResetToken(token), expiresAt },
   });
+
+  const resetUrl = `${getSiteOrigin()}/forgot-password?token=${encodeURIComponent(token)}`;
+
+  // If the email cannot be sent, roll the token back so the user can retry
+  // immediately (no cooldown penalty for a failed send). The response is the
+  // same generic message either way.
+  try {
+    await sendResetEmail(resetUrl);
+  } catch (error) {
+    await prisma.passwordResetToken.delete({ where: { id: created.id } }).catch(() => {});
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Password reset email failed:", error);
+    }
+    return { accepted: true };
+  }
 
   await prisma.auditLog.create({
     data: {
@@ -93,10 +108,6 @@ export async function requestPasswordReset(
       metadata: JSON.stringify({ recipient: PASSWORD_RESET_RECIPIENT_EMAIL }),
     },
   });
-
-  const resetUrl = `${getSiteOrigin()}/forgot-password?token=${encodeURIComponent(token)}`;
-
-  await sendResetEmail(resetUrl);
 
   return { accepted: true };
 }
@@ -153,38 +164,41 @@ export async function confirmPasswordReset(
 
   const tokenHash = hashResetToken(token);
   const now = new Date();
-
-  // Atomic one-use consumption: only succeeds if unused and unexpired.
-  const consumed = await prisma.passwordResetToken.updateMany({
-    where: { tokenHash, usedAt: null, expiresAt: { gt: now } },
-    data: { usedAt: now },
-  });
-
-  if (consumed.count !== 1) {
-    throw ApiError.badRequest("Invalid or expired reset link");
-  }
-
-  const resetToken = await prisma.passwordResetToken.findUnique({
-    where: { tokenHash },
-  });
-  if (!resetToken) {
-    throw ApiError.badRequest("Invalid or expired reset link");
-  }
-
   const passwordHash = await bcrypt.hash(password, 12);
 
-  await prisma.$transaction([
-    prisma.user.update({
+  // Everything happens in one interactive transaction: the token is consumed
+  // only if the password update, session revocation, and audit all succeed.
+  // If any step fails the whole transaction rolls back, so the link stays
+  // usable instead of being burned by a partial failure.
+  await prisma.$transaction(async (tx) => {
+    // Atomic one-use consumption: only succeeds if unused and unexpired.
+    const consumed = await tx.passwordResetToken.updateMany({
+      where: { tokenHash, usedAt: null, expiresAt: { gt: now } },
+      data: { usedAt: now },
+    });
+
+    if (consumed.count !== 1) {
+      throw ApiError.badRequest("Invalid or expired reset link");
+    }
+
+    const resetToken = await tx.passwordResetToken.findUnique({
+      where: { tokenHash },
+    });
+    if (!resetToken) {
+      throw ApiError.badRequest("Invalid or expired reset link");
+    }
+
+    await tx.user.update({
       where: { id: resetToken.userId },
       data: { passwordHash },
-    }),
+    });
     // Revoke every session for this user.
-    prisma.session.deleteMany({ where: { userId: resetToken.userId } }),
+    await tx.session.deleteMany({ where: { userId: resetToken.userId } });
     // Revoke any other reset tokens for this user.
-    prisma.passwordResetToken.deleteMany({
+    await tx.passwordResetToken.deleteMany({
       where: { userId: resetToken.userId, id: { not: resetToken.id } },
-    }),
-    prisma.auditLog.create({
+    });
+    await tx.auditLog.create({
       data: {
         actorId: resetToken.userId,
         action: AuditAction.PASSWORD_RESET_COMPLETED,
@@ -192,6 +206,6 @@ export async function confirmPasswordReset(
         resourceId: resetToken.userId,
         metadata: JSON.stringify({ method: "self_service_reset" }),
       },
-    }),
-  ]);
+    });
+  });
 }
