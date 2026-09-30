@@ -54,13 +54,13 @@ export default function AdminLayout({
           if (data.user?.role === "ADMIN") {
             setUser(data.user);
           } else {
-            window.location.href = "/portal/login?returnTo=/admin/dashboard";
+            window.location.href = "/portal/login?admin=1";
           }
         } else {
-          window.location.href = "/portal/login?returnTo=/admin/dashboard";
+          window.location.href = "/portal/login?admin=1";
         }
       } catch {
-        window.location.href = "/portal/login?returnTo=/admin/dashboard";
+        window.location.href = "/portal/login?admin=1";
       } finally {
         setChecking(false);
       }

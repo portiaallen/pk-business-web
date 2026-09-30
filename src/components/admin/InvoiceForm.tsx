@@ -87,7 +87,7 @@ export function InvoiceForm({ mode, invoiceId }: { mode: "create" | "edit"; invo
     setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
   }
 
-  async function save(thenPreview: boolean) {
+  async function save() {
     setError("");
     if (!clientId) {
       setError("Select a client before saving.");
@@ -131,12 +131,7 @@ export function InvoiceForm({ mode, invoiceId }: { mode: "create" | "edit"; invo
       setError(data.error || `Save failed (${res.status}).`);
       return;
     }
-    const id = mode === "create" ? data.invoice.id : invoiceId;
-    if (thenPreview) {
-      router.push(`/admin/invoices/${id}/preview`);
-    } else {
-      router.push(`/admin/invoices/${id}`);
-    }
+    router.push("/admin/invoices/");
   }
 
   if (loading) {
@@ -418,7 +413,7 @@ export function InvoiceForm({ mode, invoiceId }: { mode: "create" | "edit"; invo
               <button
                 type="button"
                 disabled={saving || !clientId}
-                onClick={() => save(true)}
+                onClick={save}
                 className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-charcoal px-4 py-2.5 text-sm font-medium text-ivory transition-colors hover:bg-charcoal/90 disabled:opacity-50"
               >
                 <Eye className="size-4" aria-hidden />
@@ -427,7 +422,7 @@ export function InvoiceForm({ mode, invoiceId }: { mode: "create" | "edit"; invo
               <button
                 type="button"
                 disabled={saving || !clientId}
-                onClick={() => save(false)}
+                onClick={save}
                 className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-charcoal hover:bg-secondary disabled:opacity-50"
               >
                 Save Draft

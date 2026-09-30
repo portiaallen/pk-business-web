@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
+import {
+  formatCalendarDate,
+  todayBusinessCalendarDate,
+} from "@/lib/calendar-date";
 
 // ─── Invoice domain helpers ───────────────────────────────────────────────────
 // Built on the existing Invoice/Payment models (extended additively).
@@ -79,7 +83,11 @@ export function effectiveStatus(
   }
   if (paidCents >= amountCents && amountCents > 0) return "PAID";
   if (paidCents > 0) return "PARTIALLY_PAID";
-  if (dueAt && dueAt < new Date() && (status === "SENT" || status === "VIEWED")) {
+  if (
+    dueAt &&
+    dueAt.toISOString().slice(0, 10) < todayBusinessCalendarDate() &&
+    (status === "SENT" || status === "VIEWED")
+  ) {
     return "OVERDUE";
   }
   return status; // SENT / VIEWED / UNPAID
@@ -89,8 +97,15 @@ export function paidCentsOf(
   payments: Array<{ status: string; amountCents: number }>
 ): number {
   return payments
-    .filter((p) => p.status === "PAID" || p.status === "PENDING")
+    .filter((p) => p.status === "PAID")
     .reduce((sum, p) => sum + p.amountCents, 0);
+}
+
+export function isStripeConfigured(): boolean {
+  return Boolean(
+    process.env.STRIPE_SECRET_KEY?.trim() &&
+    process.env.STRIPE_WEBHOOK_SECRET?.trim()
+  );
 }
 
 export async function logActivity(
@@ -137,7 +152,7 @@ export function buildInvoiceEmailHtml(opts: {
 }): string {
   const { invoiceNumber, clientName, totalCents, dueAt, paymentTerms, portalUrl, isResend } = opts;
   const amount = `$${(totalCents / 100).toFixed(2)}`;
-  const due = dueAt ? dueAt.toLocaleDateString("en-US", { dateStyle: "long" }) : "upon receipt";
+  const due = dueAt ? formatCalendarDate(dueAt.toISOString()) : "upon receipt";
   return `<!DOCTYPE html>
 <html><body style="margin:0;padding:0;background:#faf9f7;font-family:Georgia,serif;color:#1c1917;">
   <div style="max-width:560px;margin:0 auto;padding:24px;">

@@ -15,6 +15,7 @@ import {
   INVOICE_PAYMENT_TERMS_PRESETS,
 } from "@/lib/invoices";
 import { readDeleteId, requireAdminForDelete } from "@/lib/admin-delete";
+import { parseCalendarDate } from "@/lib/calendar-date";
 
 async function requireAdmin(request: Request) {
   const token = getSessionTokenFromRequest(request);
@@ -232,9 +233,7 @@ export async function PATCH(
     if (body.paymentInstructions !== undefined)
       data.paymentInstructions = body.paymentInstructions ? String(body.paymentInstructions) : null;
     if (body.dueAt !== undefined) {
-      const dueAt = body.dueAt ? new Date(String(body.dueAt)) : null;
-      if (dueAt && Number.isNaN(dueAt.getTime())) throw ApiError.badRequest("Invalid due date.");
-      data.dueAt = dueAt;
+      data.dueAt = parseCalendarDate(body.dueAt);
     }
     if (body.requestId !== undefined) data.requestId = body.requestId ? String(body.requestId) : null;
     if (body.paymentTerms !== undefined) {

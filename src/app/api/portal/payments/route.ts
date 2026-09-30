@@ -5,6 +5,7 @@ import {
   getSessionTokenFromRequest,
 } from "@/lib/auth";
 import { handleApiError, ApiError } from "@/lib/api-error";
+import { isStripeConfigured } from "@/lib/invoices";
 
 /**
  * Payment options shown to the authenticated client in the portal.
@@ -27,8 +28,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       zelleEmail: process.env.PAYMENT_ZELLE_EMAIL || "portiaallen40@gmail.com",
       cashAppTag: process.env.PAYMENT_CASHAPP_TAG || "$portiaallen40",
-      stripeEnabled: true,
-      stripeUrl: process.env.PAYMENT_STRIPE_URL || "https://buy.stripe.com/5kQ3cu1Hw0252lpdNTdnW09",
+      stripeEnabled: isStripeConfigured(),
     });
   } catch (error) {
     return handleApiError(error);

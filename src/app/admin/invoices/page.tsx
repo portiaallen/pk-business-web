@@ -14,6 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { confirmDelete } from "@/lib/confirm-delete";
+import { formatCalendarDate } from "@/lib/calendar-date";
 
 type Invoice = {
   id: string;
@@ -224,7 +225,7 @@ export default function AdminInvoicesPage() {
                       <> · paid {fmt(inv.paidCents)} · balance {fmt(inv.balanceCents)}</>
                     )}
                     {inv.dueAt && inv.status !== "PAID" && (
-                      <> · due {new Date(inv.dueAt).toLocaleDateString()}</>
+                      <> · due {formatCalendarDate(inv.dueAt)}</>
                     )}
                   </p>
                 </div>

@@ -15,12 +15,27 @@ import {
 } from "@/lib/rate-limit";
 import { AuditAction } from "@/generated/prisma/client";
 
+function safeReturnTo(value: unknown): string | null {
+  if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) {
+    return null;
+  }
+  try {
+    const base = new URL("https://pk-business.invalid");
+    const target = new URL(value, base);
+    if (target.origin !== base.origin) return null;
+    return `${target.pathname}${target.search}${target.hash}`;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
     const password = typeof body.password === "string" ? body.password : "";
-    const returnTo = typeof body.returnTo === "string" ? body.returnTo : undefined;
+    const adminMode = body.adminMode === true;
+    const returnTo = safeReturnTo(body.returnTo);
 
     if (!email || !password) {
       throw ApiError.badRequest("Email and password are required");
@@ -68,6 +83,10 @@ export async function POST(request: Request) {
     // Successful authentication — clear failed-attempt state
     await clearFailedLogins(email);
 
+    if (adminMode && !hasRole(user, "ADMIN")) {
+      throw ApiError.forbidden("Administrator access is required.");
+    }
+
     const token = await createSession(user.id);
 
     // Audit log
@@ -81,13 +100,17 @@ export async function POST(request: Request) {
     });
 
     // Determine redirect destination
-    let redirectUrl = "/portal/dashboard";
-    if (returnTo && returnTo.startsWith("/")) {
-      redirectUrl = returnTo;
-    }
-    if (hasRole(user, "ADMIN") && !returnTo) {
-      redirectUrl = "/admin/dashboard";
-    }
+    const isAdmin = hasRole(user, "ADMIN");
+    const isAdminPath = (path: string) => path === "/admin" || path.startsWith("/admin/");
+    const redirectUrl = isAdmin
+      ? adminMode
+        ? returnTo && isAdminPath(returnTo)
+          ? returnTo
+          : "/admin/dashboard"
+        : returnTo || "/admin/dashboard"
+      : returnTo && !isAdminPath(returnTo)
+        ? returnTo
+        : "/portal/dashboard";
 
     const response = NextResponse.json({
       success: true,

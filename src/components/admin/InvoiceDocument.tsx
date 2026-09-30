@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { CreditCard, Building, DollarSign } from "lucide-react";
+import { formatCalendarDate } from "@/lib/calendar-date";
 
 type LineItem = { description: string; quantity: number; rateCents: number; amountCents: number };
 
@@ -35,7 +37,7 @@ export function InvoiceDocument({
   notes: string | null;
   paymentInstructions: string | null;
   dueAt: string | null;
-  paymentOptions?: { stripeUrl: string; zelleEmail: string; cashAppTag: string };
+  paymentOptions?: { zelleEmail: string; cashAppTag: string };
 }) {
   return (
     <div className="rounded-xl border border-border bg-card p-6 sm:p-8">
@@ -65,7 +67,7 @@ export function InvoiceDocument({
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-gray">Due</p>
           <p className="font-semibold text-charcoal">
-            {dueAt ? new Date(dueAt).toLocaleDateString() : "Upon receipt"}
+            {dueAt ? formatCalendarDate(dueAt) : "Upon receipt"}
           </p>
         </div>
       </div>
@@ -138,14 +140,12 @@ export function InvoiceDocument({
         {paymentInstructions && <p className="mt-1 text-sm text-charcoal">{paymentInstructions}</p>}
         {paymentOptions ? (
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            <a
-              href={paymentOptions.stripeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/portal/invoices"
               className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-charcoal px-4 py-2.5 text-sm font-medium text-ivory hover:bg-charcoal/90"
             >
               <CreditCard className="size-4" aria-hidden /> Pay by Card
-            </a>
+            </Link>
             <div className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm text-charcoal">
               <Building className="size-4" aria-hidden /> Zelle: {paymentOptions.zelleEmail}
             </div>
@@ -154,9 +154,17 @@ export function InvoiceDocument({
             </div>
           </div>
         ) : (
-          <p className="mt-2 text-sm text-muted-gray">
-            Card (Stripe), Zelle, or Cash App — payment links and details are provided in the client portal and at pkservices.business/pay. No card-payment service fee is charged.
-          </p>
+          <div className="mt-3 space-y-2">
+            <Link
+              href="/portal/invoices"
+              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-charcoal px-4 py-2.5 text-sm font-medium text-ivory hover:bg-charcoal/90"
+            >
+              <CreditCard className="size-4" aria-hidden /> Pay by Card in the Client Portal
+            </Link>
+            <p className="text-sm text-muted-gray">
+              Zelle or Cash App details are available in the client portal and at pkservices.business/pay. No card-payment service fee is charged.
+            </p>
+          </div>
         )}
         <p className="mt-3 text-xs text-muted-gray">
           Please include the invoice number ({invoiceNumber}) in your payment note.

@@ -79,7 +79,7 @@ export async function POST(
         );
       }
 
-      const portalUrl = `${(process.env.NEXT_PUBLIC_APP_URL || "https://www.pkservices.business").replace(/\/$/, "")}/portal/requests${invoice.requestId ? `/${invoice.requestId}` : ""}`;
+      const portalUrl = `${(process.env.NEXT_PUBLIC_APP_URL || "https://www.pkservices.business").replace(/\/$/, "")}/portal/invoices?invoice=${encodeURIComponent(invoice.id)}`;
 
       const result = await deliverInvoiceNotification({
         userId: recipient.id,

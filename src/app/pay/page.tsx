@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import Link from "next/link";
 import { CreditCard, Building, DollarSign, ArrowLeft } from "lucide-react";
 import { siteConfig } from "@/content/site";
@@ -10,14 +11,17 @@ export const metadata: Metadata = {
     "Payment options for PK Business Services invoices: credit/debit card via Stripe, Zelle, and Cash App.",
 };
 
-const STRIPE_URL =
-  process.env.PAYMENT_STRIPE_URL ||
-  "https://buy.stripe.com/5kQ3cu1Hw0252lpdNTdnW09";
 const ZELLE_EMAIL =
   process.env.PAYMENT_ZELLE_EMAIL || "portiaallen40@gmail.com";
 const CASH_APP_TAG = process.env.PAYMENT_CASHAPP_TAG || "$portiaallen40";
 
-export default function PublicPayPage() {
+export default async function PublicPayPage() {
+  await connection();
+  const stripeEnabled = Boolean(
+    process.env.STRIPE_SECRET_KEY?.trim() &&
+    process.env.STRIPE_WEBHOOK_SECRET?.trim()
+  );
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-border bg-background">
@@ -64,18 +68,21 @@ export default function PublicPayPage() {
                       Credit / Debit Card
                     </h2>
                     <p className="mt-1 text-sm text-muted-gray">
-                      Secure checkout hosted by Stripe. All major cards
-                      accepted.
+                      Secure exact-balance checkout hosted by Stripe. Sign-in is required to pay by card.
                     </p>
-                    <a
-                      href={STRIPE_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg bg-charcoal px-5 py-2.5 text-sm font-medium text-ivory transition-colors hover:bg-charcoal/90"
-                    >
-                      <CreditCard className="size-4" aria-hidden />
-                      Pay by Card
-                    </a>
+                    {stripeEnabled ? (
+                      <Link
+                        href="/portal/invoices"
+                        className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg bg-charcoal px-5 py-2.5 text-sm font-medium text-ivory transition-colors hover:bg-charcoal/90"
+                      >
+                        <CreditCard className="size-4" aria-hidden />
+                        Sign in to pay by card
+                      </Link>
+                    ) : (
+                      <p className="mt-4 text-sm text-muted-gray">
+                        Card payments are currently unavailable.
+                      </p>
+                    )}
                   </div>
                 </div>
               </section>

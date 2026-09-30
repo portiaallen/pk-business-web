@@ -40,7 +40,15 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/portal/login?returnTo=/admin/dashboard"
+                  href="/portal/login"
+                  className="text-sm text-ivory/80 transition-colors hover:text-gold"
+                >
+                  Client Sign In
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/portal/login?admin=1"
                   className="text-sm text-ivory/80 transition-colors hover:text-gold focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
                 >
                   Admin Sign In

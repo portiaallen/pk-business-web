@@ -15,7 +15,7 @@ export function proxy(request: NextRequest) {
     }
     if (!hasSession) {
       const loginUrl = new URL("/portal/login", request.url);
-      loginUrl.searchParams.set("returnTo", pathname);
+      loginUrl.searchParams.set("returnTo", `${pathname}${request.nextUrl.search}`);
       return NextResponse.redirect(loginUrl);
     }
   }
@@ -23,8 +23,7 @@ export function proxy(request: NextRequest) {
   // Admin routes require authentication (role check happens server-side in API)
   if (pathname.startsWith("/admin")) {
     if (!hasSession) {
-      const loginUrl = new URL("/portal/login", request.url);
-      loginUrl.searchParams.set("returnTo", pathname);
+      const loginUrl = new URL("/portal/login?admin=1", request.url);
       return NextResponse.redirect(loginUrl);
     }
   }

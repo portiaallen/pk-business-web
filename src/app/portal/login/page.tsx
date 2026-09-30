@@ -9,7 +9,17 @@ import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
-  const returnTo = searchParams.get("returnTo") || "/portal/dashboard";
+  const adminMode = searchParams.get("admin") === "1";
+  const requestedReturnTo = searchParams.get("returnTo");
+  const safeReturnTo =
+    requestedReturnTo?.startsWith("/") &&
+    !requestedReturnTo.startsWith("//") &&
+    !requestedReturnTo.includes("\\");
+  const returnTo = safeReturnTo
+    ? requestedReturnTo
+    : adminMode
+      ? "/admin/dashboard"
+      : "/portal/dashboard";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,7 +35,7 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, returnTo }),
+        body: JSON.stringify({ email, password, returnTo, adminMode }),
       });
 
       const data = await res.json();
@@ -54,10 +64,12 @@ export default function LoginPage() {
             </span>
           </Link>
           <h1 className="mt-4 font-heading text-3xl font-semibold text-charcoal">
-            Client Portal
+            {adminMode ? "Admin Sign In" : "Client Portal"}
           </h1>
           <p className="mt-2 text-sm text-muted-gray">
-            Sign in to access your business workspace
+            {adminMode
+              ? "Sign in with your administrator account"
+              : "Sign in to access your business workspace"}
           </p>
         </div>
 

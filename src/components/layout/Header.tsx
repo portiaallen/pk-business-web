@@ -98,6 +98,15 @@ export function Header() {
                 </Link>
               </li>
             ))}
+            <li>
+              <Link
+                href="/portal/login"
+                onClick={() => setMobileOpen(false)}
+                className="block rounded-md px-3 py-2.5 text-base font-medium text-muted-gray transition-colors hover:bg-secondary/60"
+              >
+                Client Sign In
+              </Link>
+            </li>
             <li className="pt-2">
               <Button
                 render={<Link href={siteConfig.cta.href} />}

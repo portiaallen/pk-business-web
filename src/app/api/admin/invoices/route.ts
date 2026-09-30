@@ -14,6 +14,7 @@ import {
   logActivity,
   INVOICE_PAYMENT_TERMS_PRESETS,
 } from "@/lib/invoices";
+import { parseCalendarDate } from "@/lib/calendar-date";
 
 async function requireAdmin(request: Request) {
   const token = getSessionTokenFromRequest(request);
@@ -141,8 +142,7 @@ export async function POST(request: Request) {
     const amountCents = subtotalCents + adjustmentCents;
     if (amountCents <= 0) throw ApiError.badRequest("Invoice total must be greater than zero.");
 
-    const dueAt = body.dueAt ? new Date(String(body.dueAt)) : null;
-    if (dueAt && Number.isNaN(dueAt.getTime())) throw ApiError.badRequest("Invalid due date.");
+    const dueAt = parseCalendarDate(body.dueAt);
 
     const paymentTermsKey = body.paymentTerms ? String(body.paymentTerms) : null;
     const paymentTerms =

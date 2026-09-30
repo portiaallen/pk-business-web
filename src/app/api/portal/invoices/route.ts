@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, getSessionTokenFromRequest } from "@/lib/auth";
 import { ApiError, handleApiError } from "@/lib/api-error";
-import { effectiveStatus, paidCentsOf, PUBLIC_PAY_URL } from "@/lib/invoices";
+import {
+  effectiveStatus,
+  paidCentsOf,
+  PUBLIC_PAY_URL,
+  isStripeConfigured,
+} from "@/lib/invoices";
 
 /**
  * GET /api/portal/invoices — invoices for the authenticated client ONLY.
@@ -52,9 +57,7 @@ export async function GET(request: Request) {
           };
         }),
       paymentOptions: {
-        stripeUrl:
-          process.env.PAYMENT_STRIPE_URL ||
-          "https://buy.stripe.com/5kQ3cu1Hw0252lpdNTdnW09",
+          stripeEnabled: isStripeConfigured(),
         zelleEmail: process.env.PAYMENT_ZELLE_EMAIL || "portiaallen40@gmail.com",
         cashAppTag: process.env.PAYMENT_CASHAPP_TAG || "$portiaallen40",
         publicPayUrl: PUBLIC_PAY_URL,

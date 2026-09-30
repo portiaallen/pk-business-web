@@ -1,12 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Copy, Check, CreditCard, Building, DollarSign, Mail } from "lucide-react";
 
 type PaymentConfig = {
   stripeEnabled: boolean;
-  stripeUrl?: string;
-  stripeNote?: string;
   zelleEmail: string;
   cashAppTag: string;
 };
@@ -88,22 +87,19 @@ export default function PortalPaymentsPage() {
                 Credit / Debit Card — Stripe
               </h2>
               <p className="mt-1 text-sm text-muted-gray">
-                Secure card checkout hosted by Stripe. Use the payment link
-                provided on your invoice or in your email.
+                Secure card checkout is available from your invoice for its exact remaining balance.
               </p>
-              {config?.stripeUrl ? (
-                <a
-                  href={config.stripeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+              {config?.stripeEnabled ? (
+                <Link
+                  href="/portal/invoices"
                   className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-md bg-charcoal px-4 py-2 text-sm font-medium text-ivory transition-colors hover:bg-charcoal/90"
                 >
                   <CreditCard className="size-4" aria-hidden />
-                  Pay by Card
-                </a>
+                  Choose an invoice to pay by card
+                </Link>
               ) : (
                 <p className="mt-4 text-sm text-muted-gray">
-                  A card payment link is provided separately with each invoice.
+                  Card payments are currently unavailable.
                 </p>
               )}
             </div>

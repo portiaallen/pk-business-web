@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { CreditCard, Building, DollarSign, FileText } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { formatCalendarDate } from "@/lib/calendar-date";
 
 type LineItem = { description: string; quantity: number; rateCents: number; amountCents: number };
 type Invoice = {
@@ -21,7 +22,7 @@ type Invoice = {
   paymentInstructions: string | null;
   dueAt: string | null;
 };
-type PaymentOptions = { stripeUrl: string; zelleEmail: string; cashAppTag: string };
+type PaymentOptions = { stripeEnabled: boolean; zelleEmail: string; cashAppTag: string };
 
 function fmt(c: number) {
   return `$${(c / 100).toFixed(2)}`;
@@ -40,9 +41,14 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default function PortalInvoicesPage() {
   const { loading: authLoading } = useAuth();
+  const searchParams = useSearchParams();
+  const focusedInvoiceId = searchParams.get("invoice");
+  const checkoutStatus = searchParams.get("checkout");
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
   const [options, setOptions] = useState<PaymentOptions | null>(null);
   const [error, setError] = useState("");
+  const [checkoutError, setCheckoutError] = useState("");
+  const [checkoutInvoiceId, setCheckoutInvoiceId] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -63,6 +69,44 @@ export default function PortalInvoicesPage() {
       .catch(() => setError("Unable to load invoices."));
   }, [authLoading]);
 
+  useEffect(() => {
+    if (!invoices || !focusedInvoiceId) return;
+    document.getElementById(`invoice-${focusedInvoiceId}`)?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }, [invoices, focusedInvoiceId]);
+
+  async function startCheckout(invoiceId: string) {
+    if (checkoutInvoiceId) return;
+    setCheckoutError("");
+    setCheckoutInvoiceId(invoiceId);
+    try {
+      const res = await fetch(`/api/portal/invoices/${invoiceId}/checkout`, {
+        method: "POST",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCheckoutError(data.error || `Unable to start checkout (${res.status}).`);
+        return;
+      }
+      if (typeof data.url !== "string") {
+        setCheckoutError("Stripe did not return a checkout link. Please try again.");
+        return;
+      }
+      const checkoutUrl = new URL(data.url);
+      if (checkoutUrl.protocol !== "https:" || checkoutUrl.hostname !== "checkout.stripe.com") {
+        setCheckoutError("Stripe returned an invalid checkout link.");
+        return;
+      }
+      window.location.assign(checkoutUrl.toString());
+    } catch {
+      setCheckoutError("Unable to start checkout. Please try again.");
+    } finally {
+      setCheckoutInvoiceId(null);
+    }
+  }
+
   if (invoices === null && !error) {
     return <p className="py-16 text-center text-sm text-muted-gray">Loading…</p>;
   }
@@ -79,6 +123,22 @@ export default function PortalInvoicesPage() {
         </p>
       </div>
 
+      {checkoutError && (
+        <p role="alert" className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {checkoutError}
+        </p>
+      )}
+      {checkoutStatus === "success" && (
+        <p role="status" className="rounded-md border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-900">
+          Checkout completed. Payment confirmation will appear here shortly.
+        </p>
+      )}
+      {checkoutStatus === "cancelled" && (
+        <p role="status" className="rounded-md border border-border bg-card px-4 py-3 text-sm text-muted-gray">
+          Card checkout was cancelled. Your invoice is still available to pay.
+        </p>
+      )}
+
       {(invoices?.length ?? 0) === 0 ? (
         <div className="rounded-lg border border-border bg-card p-10 text-center">
           <FileText className="mx-auto size-10 text-muted-gray/40" />
@@ -87,14 +147,18 @@ export default function PortalInvoicesPage() {
       ) : (
         <div className="space-y-6">
           {invoices!.map((inv) => (
-            <article key={inv.id} className="rounded-xl border border-border bg-card p-6">
+            <article
+              key={inv.id}
+              id={`invoice-${inv.id}`}
+              className={`rounded-xl border bg-card p-6 ${focusedInvoiceId === inv.id ? "border-gold ring-2 ring-gold/30" : "border-border"}`}
+            >
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-4">
                 <div>
                   <h2 className="font-heading text-xl font-semibold text-charcoal">
                     Invoice {inv.invoiceNumber}
                   </h2>
                   <p className="text-sm text-muted-gray">
-                    Due {inv.dueAt ? new Date(inv.dueAt).toLocaleDateString() : "upon receipt"}
+                    Due {inv.dueAt ? formatCalendarDate(inv.dueAt) : "upon receipt"}
                   </p>
                 </div>
                 <span
@@ -165,14 +229,19 @@ export default function PortalInvoicesPage() {
 
               {inv.balanceCents > 0 && options && (
                 <div className="mt-4 flex flex-wrap gap-3">
-                  <a
-                    href={options.stripeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-charcoal px-4 py-2.5 text-sm font-medium text-ivory hover:bg-charcoal/90"
-                  >
-                    <CreditCard className="size-4" aria-hidden /> Pay by Card
-                  </a>
+                  {options.stripeEnabled && (
+                    <button
+                      type="button"
+                      onClick={() => startCheckout(inv.id)}
+                      disabled={checkoutInvoiceId !== null}
+                      className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-charcoal px-4 py-2.5 text-sm font-medium text-ivory hover:bg-charcoal/90 disabled:opacity-50"
+                    >
+                      <CreditCard className="size-4" aria-hidden />
+                      {checkoutInvoiceId === inv.id
+                        ? "Opening secure checkout..."
+                        : `Pay exact balance ${fmt(inv.balanceCents)}`}
+                    </button>
+                  )}
                   <div className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm text-charcoal">
                     <Building className="size-4" aria-hidden /> Zelle: {options.zelleEmail}
                   </div>
