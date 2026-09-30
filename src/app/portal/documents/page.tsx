@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FolderOpen, Download, FileText } from "lucide-react";
+import Link from "next/link";
+import { FolderOpen, Download, FileText, Upload } from "lucide-react";
 
 type Document = {
   id: string;
@@ -50,6 +51,17 @@ export default function PortalDocumentsPage() {
         <p className="mt-2 text-muted-gray">
           View and manage documents associated with your service requests.
         </p>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Link
+            href="/portal/requests"
+            className="inline-flex min-h-10 items-center gap-2 rounded-md bg-charcoal px-4 py-2 text-sm font-medium text-ivory hover:bg-charcoal/90"
+          >
+            <Upload className="size-4" /> Upload a document
+          </Link>
+          <p className="text-xs text-muted-gray">
+            Upload from a request page. PDF, Word, Excel, CSV, text, PNG, JPEG, or WebP; maximum 25 MB.
+          </p>
+        </div>
       </div>
 
       {loading ? (
@@ -97,7 +109,13 @@ export default function PortalDocumentsPage() {
                   {doc.reviewStatus}
                 </span>
                 {doc.uploadStatus === "UPLOADED" && (
-                  <Download className="size-4 shrink-0 text-muted-gray cursor-pointer hover:text-charcoal" />
+                  <a
+                    href={`/api/portal/documents/${doc.id}`}
+                    className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-charcoal hover:bg-muted"
+                  >
+                    <Download className="size-4" />
+                    <span>Download</span>
+                  </a>
                 )}
               </div>
             </div>

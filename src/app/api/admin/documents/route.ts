@@ -18,7 +18,10 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const clientId = url.searchParams.get("clientId");
 
-    const where = clientId ? { request: { clientId } } : {};
+    const where = {
+      retentionStatus: "ACTIVE" as const,
+      ...(clientId ? { request: { clientId } } : {}),
+    };
 
     const documents = await prisma.document.findMany({
       where,
@@ -34,20 +37,46 @@ export async function GET(request: Request) {
       take: 200,
     });
 
+    const uploadEvents = documents.length
+      ? await prisma.auditLog.findMany({
+          where: {
+            action: "DOCUMENT_UPLOADED",
+            resource: "document",
+            resourceId: { in: documents.map((document) => document.id) },
+          },
+          include: { actor: { select: { name: true } } },
+          orderBy: { createdAt: "desc" },
+        })
+      : [];
+    const uploadInfo = new Map<string, { uploadedAt: Date; uploadedBy: string | null }>();
+    for (const event of uploadEvents) {
+      if (event.resourceId && !uploadInfo.has(event.resourceId)) {
+        uploadInfo.set(event.resourceId, {
+          uploadedAt: event.createdAt,
+          uploadedBy: event.actor?.name ?? null,
+        });
+      }
+    }
+
     return NextResponse.json(
-      documents.map((d) => ({
-        id: d.id,
-        fileName: d.fileName,
-        category: d.category,
-        uploadStatus: d.uploadStatus,
-        reviewStatus: d.reviewStatus,
-        fileSizeBytes: d.fileSizeBytes,
-        clientId: d.request.clientId,
-        clientName: d.request.client.name,
-        requestId: d.request.id,
-        requestTitle: d.request.requestType || d.request.service.name,
-        createdAt: d.createdAt.toISOString(),
-      }))
+      documents.map((d) => {
+        const upload = uploadInfo.get(d.id);
+        return {
+          id: d.id,
+          fileName: d.fileName,
+          category: d.category,
+          uploadStatus: d.uploadStatus,
+          reviewStatus: d.reviewStatus,
+          fileSizeBytes: d.fileSizeBytes,
+          clientId: d.request.clientId,
+          clientName: d.request.client.name,
+          requestId: d.request.id,
+          requestTitle: d.request.requestType || d.request.service.name,
+          createdAt: d.createdAt.toISOString(),
+          uploadedAt: (upload?.uploadedAt ?? d.uploadedAt)?.toISOString() ?? null,
+          uploadedBy: upload?.uploadedBy ?? null,
+        };
+      })
     );
   } catch (error) {
     return handleApiError(error);

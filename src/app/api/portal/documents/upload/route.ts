@@ -69,7 +69,15 @@ export async function POST(request: Request) {
     }
 
     const storageKey = buildStorageKey(ctx.clientId, requestId, file.name);
-    await putObject(storageKey, Buffer.from(await file.arrayBuffer()), file.type || undefined);
+    try {
+      await putObject(storageKey, Buffer.from(await file.arrayBuffer()), file.type || undefined);
+    } catch (storageError) {
+      console.error("Client document storage upload failed:", storageError);
+      throw new ApiError(
+        503,
+        "File storage is unavailable. Your document was not saved. Please retry."
+      );
+    }
 
     const document = await prisma.document.create({
       data: {
@@ -124,7 +132,10 @@ export async function GET(request: Request) {
     const ctx = await requireAuthContext(token);
 
     const documents = await prisma.document.findMany({
-      where: { request: { clientId: ctx.clientId } },
+      where: {
+        request: { clientId: ctx.clientId },
+        retentionStatus: "ACTIVE",
+      },
       include: {
         request: { select: { requestType: true, service: { select: { name: true } } } },
       },

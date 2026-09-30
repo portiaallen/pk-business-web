@@ -39,7 +39,10 @@ export async function GET(
         client: { select: { id: true, name: true, status: true } },
         service: { select: { name: true } },
         assignedStaff: { select: { id: true, name: true, email: true } },
-        documents: { orderBy: { createdAt: "desc" } },
+        documents: {
+          where: { retentionStatus: "ACTIVE" },
+          orderBy: { createdAt: "desc" },
+        },
         documentRequests: { orderBy: { createdAt: "desc" } },
         clientMessages: {
           include: { author: { select: { id: true, name: true, role: true } } },
@@ -55,6 +58,27 @@ export async function GET(
 
     if (!req) throw ApiError.notFound("Request not found");
 
+    const uploadEvents = req.documents.length
+      ? await prisma.auditLog.findMany({
+          where: {
+            action: "DOCUMENT_UPLOADED",
+            resource: "document",
+            resourceId: { in: req.documents.map((document) => document.id) },
+          },
+          include: { actor: { select: { name: true } } },
+          orderBy: { createdAt: "desc" },
+        })
+      : [];
+    const uploadInfo = new Map<string, { uploadedAt: Date; uploadedBy: string | null }>();
+    for (const event of uploadEvents) {
+      if (event.resourceId && !uploadInfo.has(event.resourceId)) {
+        uploadInfo.set(event.resourceId, {
+          uploadedAt: event.createdAt,
+          uploadedBy: event.actor?.name ?? null,
+        });
+      }
+    }
+
     return NextResponse.json({
       id: req.id,
       client: req.client,
@@ -69,11 +93,16 @@ export async function GET(
       completedAt: req.completedAt?.toISOString() || null,
       createdAt: req.createdAt.toISOString(),
       updatedAt: req.updatedAt.toISOString(),
-      documents: req.documents.map((d) => ({
-        id: d.id, fileName: d.fileName, category: d.category,
-        uploadStatus: d.uploadStatus, reviewStatus: d.reviewStatus,
-        createdAt: d.createdAt.toISOString(),
-      })),
+      documents: req.documents.map((d) => {
+        const upload = uploadInfo.get(d.id);
+        return {
+          id: d.id, fileName: d.fileName, category: d.category,
+          uploadStatus: d.uploadStatus, reviewStatus: d.reviewStatus,
+          createdAt: d.createdAt.toISOString(),
+          uploadedAt: (upload?.uploadedAt ?? d.uploadedAt)?.toISOString() ?? null,
+          uploadedBy: upload?.uploadedBy ?? null,
+        };
+      }),
       documentRequests: req.documentRequests.map((dr) => ({
         id: dr.id, title: dr.title, description: dr.description,
         required: dr.required, status: dr.status,

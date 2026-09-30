@@ -254,7 +254,7 @@ export default function AdminDocumentsPage() {
                   <td className="px-4 py-3">
                     {d.uploadStatus === "UPLOADED" && (
                       <a
-                        href={`/api/portal/documents/${d.id}`}
+                        href={`/api/admin/documents/${d.id}`}
                         target="_blank"
                         rel="noopener"
                         className="inline-flex items-center gap-1 text-charcoal hover:text-gold text-sm"

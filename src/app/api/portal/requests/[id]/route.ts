@@ -26,6 +26,7 @@ export async function GET(
       include: {
         service: { select: { name: true, shortName: true } },
         documents: {
+          where: { retentionStatus: "ACTIVE" },
           select: {
             id: true,
             fileName: true,

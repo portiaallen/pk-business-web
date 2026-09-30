@@ -46,7 +46,15 @@ export async function POST(
     }
 
     const storageKey = buildStorageKey(req.clientId, id, file.name);
-    await putObject(storageKey, Buffer.from(await file.arrayBuffer()), file.type || undefined);
+    try {
+      await putObject(storageKey, Buffer.from(await file.arrayBuffer()), file.type || undefined);
+    } catch (storageError) {
+      console.error("Deliverable storage upload failed:", storageError);
+      throw new ApiError(
+        503,
+        "File storage is unavailable. The deliverable was not saved. Please retry."
+      );
+    }
 
     const deliverable = await prisma.deliverable.create({
       data: {

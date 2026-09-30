@@ -31,7 +31,15 @@ type Detail = {
   clientNotes: string | null;
   requesterName: string | null;
   assignedStaff: { id: string; name: string; email: string } | null;
-  documents: { id: string; fileName: string; reviewStatus: string; createdAt: string }[];
+  documents: {
+    id: string;
+    fileName: string;
+    reviewStatus: string;
+    createdAt: string;
+    uploadedAt: string | null;
+    uploadedBy: string | null;
+    uploadStatus: string;
+  }[];
   documentRequests: { id: string; title: string; status: string; required: boolean }[];
   messages: { id: string; body: string; isFromStaff: boolean; authorName: string; createdAt: string }[];
   internalNotes: { id: string; content: string; authorName: string; createdAt: string }[];
@@ -232,6 +240,12 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
     e.preventDefault();
     const form = e.currentTarget;
     const data = new FormData(form);
+    const file = data.get("file");
+    if (!(file instanceof File) || file.size === 0) {
+      setError("Choose a file to upload.");
+      return;
+    }
+    setError("");
     setSaving(true);
     try {
       const res = await fetch(`/api/admin/requests/${id}/deliverables`, {
@@ -241,7 +255,12 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
       if (res.ok) {
         form.reset();
         await load();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || `Upload failed (${res.status})`);
       }
+    } catch {
+      setError("Upload failed. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -522,8 +541,28 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
           {detail.documents.length === 0 && <p className="text-sm text-muted-foreground">No documents uploaded.</p>}
           <ul className="space-y-1 text-sm">
             {detail.documents.map((d) => (
-              <li key={d.id} className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2">
-                <span className="truncate">{d.fileName}</span>
+              <li key={d.id} className="flex items-center justify-between gap-3 rounded-md bg-muted/50 px-3 py-2">
+                <div className="min-w-0">
+                  {d.uploadStatus === "UPLOADED" ? (
+                    <a
+                      href={`/api/admin/documents/${d.id}`}
+                      target="_blank"
+                      rel="noopener"
+                      className="inline-flex max-w-full items-center gap-1 truncate hover:text-gold"
+                    >
+                      <Download className="size-3.5 shrink-0" />
+                      <span className="truncate">{d.fileName}</span>
+                    </a>
+                  ) : (
+                    <span className="truncate">{d.fileName}</span>
+                  )}
+                  {(d.uploadedBy || d.uploadedAt) && (
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {d.uploadedBy ? `Uploaded by ${d.uploadedBy}` : "Uploader unknown"}
+                      {d.uploadedAt ? ` · ${new Date(d.uploadedAt).toLocaleString()}` : ""}
+                    </p>
+                  )}
+                </div>
                 <span className="text-xs text-muted-foreground">{d.reviewStatus}</span>
               </li>
             ))}
@@ -565,10 +604,10 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
 
       {/* Deliverables (admin uploads) */}
       <div className="rounded-lg border bg-card p-4">
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="flex flex-col gap-3 border-b border-border px-4 py-3">
           <h2 className="font-medium">Deliverables</h2>
-          <form onSubmit={uploadDeliverable} className="flex gap-2">
-            <input type="file" name="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.png,.jpg,.webp" className="text-sm" />
+          <form onSubmit={uploadDeliverable} className="flex flex-wrap gap-2">
+            <input type="file" name="file" required accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.png,.jpg,.jpeg,.webp" className="text-sm" />
             <input
               name="title"
               placeholder="Title (e.g. Cleanup Report)"
@@ -579,6 +618,9 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
               <Upload className="size-3.5" /> Upload
             </Button>
           </form>
+          <p className="text-xs text-muted-foreground">
+            PDF, Word, Excel, CSV, text, PNG, JPEG, or WebP. Maximum 25 MB. Uploaded deliverables begin as Draft and must be released below.
+          </p>
         </div>
         {detail.deliverables.length === 0 ? (
           <p className="px-4 py-3 text-sm text-muted-foreground">No deliverables uploaded yet.</p>

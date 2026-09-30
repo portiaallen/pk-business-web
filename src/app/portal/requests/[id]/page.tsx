@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -92,6 +93,8 @@ export default function RequestDetailPage() {
   const [loading, setLoading] = useState(true);
   const [messageText, setMessageText] = useState("");
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
   useEffect(() => {
     async function fetchRequest() {
@@ -130,6 +133,54 @@ export default function RequestDetailPage() {
       // empty
     } finally {
       setSending(false);
+    }
+  }
+
+  async function uploadDocument(
+    e: React.FormEvent<HTMLFormElement>,
+    documentRequestId?: string
+  ) {
+    e.preventDefault();
+    if (uploading) return;
+
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    const file = data.get("file");
+    if (!(file instanceof File) || file.size === 0) {
+      setUploadError("Choose a file to upload.");
+      return;
+    }
+
+    data.set("requestId", id);
+    if (documentRequestId) data.set("documentRequestId", documentRequestId);
+    setUploadError("");
+    setUploading(true);
+    try {
+      const res = await fetch("/api/portal/documents/upload", {
+        method: "POST",
+        body: data,
+      });
+      if (!res.ok) {
+        const result = await res.json().catch(() => ({}));
+        setUploadError(result.error || `Upload failed (${res.status})`);
+        return;
+      }
+
+      form.reset();
+      try {
+        const refresh = await fetch(`/api/portal/requests/${id}`);
+        if (refresh.ok) {
+          setReq(await refresh.json());
+        } else {
+          setUploadError("Document uploaded, but request information could not be refreshed. Reload this page.");
+        }
+      } catch {
+        setUploadError("Document uploaded, but request information could not be refreshed. Reload this page.");
+      }
+    } catch {
+      setUploadError("Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -190,6 +241,12 @@ export default function RequestDetailPage() {
           </p>
         )}
       </div>
+
+      {uploadError && (
+        <p role="alert" className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {uploadError}
+        </p>
+      )}
 
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Main content */}
@@ -270,6 +327,43 @@ export default function RequestDetailPage() {
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* Upload documents */}
+          <div className="rounded-lg border border-border bg-card p-5">
+            <h2 className="flex items-center gap-2 font-heading text-lg font-semibold text-charcoal">
+              <Upload className="size-4" /> Upload a document
+            </h2>
+            <form onSubmit={uploadDocument} className="mt-4 space-y-3">
+              <select
+                name="category"
+                defaultValue="OTHER"
+                disabled={uploading}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              >
+                {[
+                  "IDENTITY", "INCOME", "EMPLOYMENT", "BUSINESS",
+                  "TAX", "BANKING", "OTHER",
+                ].map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+              <input
+                type="file"
+                name="file"
+                required
+                disabled={uploading}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.png,.jpg,.jpeg,.webp"
+                className="block w-full text-sm"
+              />
+              <Button type="submit" disabled={uploading} className="w-full">
+                <Upload className="size-4" />
+                {uploading ? "Uploading..." : "Upload document"}
+              </Button>
+            </form>
+            <p className="mt-3 text-xs text-muted-gray">
+              PDF, Word, Excel, CSV, text, PNG, JPEG, or WebP. Maximum 25 MB.
+            </p>
+          </div>
+
           {/* Documents */}
           <div className="rounded-lg border border-border bg-card">
             <div className="border-b border-border px-6 py-4">
@@ -293,7 +387,14 @@ export default function RequestDetailPage() {
                       <p className="text-xs text-muted-gray">{doc.category}</p>
                     </div>
                     {doc.uploadStatus === "UPLOADED" && (
-                      <Download className="size-4 shrink-0 text-muted-gray" />
+                      <a
+                        href={`/api/portal/documents/${doc.id}`}
+                        className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-charcoal hover:bg-muted"
+                        download
+                      >
+                        <Download className="size-4" />
+                        <span>Download</span>
+                      </a>
                     )}
                   </div>
                 ))
@@ -335,6 +436,22 @@ export default function RequestDetailPage() {
                     {dr.description && (
                       <p className="mt-1 text-xs text-muted-gray">{dr.description}</p>
                     )}
+                    <form
+                      onSubmit={(e) => uploadDocument(e, dr.id)}
+                      className="mt-3 flex flex-wrap items-center gap-2"
+                    >
+                      <input
+                        type="file"
+                        name="file"
+                        required
+                        disabled={uploading}
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.png,.jpg,.jpeg,.webp"
+                        className="min-w-0 flex-1 text-xs"
+                      />
+                      <Button type="submit" disabled={uploading} variant="outline" className="min-h-9">
+                        <Upload className="size-3.5" /> Upload
+                      </Button>
+                    </form>
                   </div>
                 ))}
               </div>

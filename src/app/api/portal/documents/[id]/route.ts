@@ -33,7 +33,10 @@ export async function GET(
       throw ApiError.notFound("Document not found");
     }
 
-    if (document.uploadStatus !== "UPLOADED") {
+    if (
+      document.uploadStatus !== "UPLOADED" ||
+      document.retentionStatus === "DELETED"
+    ) {
       throw ApiError.notFound("Document not available");
     }
 
