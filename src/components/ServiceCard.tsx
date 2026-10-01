@@ -1,39 +1,30 @@
 import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 import type { Service } from "@/content/services";
+import { serviceSituations } from "@/content/service-discovery";
 import { cn } from "@/lib/utils";
 
-interface ServiceCardProps {
+export function ServiceCard({
+  service,
+  className,
+}: {
   service: Service;
   className?: string;
-}
-
-export function ServiceCard({ service, className }: ServiceCardProps) {
+}) {
   return (
-    <article
-      className={cn(
-        "group flex h-full flex-col rounded-lg border border-border bg-card p-6 transition-shadow hover:shadow-md sm:p-8",
-        className
-      )}
-    >
-      <h3 className="font-heading text-xl font-semibold text-charcoal sm:text-2xl">
-        {service.shortName}
-      </h3>
-      <p className="mt-2 text-sm font-medium text-gold">{service.price}</p>
-      <p className="mt-4 flex-1 text-sm leading-relaxed text-muted-gray sm:text-base">
+    <article className={cn("pk-service-card group", className)}>
+      <p className="pk-service-situation">{serviceSituations[service.id]}</p>
+      <h3 className="pk-heading mt-4 text-2xl">{service.shortName}</h3>
+      <p className="mt-4 flex-1 leading-relaxed text-muted-gray">
         {service.shortDescription}
       </p>
-      <Link
-        href={service.href}
-        className="mt-6 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-charcoal transition-colors group-hover:text-gold"
-      >
-        Learn More
-        <span
-          aria-hidden="true"
-          className="transition-transform group-hover:translate-x-0.5"
-        >
-          →
-        </span>
-      </Link>
+      <div className="pk-service-card-bottom">
+        <p className="text-sm font-semibold text-charcoal">{service.price}</p>
+        <Link href={service.href} className="pk-service-link">
+          <span className="sr-only">Explore {service.shortName}</span>
+          <ArrowUpRight className="size-5" aria-hidden="true" />
+        </Link>
+      </div>
     </article>
   );
 }

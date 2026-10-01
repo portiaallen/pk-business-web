@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { PageHero } from "@/components/layout/PageHero";
 import { Section, SectionHeader } from "@/components/layout/Section";
@@ -8,7 +7,8 @@ import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: {
-    absolute: "About PK Business Services | Bookkeeping & Financial Documentation",
+    absolute:
+      "About PK Business Services | Bookkeeping & Financial Documentation",
   },
   description:
     "Meet the founder of PK Business Services and learn how our practical, professional approach helps individuals and small businesses organize bookkeeping, financial records, and documentation.",
@@ -56,29 +56,33 @@ export default function AboutPage() {
   return (
     <>
       <PageHero
-        title="Practical Support. Professional Standards."
-        subtitle="A founder-led business built on organization, clarity, and professional support for the financial records that matter."
+        eyebrow="Meet PK"
+        title="Real support. A real person behind it."
+        subtitle="Professional with personality. Practical about your records. Focused on helping you move forward."
       />
 
       {/* Founder */}
       <Section>
         <div className="grid gap-10 lg:grid-cols-2 lg:items-start lg:gap-14">
-          <figure className="mx-auto w-full max-w-[280px] sm:max-w-xs lg:mx-0">
-            <div className="relative aspect-[3/4] overflow-hidden rounded-lg border border-border bg-cream shadow-sm">
-              <Image
-                src="/images/portia-allen-founder.jpg"
-                alt="Portia Allen, Founder of PK Business Services"
-                fill
-                sizes="(max-width: 640px) 280px, (max-width: 1024px) 320px, 384px"
-                className="object-cover object-[center_20%]"
-              />
+          <div className="pk-founder-note">
+            <p className="pk-eyebrow">The person behind the business</p>
+            <p className="pk-founder-statement">
+              People first.
+              <br />
+              Details matter.
+              <br />
+              <span>Let’s get to work.</span>
+            </p>
+            <div className="pk-founder-signature">
+              <span>Portia Allen</span>
+              <p>Founder · PK Business Services</p>
             </div>
-          </figure>
+          </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">
               Meet the Founder
             </p>
-            <h2 className="mt-3 font-heading text-3xl font-semibold text-charcoal sm:text-4xl">
+            <h2 className="mt-3 pk-heading text-3xl font-semibold text-charcoal sm:text-4xl">
               Portia Allen
             </h2>
             <p className="mt-1 text-base font-medium text-muted-gray">
@@ -109,8 +113,8 @@ export default function AboutPage() {
         <p className="mx-auto mb-12 max-w-3xl text-center text-lg leading-relaxed text-muted-gray">
           Financial organization doesn&apos;t have to feel overwhelming. PK
           Business Services takes a straightforward approach: understand the
-          situation, organize the information, identify what needs attention, and
-          help the client determine the next step.
+          situation, organize the information, identify what needs attention,
+          and help the client determine the next step.
         </p>
         <div className="grid gap-8 md:grid-cols-3">
           {approachPrinciples.map((principle) => (
@@ -118,7 +122,7 @@ export default function AboutPage() {
               key={principle.title}
               className="border-t-2 border-gold/40 bg-background px-1 pt-6"
             >
-              <h3 className="mb-3 font-heading text-lg font-semibold uppercase tracking-wide text-charcoal">
+              <h3 className="mb-3 pk-heading text-lg font-semibold uppercase tracking-wide text-charcoal">
                 {principle.title}
               </h3>
               <p className="text-sm leading-relaxed text-muted-gray sm:text-base">
@@ -138,7 +142,7 @@ export default function AboutPage() {
               key={item.title}
               className="rounded-lg border border-border bg-card p-6"
             >
-              <h3 className="mb-2 font-heading text-lg font-semibold text-charcoal">
+              <h3 className="mb-2 pk-heading text-lg font-semibold text-charcoal">
                 {item.title}
               </h3>
               <p className="text-sm leading-relaxed text-muted-gray sm:text-base">
@@ -152,16 +156,16 @@ export default function AboutPage() {
       {/* Founder Philosophy */}
       <Section variant="cream">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="font-heading text-2xl font-semibold leading-snug text-charcoal sm:text-3xl">
+          <p className="pk-heading text-2xl font-semibold leading-snug text-charcoal sm:text-3xl">
             &ldquo;Good financial organization starts with good
             information.&rdquo;
           </p>
           <p className="mt-6 text-base leading-relaxed text-muted-gray sm:text-lg">
             PK believes that organized records create clarity. Whether a client
             needs help cleaning up their books, preparing records for tax time,
-            maintaining bookkeeping throughout the year, or organizing legitimate
-            income documentation, the goal is the same: create a clearer, more
-            organized starting point.
+            maintaining bookkeeping throughout the year, or organizing
+            legitimate income documentation, the goal is the same: create a
+            clearer, more organized starting point.
           </p>
         </div>
       </Section>
@@ -189,7 +193,7 @@ export default function AboutPage() {
       <section className="section-padding bg-charcoal text-ivory">
         <div className="container-narrow text-center">
           <div className="gold-accent-line mx-auto mb-6" />
-          <h2 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h2 className="pk-heading text-3xl font-semibold tracking-tight sm:text-4xl">
             Ready to Get Organized?
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-ivory/75">
@@ -200,7 +204,7 @@ export default function AboutPage() {
           <div className="mt-8">
             <Button
               render={<Link href={siteConfig.cta.href} />}
-              className="h-12 min-h-11 bg-gold px-8 text-base text-charcoal hover:bg-gold-light"
+              className="pk-primary-button"
             >
               {siteConfig.cta.label}
             </Button>

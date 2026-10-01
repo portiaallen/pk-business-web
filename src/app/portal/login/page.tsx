@@ -54,7 +54,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-cream px-4">
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center pk-login bg-cream px-4 py-14">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="mb-8 text-center">
@@ -63,18 +63,18 @@ export default function LoginPage() {
               PK Business Services
             </span>
           </Link>
-          <h1 className="mt-4 font-heading text-3xl font-semibold text-charcoal">
+          <h1 className="mt-4 pk-heading text-3xl font-semibold text-charcoal">
             {adminMode ? "Admin Sign In" : "Client Portal"}
           </h1>
           <p className="mt-2 text-sm text-muted-gray">
             {adminMode
               ? "Sign in with your administrator account"
-              : "Sign in to access your business workspace"}
+              : "Your records, requests, invoices, and completed work—all in one place."}
           </p>
         </div>
 
         {/* Login Form */}
-        <div className="rounded-xl border border-border bg-background p-8 shadow-sm">
+        <div className="pk-login-card rounded-xl border border-border bg-background p-6 sm:p-8 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
               <div
@@ -126,13 +126,19 @@ export default function LoginPage() {
         {/* Help */}
         <p className="mt-6 text-center text-sm text-muted-gray">
           Forgot your password?{" "}
-          <Link href="/forgot-password" className="font-medium text-charcoal underline-offset-2 hover:underline">
+          <Link
+            href="/forgot-password"
+            className="font-medium text-charcoal underline-offset-2 hover:underline"
+          >
             Reset it here
           </Link>
         </p>
         <p className="mt-2 text-center text-sm text-muted-gray">
           Need access?{" "}
-          <Link href="/contact" className="font-medium text-charcoal underline-offset-2 hover:underline">
+          <Link
+            href="/contact"
+            className="font-medium text-charcoal underline-offset-2 hover:underline"
+          >
             Request a consultation
           </Link>
         </p>

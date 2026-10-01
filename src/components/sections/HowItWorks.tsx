@@ -2,27 +2,24 @@ import { Section, SectionHeader } from "@/components/layout/Section";
 
 const steps = [
   {
-    number: "01",
-    title: "Tell Us What You Need",
+    title: "Tell PK what’s going on",
     description:
-      "Submit a consultation request and briefly describe what you're trying to accomplish.",
+      "Start with a consultation request. A brief overview is enough; no sensitive documents needed.",
   },
   {
-    number: "02",
-    title: "We Review Your Situation",
-    description: "We'll determine which service best fits your needs.",
+    title: "Agree on the right support",
+    description:
+      "PK reviews your needs and helps determine the service and scope. Review your invoice and follow its payment terms.",
   },
   {
-    number: "03",
-    title: "We Organize Your Records",
+    title: "Put your records to work",
     description:
-      "We work with the authentic information and documentation you provide.",
+      "Provide the information and documents through your client portal. PK works with your authentic records and follows up on missing items.",
   },
   {
-    number: "04",
-    title: "Move Forward With Clarity",
+    title: "Receive the result",
     description:
-      "You receive organized records and a clearer path forward.",
+      "Access your completed deliverables in the portal, with your records organized and the next step clearer.",
   },
 ];
 
@@ -30,19 +27,16 @@ export function HowItWorks() {
   return (
     <Section variant="cream">
       <SectionHeader
-        title="How It Works"
-        subtitle="A straightforward process to help you get organized."
+        title="A clear path from here."
+        subtitle="Know what comes next, from the first conversation to the finished work."
+        align="left"
       />
-      <ol className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
-        {steps.map((step) => (
-          <li key={step.number}>
-            <span className="mb-4 block font-heading text-3xl font-light text-gold">
-              {step.number}
-            </span>
-            <h3 className="mb-2 font-heading text-lg font-semibold text-charcoal">
-              {step.title}
-            </h3>
-            <p className="text-sm leading-relaxed text-muted-gray">
+      <ol className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        {steps.map((step, index) => (
+          <li key={step.title} className="pk-step">
+            <span className="pk-step-number">0{index + 1}</span>
+            <h3 className="pk-heading mt-5 text-xl">{step.title}</h3>
+            <p className="mt-3 leading-relaxed text-muted-gray">
               {step.description}
             </p>
           </li>

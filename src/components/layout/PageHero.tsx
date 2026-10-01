@@ -1,23 +1,26 @@
 interface PageHeroProps {
   title: string;
   subtitle?: string;
+  eyebrow?: string;
 }
 
-export function PageHero({ title, subtitle }: PageHeroProps) {
+export function PageHero({
+  title,
+  subtitle,
+  eyebrow = "PK Business Services",
+}: PageHeroProps) {
   return (
-    <section className="border-b border-border bg-charcoal text-ivory">
-      <div className="container-wide section-padding !py-14 sm:!py-20">
-        <div className="mx-auto max-w-3xl text-center">
-          <div className="gold-accent-line mx-auto mb-6" />
-          <h1 className="text-balance font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
-            {title}
-          </h1>
-          {subtitle && (
-            <p className="mt-4 text-lg leading-relaxed text-ivory/75">
-              {subtitle}
-            </p>
-          )}
-        </div>
+    <section className="pk-page-hero">
+      <div className="container-narrow">
+        <p className="pk-eyebrow">{eyebrow}</p>
+        <h1 className="pk-heading mt-5 max-w-3xl text-balance text-4xl sm:text-5xl">
+          {title}
+        </h1>
+        {subtitle && (
+          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-ivory/80">
+            {subtitle}
+          </p>
+        )}
       </div>
     </section>
   );

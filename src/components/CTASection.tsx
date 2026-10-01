@@ -21,20 +21,20 @@ export function CTASection({
   return (
     <section
       className={cn(
-        "section-padding",
+        "section-padding pk-cta",
         isCharcoal ? "bg-charcoal text-ivory" : "bg-cream",
-        className
+        className,
       )}
     >
       <div className="container-narrow text-center">
         <div className="gold-accent-line mx-auto mb-6" />
-        <h2 className="text-balance font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
+        <h2 className="pk-heading text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
           {title}
         </h2>
         <p
           className={cn(
             "mx-auto mt-4 max-w-2xl text-lg leading-relaxed",
-            isCharcoal ? "text-ivory/75" : "text-muted-gray"
+            isCharcoal ? "text-ivory/75" : "text-muted-gray",
           )}
         >
           {description}
@@ -45,8 +45,8 @@ export function CTASection({
             className={cn(
               "h-12 px-8 text-base",
               isCharcoal
-                ? "bg-gold text-charcoal hover:bg-gold-light"
-                : "bg-charcoal text-ivory hover:bg-charcoal/90"
+                ? "pk-primary-button"
+                : "bg-charcoal text-ivory hover:bg-charcoal/90",
             )}
           >
             {siteConfig.cta.label}

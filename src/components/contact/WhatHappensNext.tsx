@@ -13,7 +13,7 @@ export function WhatHappensNext() {
     >
       <h2
         id="what-happens-next-heading"
-        className="font-heading text-xl font-semibold text-charcoal"
+        className="pk-heading text-xl font-semibold text-charcoal"
       >
         What Happens Next?
       </h2>

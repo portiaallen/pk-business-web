@@ -1,3 +1,4 @@
+import { serviceSituations } from "@/content/service-discovery";
 import Link from "next/link";
 import type { Service } from "@/content/services";
 import { siteConfig } from "@/content/site";
@@ -17,10 +18,11 @@ export function ServiceDetail({ service }: ServiceDetailProps) {
     >
       <div className="grid gap-10 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <p className="mb-2 text-sm font-medium tracking-wide text-gold">
+          <p className="pk-eyebrow mb-4">{serviceSituations[service.id]}</p>
+          <p className="mb-2 text-sm font-semibold tracking-wide text-charcoal">
             {service.price}
           </p>
-          <h2 className="font-heading text-2xl font-semibold text-charcoal sm:text-3xl">
+          <h2 className="pk-heading text-2xl font-semibold text-charcoal sm:text-3xl">
             {service.name}
           </h2>
           <p className="mt-2 font-heading text-xl text-charcoal/90">
@@ -32,7 +34,7 @@ export function ServiceDetail({ service }: ServiceDetailProps) {
 
           <div className="mt-10">
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-widest text-charcoal">
-              What May Be Included
+              What PK can help with
             </h3>
             <ul className="grid gap-2.5 sm:grid-cols-2">
               {service.scope.map((item) => (
@@ -65,8 +67,8 @@ export function ServiceDetail({ service }: ServiceDetailProps) {
         </div>
 
         <aside className="rounded-lg border border-border bg-card p-6 lg:sticky lg:top-24 lg:self-start">
-          <h3 className="mb-3 font-heading text-lg font-semibold text-charcoal">
-            Best For
+          <h3 className="mb-3 pk-heading text-lg font-semibold text-charcoal">
+            Is this for you?
           </h3>
           <ul className="mb-8 space-y-2">
             {service.bestFor.map((item) => (

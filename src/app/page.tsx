@@ -23,8 +23,8 @@ export default function HomePage() {
       <WhyPKSection />
       <HowItWorks />
       <CTASection
-        title="Ready to Get Your Records in Order?"
-        description="Whether your books need a cleanup, your business records need organizing, or you need help documenting legitimate income information, PK Business Services can help you determine the right place to start."
+        title="Let’s take it off your mental to-do list."
+        description="Tell PK what needs attention. We’ll help you determine the right service and a practical next step."
       />
     </>
   );

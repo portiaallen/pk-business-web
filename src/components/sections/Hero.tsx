@@ -1,47 +1,92 @@
 import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 import { siteConfig } from "@/content/site";
 import { Button } from "@/components/ui/button";
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden bg-charcoal text-ivory">
-      <div
-        className="absolute inset-0 opacity-30"
-        aria-hidden="true"
-        style={{
-          backgroundImage: `
-            radial-gradient(ellipse at 20% 50%, rgba(184, 149, 106, 0.15) 0%, transparent 50%),
-            radial-gradient(ellipse at 80% 20%, rgba(184, 149, 106, 0.1) 0%, transparent 40%),
-            linear-gradient(180deg, rgba(28, 28, 28, 0) 0%, rgba(28, 28, 28, 1) 100%)
-          `,
-        }}
-      />
-      <div className="container-wide relative section-padding">
-        <div className="mx-auto max-w-3xl text-center">
-          <p className="mb-6 text-xs font-semibold uppercase tracking-[0.2em] text-gold">
-            {siteConfig.tagline}
+    <section className="pk-hero">
+      <div className="container-wide pk-hero-grid">
+        <div className="pk-hero-copy">
+          <p className="pk-eyebrow">
+            <span className="pk-dot" /> Professional with personality
           </p>
-          <h1 className="text-balance font-heading text-4xl font-semibold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-            Organize Your Records. Strengthen Your Business. Stay Ready.
+          <h1>
+            Your business is busy.
+            <span>Your books shouldn’t be.</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ivory/75 sm:text-xl">
-            {siteConfig.description}
+          <p className="pk-hero-description">
+            Behind on your books? Records all over the place? Let’s make sense
+            of it. Practical bookkeeping and financial documentation support for
+            small businesses, self-employed professionals, and individuals.
           </p>
-          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <div className="pk-hero-actions">
             <Button
               render={<Link href={siteConfig.cta.href} />}
-              className="h-12 w-full bg-gold px-8 text-base text-charcoal hover:bg-gold-light sm:w-auto"
+              className="pk-primary-button"
             >
               {siteConfig.cta.label}
+              <ArrowUpRight aria-hidden="true" className="size-4" />
             </Button>
-            <Button
-              render={<Link href="/services" />}
-              variant="outline"
-              className="h-12 w-full border-ivory/30 bg-transparent px-8 text-base text-ivory hover:bg-ivory/10 sm:w-auto"
-            >
-              Explore Services
-            </Button>
+            <Link href="/services" className="pk-text-link pk-text-link-light">
+              Find your service <span aria-hidden="true">→</span>
+            </Link>
           </div>
+          <p className="pk-hero-note">
+            You don’t need to have it all figured out to start.
+          </p>
+        </div>
+        <div
+          className="pk-desk"
+          role="img"
+          aria-label="A little order. A lot more clarity. Bookkeeping, QuickBooks, and financial documentation."
+        >
+          <div className="pk-desk-top" aria-hidden="true">
+            <span>THE PK APPROACH</span>
+            <span>01 / GET ORGANIZED</span>
+          </div>
+          <div className="pk-folder" aria-hidden="true">
+            <span className="pk-folder-tab">A CLEARER STARTING POINT</span>
+            <div className="pk-paper">
+              <span className="pk-paper-label">
+                People. Knowledge. Results.
+              </span>
+              <p>
+                A little order.
+                <br />
+                <em>
+                  A lot more
+                  <br />
+                  clarity.
+                </em>
+              </p>
+              <div className="pk-paper-rule" />
+              <div className="pk-paper-list">
+                <span>01</span> Books that need attention
+              </div>
+              <div className="pk-paper-list">
+                <span>02</span> Records that need structure
+              </div>
+              <div className="pk-paper-list">
+                <span>03</span> A practical next step
+              </div>
+              <span className="pk-paper-signature">PK Business Services</span>
+            </div>
+          </div>
+          <div className="pk-desk-bottom" aria-hidden="true">
+            <span>LET’S PUT THINGS IN ORDER.</span>
+            <span className="pk-desk-mark">
+              PK<span>.</span>
+            </span>
+          </div>
+        </div>
+      </div>
+      <div className="pk-hero-strip">
+        <div className="container-wide">
+          <span>Bookkeeping</span>
+          <span>QuickBooks support</span>
+          <span>Financial documentation</span>
+          <span>Real, practical help</span>
         </div>
       </div>
     </section>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { Brand } from "@/components/layout/Brand";
 import { Menu, X } from "lucide-react";
 import { siteConfig } from "@/content/site";
 import { cn } from "@/lib/utils";
@@ -13,34 +14,28 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/95 backdrop-blur-sm">
-      <div className="container-wide flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="pk-header sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
+      <div className="container-wide flex h-20 items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link
           href="/"
           className="group flex flex-col gap-0.5"
           onClick={() => setMobileOpen(false)}
         >
-          <span className="font-heading text-xl font-semibold tracking-tight text-charcoal sm:text-2xl">
-            {siteConfig.name}
-          </span>
-          <span className="hidden text-[0.65rem] font-medium uppercase tracking-widest text-muted-gray sm:block">
-            Bookkeeping &amp; Business Support
-          </span>
+          <Brand />
         </Link>
 
         <nav
-          className="hidden items-center gap-8 md:flex"
+          className="hidden items-center gap-6 lg:flex"
           aria-label="Main navigation"
         >
           {siteConfig.nav.map((item) => (
             <Link
               key={item.href}
               href={item.href}
+              aria-current={pathname === item.href ? "page" : undefined}
               className={cn(
-                "text-sm font-medium transition-colors hover:text-gold",
-                pathname === item.href
-                  ? "text-charcoal"
-                  : "text-muted-gray"
+                "pk-nav-link text-sm font-semibold transition-colors",
+                pathname === item.href ? "text-charcoal" : "text-muted-gray",
               )}
             >
               {item.label}
@@ -48,7 +43,7 @@ export function Header() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-4 md:flex">
+        <div className="hidden items-center gap-5 lg:flex">
           <Link
             href="/portal/login"
             className="text-sm font-medium text-muted-gray transition-colors hover:text-gold"
@@ -57,7 +52,7 @@ export function Header() {
           </Link>
           <Button
             render={<Link href={siteConfig.cta.href} />}
-            className="h-10 min-h-11 bg-charcoal px-5 text-ivory hover:bg-charcoal/90"
+            className="h-11 bg-charcoal px-5 text-ivory hover:bg-charcoal/90"
           >
             {siteConfig.cta.label}
           </Button>
@@ -65,10 +60,13 @@ export function Header() {
 
         <button
           type="button"
-          className="inline-flex size-10 items-center justify-center rounded-md border border-border text-charcoal md:hidden"
+          className="inline-flex size-11 items-center justify-center rounded-md border border-border text-charcoal lg:hidden"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-expanded={mobileOpen}
           aria-controls="mobile-nav"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") setMobileOpen(false);
+          }}
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
         >
           {mobileOpen ? <X className="size-5" /> : <Menu className="size-5" />}
@@ -78,7 +76,17 @@ export function Header() {
       {mobileOpen && (
         <nav
           id="mobile-nav"
-          className="border-t border-border bg-background px-4 py-4 md:hidden"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              setMobileOpen(false);
+              document
+                .querySelector<HTMLButtonElement>(
+                  '[aria-controls="mobile-nav"]',
+                )
+                ?.focus();
+            }
+          }}
+          className="max-h-[calc(100dvh-5rem)] overflow-y-auto border-t border-border bg-background px-4 py-4 lg:hidden"
           aria-label="Mobile navigation"
         >
           <ul className="flex flex-col gap-1">
@@ -91,7 +99,7 @@ export function Header() {
                     "block rounded-md px-3 py-2.5 text-base font-medium transition-colors",
                     pathname === item.href
                       ? "bg-secondary text-charcoal"
-                      : "text-muted-gray hover:bg-secondary/60"
+                      : "text-muted-gray hover:bg-secondary/60",
                   )}
                 >
                   {item.label}

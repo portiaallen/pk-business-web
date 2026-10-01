@@ -73,8 +73,13 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col font-sans">
         <ServiceWorkerRegister />
+        <a href="#main-content" className="pk-skip-link">
+          Skip to content
+        </a>
         <Header />
-        <main className="flex-1">{children}</main>
+        <main id="main-content" tabIndex={-1} className="flex-1">
+          {children}
+        </main>
         <Footer />
       </body>
     </html>

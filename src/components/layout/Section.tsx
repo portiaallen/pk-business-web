@@ -21,7 +21,7 @@ export function Section({
         variant === "cream" && "bg-cream",
         variant === "charcoal" && "bg-charcoal text-ivory",
         variant === "default" && "bg-background",
-        className
+        className,
       )}
     >
       <div className="container-narrow">{children}</div>
@@ -47,19 +47,16 @@ export function SectionHeader({
       className={cn(
         "mb-12 max-w-2xl",
         align === "center" && "mx-auto text-center",
-        align === "left" && "text-left"
+        align === "left" && "text-left",
       )}
     >
       <div
-        className={cn(
-          "gold-accent-line mb-6",
-          align === "center" && "mx-auto"
-        )}
+        className={cn("gold-accent-line mb-6", align === "center" && "mx-auto")}
       />
       <h2
         className={cn(
-          "text-balance text-3xl font-semibold tracking-tight sm:text-4xl",
-          light ? "text-ivory" : "text-charcoal"
+          "pk-heading text-balance text-3xl font-semibold tracking-tight sm:text-4xl",
+          light ? "text-ivory" : "text-charcoal",
         )}
       >
         {title}
@@ -68,7 +65,7 @@ export function SectionHeader({
         <p
           className={cn(
             "mt-4 text-lg leading-relaxed",
-            light ? "text-ivory/75" : "text-muted-gray"
+            light ? "text-ivory/75" : "text-muted-gray",
           )}
         >
           {subtitle}
