@@ -56,3 +56,16 @@
 ## Final verdict
 
 The PK application is validated for the core customer journey in the local safe environment: public discovery, consultation intake, admin visibility, client sign-in, portal access, and invoice visibility are working. No remaining P0 or P1 blockers were observed in the tested launch path.
+
+# PRODUCTION DEPLOYMENT VERIFICATION
+
+- Deployment date/time: 2026-10-01 21:09 UTC (public site smoke test)
+- Production domain: `https://pkservices.business` and `https://www.pkservices.business`
+- Deployed commit/version: not provably attributable from the public Vercel deployment metadata alone; no branch/commit SHA is exposed without Vercel project access.
+- Hosting/deployment mechanism: Vercel-hosted production site (`Server: Vercel`, `x-vercel-id` present on live responses). The repository includes a Vercel config file and a CI workflow that triggers on the `main` branch, but the authoritative deployment branch for the live site was not confirmed from the production project console.
+- Live routes tested: `/`, `/services`, `/contact`, `/pay`, `/portal/login`, `/portal/login?admin=1`, `/api/health`
+- Production acceptance results: all tested public routes returned HTTP 200 on the live domain; the app served the PK public experience without obvious 404/500 failures or development/debug output.
+- Unresolved production blockers: the exact production deployment branch/commit could not be proven from the available repository + public site metadata; no production push was performed because the deployment source was ambiguous and the instructions required stopping before acting on an uncertain production branch.
+- Final production verdict: `🟡 PK LIVE SITE — DEPLOYMENT UNVERIFIED`
+
+The approved Safe-to-Sell workflow and local validation are complete, but the production branch/commit mapping for the live site is not sufficiently proven to mark the live deployment as the approved Safe-to-Sell build.
