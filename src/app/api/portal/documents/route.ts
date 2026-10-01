@@ -20,6 +20,7 @@ export async function GET(request: Request) {
     const documents = await prisma.document.findMany({
       where: {
         request: { clientId: membership.clientId },
+        retentionStatus: "ACTIVE",
       },
       include: {
         request: { select: { requestType: true, service: { select: { name: true } } } },
