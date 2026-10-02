@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import Link from "next/link";
 import { CreditCard, Building, DollarSign } from "lucide-react";
+import { isStripeConfigured } from "@/lib/invoices";
 import { siteConfig } from "@/content/site";
 import { PageHero } from "@/components/layout/PageHero";
 
@@ -17,10 +18,8 @@ const CASH_APP_TAG = process.env.PAYMENT_CASHAPP_TAG || "$portiaallen40";
 
 export default async function PublicPayPage() {
   await connection();
-  const stripeEnabled = Boolean(
-    process.env.STRIPE_SECRET_KEY?.trim() &&
-    process.env.STRIPE_WEBHOOK_SECRET?.trim(),
-  );
+  // Use the same runtime readiness check as portal options and secure checkout.
+  const stripeEnabled = isStripeConfigured();
 
   return (
     <>
@@ -54,16 +53,30 @@ export default async function PublicPayPage() {
                     required to pay by card.
                   </p>
                   {stripeEnabled ? (
-                    <Link
-                      href="/portal/invoices"
-                      className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg bg-charcoal px-5 py-2.5 text-sm font-medium text-ivory transition-colors hover:bg-charcoal/90"
-                    >
-                      <CreditCard className="size-4" aria-hidden />
-                      Sign in to pay by card
-                    </Link>
+                    <>
+                      <p className="mt-4 text-sm font-semibold text-charcoal">
+                        Card payments are available. Pay the exact balance on
+                        your invoice through secure Stripe checkout.
+                      </p>
+                      <Link
+                        href="/portal/invoices"
+                        className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg bg-charcoal px-5 py-2.5 text-sm font-medium text-ivory transition-colors hover:bg-charcoal/90"
+                      >
+                        <CreditCard className="size-4" aria-hidden />
+                        Sign in to pay by card
+                      </Link>
+                    </>
                   ) : (
                     <p className="mt-4 text-sm text-muted-gray">
-                      Card payments are currently unavailable.
+                      Card checkout is not configured in this environment.
+                      Please{" "}
+                      <Link
+                        href="/contact"
+                        className="font-medium text-charcoal underline underline-offset-2"
+                      >
+                        contact PK
+                      </Link>{" "}
+                      for help with your invoice.
                     </p>
                   )}
                 </div>
