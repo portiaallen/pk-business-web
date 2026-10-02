@@ -21,7 +21,7 @@ export function Header() {
           className="group flex flex-col gap-0.5"
           onClick={() => setMobileOpen(false)}
         >
-          <Brand />
+          <Brand light />
         </Link>
 
         <nav
@@ -52,7 +52,7 @@ export function Header() {
           </Link>
           <Button
             render={<Link href={siteConfig.cta.href} />}
-            className="h-11 bg-charcoal px-5 text-ivory hover:bg-charcoal/90"
+            className="pk-primary-button"
           >
             {siteConfig.cta.label}
           </Button>
@@ -118,7 +118,7 @@ export function Header() {
             <li className="pt-2">
               <Button
                 render={<Link href={siteConfig.cta.href} />}
-                className="h-11 w-full bg-charcoal text-ivory hover:bg-charcoal/90"
+                className="pk-primary-button w-full"
                 onClick={() => setMobileOpen(false)}
               >
                 {siteConfig.cta.label}

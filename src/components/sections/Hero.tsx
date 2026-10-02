@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { siteConfig } from "@/content/site";
@@ -16,9 +17,9 @@ export function Hero() {
             <span>Your books shouldn’t be.</span>
           </h1>
           <p className="pk-hero-description">
-            Behind on your books? Records all over the place? Let’s make sense
-            of it. Practical bookkeeping and financial documentation support for
-            small businesses, self-employed professionals, and individuals.
+            Messy books? We can work with that. Practical bookkeeping and
+            financial documentation support for small businesses, self-employed
+            professionals, and individuals.
           </p>
           <div className="pk-hero-actions">
             <Button
@@ -33,53 +34,30 @@ export function Hero() {
             </Link>
           </div>
           <p className="pk-hero-note">
-            You don’t need to have it all figured out to start.
+            No judgment. Just a practical place to start.
           </p>
         </div>
-        <div
-          className="pk-desk"
-          role="img"
-          aria-label="A little order. A lot more clarity. Bookkeeping, QuickBooks, and financial documentation."
-        >
-          <div className="pk-desk-top" aria-hidden="true">
-            <span>THE PK APPROACH</span>
-            <span>01 / GET ORGANIZED</span>
+        <figure className="pk-founder-hero">
+          <div className="pk-founder-image">
+            <Image
+              src="/images/pk-founder-workspace.jpg"
+              alt="Portia Allen at the PK Business Services workspace, with organized planners, records, and a laptop"
+              fill
+              sizes="(max-width: 767px) 100vw, (max-width: 1023px) 52vw, 700px"
+              preload
+              className="object-cover"
+            />
           </div>
-          <div className="pk-folder" aria-hidden="true">
-            <span className="pk-folder-tab">A CLEARER STARTING POINT</span>
-            <div className="pk-paper">
-              <span className="pk-paper-label">
-                People. Knowledge. Results.
+          <figcaption className="pk-founder-caption">
+            <span>
+              Portia Allen{" "}
+              <span className="pk-caption-role">
+                Founder, PK Business Services
               </span>
-              <p>
-                A little order.
-                <br />
-                <em>
-                  A lot more
-                  <br />
-                  clarity.
-                </em>
-              </p>
-              <div className="pk-paper-rule" />
-              <div className="pk-paper-list">
-                <span>01</span> Books that need attention
-              </div>
-              <div className="pk-paper-list">
-                <span>02</span> Records that need structure
-              </div>
-              <div className="pk-paper-list">
-                <span>03</span> A practical next step
-              </div>
-              <span className="pk-paper-signature">PK Business Services</span>
-            </div>
-          </div>
-          <div className="pk-desk-bottom" aria-hidden="true">
-            <span>LET’S PUT THINGS IN ORDER.</span>
-            <span className="pk-desk-mark">
-              PK<span>.</span>
             </span>
-          </div>
-        </div>
+            <span className="pk-margin-note">Real help. Real human.</span>
+          </figcaption>
+        </figure>
       </div>
       <div className="pk-hero-strip">
         <div className="container-wide">

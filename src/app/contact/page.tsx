@@ -32,12 +32,12 @@ export default function ContactPage() {
           </div>
           <div className="lg:col-span-2">
             <WhatHappensNext />
-            <div className="mt-6 border-l-2 border-pink px-5 py-2">
-              <h2 className="pk-heading text-xl">A conversation first.</h2>
+            <div className="pk-contact-note mt-8">
+              <h2 className="pk-heading text-xl">Bring the mess.</h2>
               <p className="mt-3 leading-relaxed text-muted-gray">
-                This form starts your inquiry. Keep sensitive financial
-                information for the client portal when it’s time to provide
-                documents.
+                This form starts a conversation, without judgment. Keep
+                sensitive financial information for the client portal when it’s
+                time to provide documents.
               </p>
             </div>
           </div>

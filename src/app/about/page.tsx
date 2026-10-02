@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHero } from "@/components/layout/PageHero";
@@ -64,20 +65,23 @@ export default function AboutPage() {
       {/* Founder */}
       <Section>
         <div className="grid gap-10 lg:grid-cols-2 lg:items-start lg:gap-14">
-          <div className="pk-founder-note">
-            <p className="pk-eyebrow">The person behind the business</p>
-            <p className="pk-founder-statement">
-              People first.
-              <br />
-              Details matter.
-              <br />
-              <span>Let’s get to work.</span>
-            </p>
-            <div className="pk-founder-signature">
-              <span>Portia Allen</span>
-              <p>Founder · PK Business Services</p>
+          <figure className="pk-about-founder">
+            <div className="pk-about-founder-image">
+              <Image
+                src="/images/pk-founder-workspace.jpg"
+                alt="Portia Allen, founder of PK Business Services, at her black, gold, and pink workspace"
+                fill
+                sizes="(max-width: 1023px) 100vw, 550px"
+                className="object-cover"
+              />
             </div>
-          </div>
+            <figcaption>
+              <span className="pk-margin-note">
+                People first. Details matter.
+              </span>
+              <span>Portia Allen · Founder</span>
+            </figcaption>
+          </figure>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">
               Meet the Founder

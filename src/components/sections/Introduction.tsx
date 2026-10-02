@@ -22,13 +22,15 @@ const situations = [
 export function Introduction() {
   return (
     <Section className="pk-introduction">
-      <div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-20">
+      <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-20">
         <div>
           <p className="pk-eyebrow">Sound familiar?</p>
           <h2 className="pk-heading mt-4 text-3xl sm:text-4xl">
-            You’re running a business.
+            You run the business.
             <br />
-            <span className="pk-serif">The paperwork is running behind.</span>
+            <span className="pk-serif">
+              Let’s handle the <em className="pk-ink-underline">paperwork.</em>
+            </span>
           </h2>
           <p className="mt-5 text-lg leading-relaxed text-muted-gray">
             Scattered records and unfinished books can take up more space in
@@ -36,17 +38,31 @@ export function Introduction() {
             find a practical place to start.
           </p>
         </div>
-        <div className="divide-y divide-border">
-          {situations.map((item) => (
-            <Link key={item.title} href={item.href} className="pk-situation">
-              <div>
-                <h3 className="pk-heading text-xl">{item.title}</h3>
-                <p className="mt-2 text-muted-gray">{item.text}</p>
-              </div>
-              <span aria-hidden="true">↗</span>
-            </Link>
-          ))}
+        <div className="pk-notebook">
+          <span className="pk-notebook-label">ON THE PK TO-DO LIST</span>
+          <p className="pk-notebook-title">
+            More clarity.
+            <br />
+            <span>Less stress.</span>
+          </p>
+          <ul>
+            <li>Understand what needs attention</li>
+            <li>Put your records in order</li>
+            <li>Make the next step clear</li>
+          </ul>
+          <p className="pk-margin-note">One step at a time.</p>
         </div>
+      </div>
+      <div className="pk-situation-grid">
+        {situations.map((item) => (
+          <Link key={item.title} href={item.href} className="pk-situation">
+            <div>
+              <h3 className="pk-heading text-xl">{item.title}</h3>
+              <p className="mt-2 text-muted-gray">{item.text}</p>
+            </div>
+            <span aria-hidden="true">↗</span>
+          </Link>
+        ))}
       </div>
     </Section>
   );

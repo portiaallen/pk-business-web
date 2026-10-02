@@ -5,7 +5,7 @@ import { Section, SectionHeader } from "@/components/layout/Section";
 
 export function ServiceCards() {
   return (
-    <Section variant="cream">
+    <Section variant="cream" className="pk-services-display">
       <SectionHeader
         title="The right support for what’s on your desk."
         subtitle="A cleanup, ongoing help, or a documentation project. Start with the situation you’re in."
