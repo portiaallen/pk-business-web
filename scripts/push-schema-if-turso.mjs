@@ -1,3 +1,10 @@
+// Schema changes require a separate explicit non-production operator action.
+if (process.env.VERCEL || process.env.NODE_ENV === "production" ||
+    !["development", "test"].includes(process.env.PK_ENVIRONMENT ?? "") ||
+    process.env.PK_ALLOW_SCHEMA_CHANGE !== "true") {
+  throw new Error("Automatic or production schema changes are disabled");
+}
+
 import { execSync } from "node:child_process";
 
 const databaseUrl = process.env.DATABASE_URL?.trim() ?? "";

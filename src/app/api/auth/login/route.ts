@@ -1,3 +1,4 @@
+import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
         data: {
           action: AuditAction.LOGIN_FAILED,
           resource: "auth",
-          metadata: JSON.stringify({ email, reason: "user_not_found" }),
+          metadata: safeAuditMetadata({ email, reason: "user_not_found" }),
         },
       });
       // Generic response — never reveals whether the account exists
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
           actorId: user.id,
           action: AuditAction.LOGIN_FAILED,
           resource: "auth",
-          metadata: JSON.stringify({ reason: "invalid_password" }),
+          metadata: safeAuditMetadata({ reason: "invalid_password" }),
         },
       });
       throw genericLoginError();
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
         actorId: user.id,
         action: AuditAction.LOGIN,
         resource: "auth",
-        metadata: JSON.stringify({ email: user.email }),
+        metadata: safeAuditMetadata({ email: user.email }),
       },
     });
 

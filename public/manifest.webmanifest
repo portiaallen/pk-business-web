@@ -32,7 +32,7 @@
     {
       "name": "QB Initial Review",
       "short_name": "QB Review",
-      "url": "/admin/requests/cmtucijv50004fv0f9r26yy2w/qb-review",
+      "url": "/admin/requests",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {

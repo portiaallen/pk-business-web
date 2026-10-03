@@ -1,3 +1,4 @@
+import { assertResourceEnvironment, securityEnvironment } from "@/lib/security-environment";
 import { randomBytes, createHash, createHmac } from "crypto";
 import bcrypt from "bcryptjs";
 import type { User, UserRole, ClientMemberRole } from "@/generated/prisma/client";
@@ -10,7 +11,7 @@ function ApiErrorForbidden() {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const SESSION_COOKIE = "pk_session";
+export const SESSION_COOKIE = "pk_business_session";
 export const SESSION_TTL_DAYS = 7;
 const BCRYPT_ROUNDS = 12;
 
@@ -41,18 +42,20 @@ export async function verifyPassword(
 // ─── Token utilities ──────────────────────────────────────────────────────────
 
 function hashToken(token: string): string {
+  const environment = securityEnvironment();
   const secret = process.env.AUTH_SECRET?.trim();
+  if (secret) assertResourceEnvironment("AUTH");
   if (secret) {
-    return createHmac("sha256", secret).update(token).digest("hex");
+    return createHmac("sha256", secret).update(`pk-business:${token}`).digest("hex");
   }
   // Fail-safe: never silently weaken token hashing in production.
   // In development, plain SHA-256 is acceptable for local testing.
-  if (process.env.NODE_ENV === "production") {
+  if (environment === "production" || environment === "preview") {
     throw new Error(
       "AUTH_SECRET is required in production. Set it via environment configuration before serving requests."
     );
   }
-  return createHash("sha256").update(token).digest("hex");
+  return createHash("sha256").update(`pk-business:${token}`).digest("hex");
 }
 
 export function generateSessionToken(): string {
@@ -89,7 +92,7 @@ export async function getSessionUser(
     include: { user: true },
   });
 
-  if (!session || session.expiresAt < new Date()) {
+  if (!session || session.expiresAt <= new Date()) {
     if (session) {
       await prisma.session.delete({ where: { id: session.id } });
     }
@@ -167,14 +170,18 @@ export async function getAuthContext(
   const user = await getSessionUser(token);
   if (!user || user.status !== "ACTIVE") return null;
 
-  // Admin users don't have a client membership — they access everything
-  if (user.role === "ADMIN") return null;
+  // Internal staff must use assignment-scoped APIs, never tenant membership as a bypass.
+  if (user.role !== "CLIENT") return null;
 
-  const membership = await prisma.clientMember.findFirst({
+  const memberships = await prisma.clientMember.findMany({
     where: { userId: user.id },
     include: { client: true },
+    take: 2,
   });
 
+  // Until explicit selection is implemented, never guess among multiple tenants.
+  if (memberships.length !== 1) return null;
+  const membership = memberships[0];
   if (!membership || membership.client.status !== "ACTIVE") return null;
 
   return {
@@ -204,25 +211,25 @@ export function getSessionTokenFromRequest(request: Request): string | undefined
   const cookieHeader = request.headers.get("cookie");
   if (!cookieHeader) return undefined;
 
-  const match = cookieHeader
+  const matches = cookieHeader
     .split(";")
     .map((part) => part.trim())
-    .find((part) => part.startsWith(`${SESSION_COOKIE}=`));
+    .filter((part) => part.startsWith(`${SESSION_COOKIE}=`));
 
-  if (!match) return undefined;
-  return decodeURIComponent(match.slice(SESSION_COOKIE.length + 1));
+  if (matches.length !== 1) return undefined;
+  const match = matches[0];
+  try {
+    const token = decodeURIComponent(match.slice(SESSION_COOKIE.length + 1));
+    return /^[a-f0-9]{64}$/.test(token) ? token : undefined;
+  } catch { return undefined; }
 }
 
 export function buildSessionCookie(token: string): string {
   const maxAge = SESSION_TTL_DAYS * 24 * 60 * 60;
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  const domain = process.env.COOKIE_DOMAIN?.trim();
-  const domainAttr = domain ? `; Domain=${domain}` : "";
-  return `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}${domainAttr}`;
+  return `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`;
 }
 
 export function clearSessionCookie(): string {
-  const domain = process.env.COOKIE_DOMAIN?.trim();
-  const domainAttr = domain ? `; Domain=${domain}` : "";
-  return `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${domainAttr}`;
+  return `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${process.env.NODE_ENV === "production" ? "; Secure" : ""}`;
 }

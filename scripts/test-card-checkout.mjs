@@ -68,14 +68,14 @@ for (const [env, expected] of [
   [{ STRIPE_SECRET_KEY: " ", STRIPE_WEBHOOK_SECRET: testWebhook }, false],
   [{ STRIPE_SECRET_KEY: testKey, STRIPE_WEBHOOK_SECRET: " " }, false],
   [{ STRIPE_SECRET_KEY: testKey, STRIPE_WEBHOOK_SECRET: testWebhook }, true],
-  [{ STRIPE_SECRET_KEY: "sk_live_fixture_not_a_credential", STRIPE_WEBHOOK_SECRET: testWebhook }, true],
-]) { runtime.env = env; assert.equal(isStripeConfigured(), expected); passed++; }
+  [{ PK_ENVIRONMENT: "production", PK_STRIPE_ENVIRONMENT: "production", STRIPE_SECRET_KEY: "sk_live_fixture_not_a_credential", STRIPE_WEBHOOK_SECRET: testWebhook }, true],
+]) { runtime.env = { PK_ENVIRONMENT: "test", PK_STRIPE_ENVIRONMENT: "test", ...env }; assert.equal(isStripeConfigured(), expected); passed++; }
 
 async function checkout() {
   return POST(new Request("https://pk.example.test/api/portal/invoices/fixture-invoice/checkout", { method: "POST" }), { params: Promise.resolve({ id: "fixture-invoice" }) });
 }
 function reset() {
-  runtime.env = { STRIPE_SECRET_KEY: testKey, STRIPE_WEBHOOK_SECRET: testWebhook };
+  runtime.env = { PK_ENVIRONMENT: "test", PK_STRIPE_ENVIRONMENT: "test", STRIPE_SECRET_KEY: testKey, STRIPE_WEBHOOK_SECRET: testWebhook };
   authenticated = true; requests = []; sessionOverride = {};
   invoice = { id: "fixture-invoice", clientId: "fixture-client", invoiceNumber: "FIXTURE-ONLY", status: "SENT", currency: "USD", amountCents: 10000, dueAt: null, payments: [{ status: "PAID", amountCents: 2000 }] };
 }

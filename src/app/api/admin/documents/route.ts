@@ -1,3 +1,4 @@
+import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -108,7 +109,7 @@ export async function DELETE(request: Request) {
         action: "DOCUMENT_DELETED",
         resource: "document",
         resourceId: id,
-        metadata: JSON.stringify({ action: "DOCUMENT_HARD_DELETED", fileName: doc.fileName }),
+        metadata: safeAuditMetadata({ action: "DOCUMENT_HARD_DELETED" }),
       },
     });
 

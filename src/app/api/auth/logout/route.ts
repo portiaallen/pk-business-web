@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   destroySession,
+  getSessionUser,
   clearSessionCookie,
   getSessionTokenFromRequest,
 } from "@/lib/auth";
@@ -12,17 +13,14 @@ export async function POST(request: Request) {
 
   if (token) {
     // Find user for audit log before destroying session
-    const session = await prisma.session.findUnique({
-      where: { tokenHash: token },
-      select: { userId: true },
-    });
+    const user = await getSessionUser(token);
 
     await destroySession(token);
 
-    if (session) {
+    if (user) {
       await prisma.auditLog.create({
         data: {
-          actorId: session.userId,
+          actorId: user.id,
           action: AuditAction.LOGOUT,
           resource: "auth",
         },

@@ -1,3 +1,4 @@
+import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, getSessionTokenFromRequest, hasRole } from "@/lib/auth";
@@ -221,7 +222,7 @@ export async function PATCH(
           action: "ADMIN_ACTION",
           resource: "qb_review",
           resourceId: review.id,
-          metadata: JSON.stringify({ action: "review_status_changed", newStatus: body.reviewStatus }),
+          metadata: safeAuditMetadata({ action: "review_status_changed", newStatus: body.reviewStatus }),
         },
       });
 

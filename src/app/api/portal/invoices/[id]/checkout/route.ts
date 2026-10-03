@@ -1,3 +1,4 @@
+import { logSecurityEvent } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionTokenFromRequest, requireAuthContext } from "@/lib/auth";
@@ -85,14 +86,14 @@ export async function POST(
         },
         body: form,
       });
-    } catch (error) {
-      console.error("Stripe Checkout request failed:", error);
+    } catch {
+      logSecurityEvent("CHECKOUT_NETWORK_FAILURE");
       throw new ApiError(502, "Card checkout could not be started. Please try again.");
     }
 
     const session = (await stripeResponse.json().catch(() => null)) as StripeCheckoutSession | null;
     if (!stripeResponse.ok) {
-      console.error("Stripe Checkout session creation failed:", stripeResponse.status);
+      logSecurityEvent("CHECKOUT_PROVIDER_FAILURE");
       throw new ApiError(502, "Card checkout could not be started. Please try again.");
     }
 

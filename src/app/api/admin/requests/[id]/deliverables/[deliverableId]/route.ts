@@ -1,3 +1,5 @@
+import { safeAuditMetadata } from "@/lib/security-log";
+import { requireDocumentRequestAccess } from "@/lib/document-access";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -32,6 +34,7 @@ export async function GET(
       throw ApiError.notFound("Deliverable not found");
     }
 
+    await requireDocumentRequestAccess(user, id);
     const data = await getObject(deliverable.storageKey);
     if (!data) throw ApiError.notFound("File not found");
 
@@ -83,10 +86,9 @@ export async function DELETE(
         action: "ADMIN_ACTION",
         resource: "deliverable",
         resourceId: deliverable.id,
-        metadata: JSON.stringify({
+        metadata: safeAuditMetadata({
           action: "DELIVERABLE_DELETED",
           requestId: id,
-          title: deliverable.title,
         }),
       },
     });
@@ -139,7 +141,7 @@ export async function PATCH(
           action: "ADMIN_ACTION",
           resource: "deliverable",
           resourceId: deliverable.id,
-          metadata: JSON.stringify({ action: "DELIVERABLE_RETRACTED", requestId: id }),
+          metadata: safeAuditMetadata({ action: "DELIVERABLE_RETRACTED", requestId: id }),
         },
       });
       return NextResponse.json({ id: deliverable.id, visibility: "DRAFT" });
@@ -166,7 +168,7 @@ export async function PATCH(
         action: "ADMIN_ACTION",
         resource: "deliverable",
         resourceId: deliverable.id,
-        metadata: JSON.stringify({ action: "DELIVERABLE_RELEASED", requestId: id, title: deliverable.title }),
+        metadata: safeAuditMetadata({ action: "DELIVERABLE_RELEASED", requestId: id }),
       },
     });
 

@@ -1,3 +1,5 @@
+import { requireDocumentRequestAccess } from "@/lib/document-access";
+import { logSecurityEvent, safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -24,6 +26,7 @@ export async function POST(
     const user = await getSessionUser(token);
     if (!user || !hasRole(user, "ADMIN", "STAFF")) throw ApiError.forbidden();
 
+    await requireDocumentRequestAccess(user, id);
     const req = await prisma.verificationRequest.findUnique({
       where: { id },
       select: { clientId: true },
@@ -48,8 +51,8 @@ export async function POST(
     const storageKey = buildStorageKey(req.clientId, id, file.name);
     try {
       await putObject(storageKey, Buffer.from(await file.arrayBuffer()), file.type || undefined);
-    } catch (storageError) {
-      console.error("Deliverable storage upload failed:", storageError);
+    } catch {
+      logSecurityEvent("DELIVERABLE_STORAGE_FAILURE");
       throw new ApiError(
         503,
         "File storage is unavailable. The deliverable was not saved. Please retry."
@@ -75,7 +78,7 @@ export async function POST(
         action: "DELIVERABLE_UPLOADED",
         resource: "deliverable",
         resourceId: deliverable.id,
-        metadata: JSON.stringify({ requestId: id, title, fileName: file.name }),
+        metadata: safeAuditMetadata({ requestId: id }),
       },
     });
 

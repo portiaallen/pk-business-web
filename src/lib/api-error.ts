@@ -1,3 +1,4 @@
+import { logSecurityEvent } from "@/lib/security-log";
 export class ApiError extends Error {
   public readonly statusCode: number;
 
@@ -40,7 +41,7 @@ export function handleApiError(error: unknown) {
     );
   }
 
-  console.error("Unhandled API error:", error);
+  logSecurityEvent("API_FAILURE");
   return Response.json(
     { error: "An unexpected error occurred" },
     { status: 500 }

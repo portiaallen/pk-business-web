@@ -1,3 +1,5 @@
+import { assertResourceEnvironment, securityEnvironment } from "@/lib/security-environment";
+import { logSecurityEvent, safeAuditMetadata } from "@/lib/security-log";
 import { randomBytes, createHash, createHmac } from "crypto";
 import nodemailer from "nodemailer";
 import bcrypt from "bcryptjs";
@@ -29,17 +31,19 @@ export function generateResetToken(): string {
 }
 
 export function hashResetToken(token: string): string {
+  const environment = securityEnvironment();
   const secret = process.env.AUTH_SECRET?.trim();
+  if (secret) assertResourceEnvironment("AUTH");
   if (secret) {
-    return createHmac("sha256", secret).update(token).digest("hex");
+    return createHmac("sha256", secret).update(`pk-business-reset:${token}`).digest("hex");
   }
   // Fail-safe: never silently weaken token hashing in production.
-  if (process.env.NODE_ENV === "production") {
+  if (environment === "production" || environment === "preview") {
     throw new Error(
       "AUTH_SECRET is required in production for password reset token hashing."
     );
   }
-  return createHash("sha256").update(token).digest("hex");
+  return createHash("sha256").update(`pk-business-reset:${token}`).digest("hex");
 }
 
 // ─── Request flow ─────────────────────────────────────────────────────────────
@@ -91,10 +95,10 @@ export async function requestPasswordReset(
   // same generic message either way.
   try {
     await sendResetEmail(resetUrl);
-  } catch (error) {
+  } catch {
     await prisma.passwordResetToken.delete({ where: { id: created.id } }).catch(() => {});
     if (process.env.NODE_ENV !== "production") {
-      console.error("Password reset email failed:", error);
+      logSecurityEvent("RESET_EMAIL_FAILURE");
     }
     return { accepted: true };
   }
@@ -105,7 +109,7 @@ export async function requestPasswordReset(
       action: AuditAction.PASSWORD_RESET_REQUESTED,
       resource: "auth",
       resourceId: user.id,
-      metadata: JSON.stringify({ recipient: PASSWORD_RESET_RECIPIENT_EMAIL }),
+      metadata: safeAuditMetadata({ recipient: PASSWORD_RESET_RECIPIENT_EMAIL }),
     },
   });
 
@@ -132,6 +136,7 @@ async function sendResetEmail(resetUrl: string): Promise<void> {
     "This link can be used once. If you did not request this, ignore this email.",
   ].join("\n");
 
+  assertResourceEnvironment("EMAIL");
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: { user: gmailUser, pass: gmailAppPassword },
@@ -204,7 +209,7 @@ export async function confirmPasswordReset(
         action: AuditAction.PASSWORD_RESET_COMPLETED,
         resource: "auth",
         resourceId: resetToken.userId,
-        metadata: JSON.stringify({ method: "self_service_reset" }),
+        metadata: safeAuditMetadata({ method: "self_service_reset" }),
       },
     });
   });

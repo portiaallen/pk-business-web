@@ -1,3 +1,4 @@
+import { safeAuditMetadata } from "@/lib/security-log";
 import { prisma } from "@/lib/prisma";
 import {
   getSessionTokenFromRequest,
@@ -87,7 +88,7 @@ export async function DELETE(
         action: "DOCUMENT_DELETED",
         resource: "document",
         resourceId: document.id,
-        metadata: JSON.stringify({ fileName: document.fileName }),
+        metadata: safeAuditMetadata({ action: "DOCUMENT_ACCESS_REVOKED" }),
       },
     });
 

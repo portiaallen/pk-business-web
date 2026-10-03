@@ -6,7 +6,8 @@
     "dev": "next dev --port 4321",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:security:phase1a": "node --test scripts/test-phase1a.mjs && node scripts/test-card-checkout.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",

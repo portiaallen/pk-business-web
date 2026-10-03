@@ -1,3 +1,4 @@
+import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -156,7 +157,7 @@ export async function DELETE(
         action: "ADMIN_ACTION",
         resource: "verification_request",
         resourceId: id,
-        metadata: JSON.stringify({
+        metadata: safeAuditMetadata({
           action: "REQUEST_HARD_DELETED",
           requestType: existing.requestType,
           filesRemoved: storageKeys.length,
@@ -223,7 +224,7 @@ export async function PATCH(
           action: "REQUEST_STATUS_CHANGED",
           resource: "verification_request",
           resourceId: id,
-          metadata: JSON.stringify({ from: existing.status, to: body.status }),
+          metadata: safeAuditMetadata({ from: existing.status, to: body.status }),
         },
       });
     }
@@ -235,7 +236,7 @@ export async function PATCH(
           action: "REQUEST_ASSIGNED",
           resource: "verification_request",
           resourceId: id,
-          metadata: JSON.stringify({ assignedStaffId: body.assignedStaffId }),
+          metadata: safeAuditMetadata({ assignedStaffId: body.assignedStaffId }),
         },
       });
     }

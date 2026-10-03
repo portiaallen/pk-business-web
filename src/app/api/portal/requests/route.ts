@@ -1,3 +1,4 @@
+import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
         action: "REQUEST_CREATED",
         resource: "verification_request",
         resourceId: req.id,
-        metadata: JSON.stringify({ service: service.name }),
+        metadata: safeAuditMetadata({ service: service.name }),
       },
     });
 

@@ -1,3 +1,4 @@
+import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
@@ -107,14 +108,14 @@ export async function POST(request: Request) {
           action: AuditAction.CLIENT_CREATED,
           resource: "client",
           resourceId: client.id,
-          metadata: JSON.stringify({ email }),
+          metadata: safeAuditMetadata({ email }),
         },
         {
           actorId: admin.id,
           action: AuditAction.USER_CREATED,
           resource: "user",
           resourceId: newUser.id,
-          metadata: JSON.stringify({ email, role: "CLIENT" }),
+          metadata: safeAuditMetadata({ email, role: "CLIENT" }),
         },
       ],
     });

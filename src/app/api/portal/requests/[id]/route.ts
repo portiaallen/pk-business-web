@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
-  getSessionUser,
+  requireAuthContext,
   getSessionTokenFromRequest,
 } from "@/lib/auth";
 import { ApiError, handleApiError } from "@/lib/api-error";
@@ -13,13 +13,7 @@ export async function GET(
   try {
     const { id } = await params;
     const token = getSessionTokenFromRequest(request);
-    const user = await getSessionUser(token);
-    if (!user) throw ApiError.unauthorized();
-
-    const membership = await prisma.clientMember.findFirst({
-      where: { userId: user.id },
-    });
-    if (!membership) throw ApiError.forbidden();
+    const ctx = await requireAuthContext(token);
 
     const req = await prisma.verificationRequest.findUnique({
       where: { id },
@@ -70,7 +64,7 @@ export async function GET(
       },
     });
 
-    if (!req || req.clientId !== membership.clientId) {
+    if (!req || req.clientId !== ctx.clientId) {
       throw ApiError.notFound("Request not found");
     }
 

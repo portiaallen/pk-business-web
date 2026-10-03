@@ -50,21 +50,13 @@ export async function requireInventoryContext(
     );
   }
 
-  let member = await prisma.inventoryMember.findUnique({
+  const member = await prisma.inventoryMember.findUnique({
     where: {
       clientId_userId: { clientId: client.id, userId: user.id },
     },
   });
 
-  if (!member) {
-    member = await prisma.inventoryMember.create({
-      data: {
-        clientId: client.id,
-        userId: user.id,
-        role: "OWNER",
-      },
-    });
-  }
+  if (!member) throw ApiError.forbidden("Inventory membership is required.");
 
   if (!hasInventoryPermission(member.role, minimumRole)) {
     throw ApiError.forbidden("You do not have permission for this action.");
@@ -78,7 +70,7 @@ export async function requireInventoryContextFromToken(
   minimumRole: InventoryMemberRole = "VIEWER"
 ): Promise<InventoryContext> {
   const request = new Request("http://inventory.local", {
-    headers: token ? { cookie: `pk_session=${encodeURIComponent(token)}` } : {},
+    headers: token ? { cookie: `pk_inventory_session=${encodeURIComponent(token)}` } : {},
   });
   return requireInventoryContext(request, minimumRole);
 }

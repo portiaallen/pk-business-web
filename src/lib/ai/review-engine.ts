@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
-import { getEngagementContext, renderContextForPrompt } from "@/lib/ai/context";
+import { getEngagementContext } from "@/lib/ai/context";
 import { selectRelevantQuestions, type TriggerCondition } from "@/lib/ai/question-library";
 import { logAiActivity } from "@/lib/ai/activity";
 
@@ -13,8 +13,7 @@ import { logAiActivity } from "@/lib/ai/activity";
  *  - Engagement scope/context (client notes, service, invoices)
  *
  * The MVP rule engine derives findings from recorded manual-review state and
- * detected scope conditions; when ANTHROPIC_API_KEY is configured, Claude
- * enhances the summary and produces prioritized narrative recommendations.
+ * detected scope conditions. External AI receives no engagement context.
  * It NEVER invents transaction data that is not present in the portal.
  */
 
@@ -182,42 +181,6 @@ async function detectScopeAlerts(requestId: string): Promise<
   return alerts;
 }
 
-/** Optional Claude enhancement of the summary. Returns null if not configured. */
-async function claudeSummary(ctxText: string, findings: EngineFinding[]): Promise<string | null> {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) return null;
-  try {
-    const { default: Anthropic } = await import("@anthropic-ai/sdk");
-    const client = new Anthropic({ apiKey });
-    const findingList = findings
-      .slice(0, 25)
-      .map((f) => `- [${f.priority}] ${f.category}: ${f.description}`)
-      .join("\n");
-    const res = await client.messages.create({
-      model: "claude-sonnet-4-5",
-      max_tokens: 1200,
-      system:
-        "You are the PK Business Services AI bookkeeping analyst. You write concise advisor-facing initial-review summaries. " +
-        "Rules: use tentative language ('potential', 'appears', 'requires review'); never assert an error exists; " +
-        "never claim work is complete; base every statement ONLY on the data provided; end with recommended next steps as a numbered list. " +
-        "Format as short markdown sections.",
-      messages: [
-        {
-          role: "user",
-          content: `Engagement context:\n${ctxText}\n\nDetected findings:\n${findingList || "(none recorded yet)"}\n\nWrite the Initial Review Summary.`,
-        },
-      ],
-    });
-    const text = res.content
-      .map((b) => (b.type === "text" ? b.text : ""))
-      .join("\n");
-    return text || null;
-  } catch (err) {
-    console.error("Claude summary failed:", err instanceof Error ? err.message : err);
-    return null;
-  }
-}
-
 /** Run the initial review engine for an engagement. Idempotent per request. */
 export async function runInitialReview(requestId: string, userId: string): Promise<EngineResult> {
   const ctx = await getEngagementContext(requestId);
@@ -285,20 +248,14 @@ export async function runInitialReview(requestId: string, userId: string): Promi
     const { relevant, skippedCount } = selectRelevantQuestions(triggers);
 
     // Build the summary.
-    const ctxText = renderContextForPrompt(ctx);
-    let summary = buildRuleSummary(ctx, newFindings.length, relevant.length, skippedCount, scopeAlerts.length);
-    let engine = "rules";
-    const claude = await claudeSummary(ctxText, detected);
-    if (claude) {
-      summary = claude;
-      engine = "hybrid";
-    }
+    const summary = buildRuleSummary(ctx, newFindings.length, relevant.length, skippedCount, scopeAlerts.length);
+    const engine = "rules";
 
     await prisma.aiReview.update({
       where: { id: review.id },
       data: { status: "COMPLETE", completedAt: new Date(), summary, engine },
     });
-    await log(review.id, "RECOMMENDATION_GENERATED", `Summary generated (engine: ${engine}).`, claude ? "AI_GENERATED" : "SYSTEM_GENERATED");
+    await log(review.id, "RECOMMENDATION_GENERATED", `Summary generated (engine: ${engine}).`, "SYSTEM_GENERATED");
 
     return {
       requestId,

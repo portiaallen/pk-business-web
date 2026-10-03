@@ -1,3 +1,4 @@
+import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -177,7 +178,7 @@ export async function DELETE(
         action: "ADMIN_ACTION",
         resource: "client",
         resourceId: id,
-        metadata: JSON.stringify({
+        metadata: safeAuditMetadata({
           action: "CLIENT_HARD_DELETED",
           clientName: existing.name,
           ...result.counts,
@@ -238,7 +239,7 @@ export async function PATCH(
         action: "ADMIN_ACTION",
         resource: "client",
         resourceId: id,
-        metadata: JSON.stringify({ changes: data, clientName: existing.name }),
+        metadata: safeAuditMetadata({ action: "CLIENT_UPDATED", from: existing.status, to: updated.status, fieldsChanged: Object.keys(data) }),
       },
     });
 

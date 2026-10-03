@@ -1,3 +1,4 @@
+import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -93,7 +94,7 @@ export async function POST(request: Request) {
         action: "CLIENT_MEMBER_ADDED",
         resource: "client_member",
         resourceId: member.id,
-        metadata: JSON.stringify({ email, role }),
+        metadata: safeAuditMetadata({ email, role }),
       },
     });
 
@@ -146,7 +147,7 @@ export async function PATCH(request: Request) {
         action: "ADMIN_ACTION",
         resource: "client_member",
         resourceId: memberId,
-        metadata: JSON.stringify({ roleChange: role }),
+        metadata: safeAuditMetadata({ roleChange: role }),
       },
     });
 
@@ -188,7 +189,7 @@ export async function DELETE(request: Request) {
         action: "CLIENT_MEMBER_REMOVED",
         resource: "client_member",
         resourceId: memberId,
-        metadata: JSON.stringify({ removedUserId: member.userId }),
+        metadata: safeAuditMetadata({ removedUserId: member.userId }),
       },
     });
 

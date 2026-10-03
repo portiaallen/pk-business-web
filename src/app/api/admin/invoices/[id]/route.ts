@@ -1,3 +1,4 @@
+import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -135,7 +136,7 @@ export async function DELETE(
           action: "PAYMENT_STATUS_CHANGED",
           resource: "payment",
           resourceId: payment.id,
-          metadata: JSON.stringify({
+          metadata: safeAuditMetadata({
             action: "PAYMENT_DELETED",
             invoiceId: invoice.id,
             amountCents: payment.amountCents,
@@ -171,7 +172,7 @@ export async function DELETE(
           action: "ADMIN_ACTION",
           resource: "invoice",
           resourceId: invoice.id,
-          metadata: JSON.stringify({
+          metadata: safeAuditMetadata({
             action: "INVOICE_HARD_DELETED",
             invoiceNumber: invoice.invoiceNumber,
             amountCents: invoice.amountCents,
