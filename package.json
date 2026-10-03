@@ -9,7 +9,9 @@
     "lint": "eslint",
     "test:security:phase1a": "node --test scripts/test-phase1a.mjs && node scripts/test-card-checkout.mjs",
     "test:security:phase1b": "prisma generate && node --import tsx --test scripts/test-phase1b.mts",
-    "test:browser:phase1b": "prisma generate && node --import tsx scripts/verify-phase1b-browser.mts"
+    "test:browser:phase1b": "prisma generate && node --import tsx scripts/verify-phase1b-browser.mts",
+    "test:security:phase1c": "prisma generate && node --import tsx --test scripts/test-phase1c.mts",
+    "test:browser:phase1c": "prisma generate && node --import tsx scripts/verify-phase1b-browser.mts --vault"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",

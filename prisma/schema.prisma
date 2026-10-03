@@ -297,6 +297,7 @@ model Client {
   inventoryLocations   InventoryLocation[]
   inventoryProducts    InventoryProduct[]
   inventoryTransactions InventoryTransaction[]
+  vaultDocuments VaultDocument[]
 }
 
 // ─── Client membership (multi-user businesses) ────────────────────────────────
@@ -376,6 +377,7 @@ model VerificationRequest {
   timeEntries     TimeEntry[]
   qbCleanupReview QbCleanupReview?
   aiReview        AiReview?
+  vaultDocuments VaultDocument[]
 
   @@index([clientId])
   @@index([serviceId])
@@ -1153,4 +1155,76 @@ model CapabilityGrant {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@unique([userId, capability, scope, clientId, requestId])
   @@index([userId, clientId])
+}
+
+// Explicit confidential boundary. No legacy Document/Deliverable migration.
+// Restrict parent deletion: disposal is an audited storage operation, never a cascade.
+model VaultDocument {
+  id                    String @id
+  clientId              String
+  requestId             String
+  createdBy             String
+  idempotencyKey        String
+  purpose               String
+  classification        String @default("CONFIDENTIAL_CLIENT")
+  category              String
+  highRisk              Boolean @default(false)
+  taxInformation        Boolean @default(false)
+  mimeType              String
+  expectedSize          Int
+  digest                String?
+  state                 String @default("INTENT")
+  version               Int @default(0)
+  expiresAt             DateTime
+  leaseUntil            DateTime?
+  uploadedAt            DateTime?
+  releasedAt            DateTime?
+  retentionCategory     String
+  policyReference       String?
+  policyVersion         String?
+  retentionTrigger      String @default("ENGAGEMENT_CLOSEOUT")
+  retentionTriggeredAt  DateTime?
+  disposalEligibleAt    DateTime?
+  legalHold             Boolean @default(false)
+  holdReference         String?
+  holdReason            String?
+  disposalState         String @default("NONE")
+  disposalRequestedAt   DateTime?
+  disposedAt            DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  client Client @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  request VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  @@unique([createdBy, idempotencyKey])
+  @@index([clientId, requestId, state])
+}
+
+// Durable evidence is independent of parent lifecycle and included in recovery reconciliation.
+model VaultTombstone {
+  id          String @id
+  clientId    String
+  digest      String?
+  disposedAt  DateTime
+  evidence    String
+}
+
+model VaultBackup {
+  id          String @id
+  clientId    String
+  state       String @default("PENDING")
+  digest      String?
+  createdAt   DateTime @default(now())
+  restoredAt  DateTime?
+  @@index([clientId])
+}
+
+// Empty until approved PK policy/authority supplies categories and periods. NULL is never zero.
+model VaultRetentionPolicy {
+  id             String @id
+  category       String
+  policyVersion  String
+  trigger        String @default("ENGAGEMENT_CLOSEOUT")
+  durationDays   Int?
+  approved       Boolean @default(false)
+  @@unique([category, policyVersion])
 }

@@ -9,6 +9,10 @@ import {
 
 export const CAPABILITIES = [
   "confidential_access",
+  "vault_read",
+  "vault_upload",
+  "high_risk_access",
+  "tax_information_access",
   "bookkeeping",
   "tax_preparation",
   "qa",

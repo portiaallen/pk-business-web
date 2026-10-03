@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, createWriteStream, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { deflateSync } from "node:zlib";
 import { spawn, execFileSync } from "node:child_process";
 import Database from "better-sqlite3";
 import { chromium } from "@playwright/test";
@@ -20,7 +21,8 @@ for (const key of [
   "PK_STORAGE_ENVIRONMENT",
 ])
   process.env[key] = "";
-const directory = mkdtempSync(join(tmpdir(), "pk-phase1b-browser-synthetic-"));
+const verifyVault = process.argv.includes("--vault");
+const directory = mkdtempSync(join(tmpdir(), verifyVault ? "pk-phase1c-browser-synthetic-" : "pk-phase1b-browser-synthetic-"));
 const database = join(directory, "synthetic.db");
 const port = 4341,
   origin = `http://localhost:${port}`;
@@ -30,6 +32,9 @@ Object.assign(process.env, {
   AUTH_SECRET: "synthetic-browser-only-secret",
   DATABASE_URL: `file:${database}`,
   PK_WEBAUTHN_ORIGIN: origin,
+  PK_VAULT_SYNTHETIC: verifyVault ? "true" : "false",
+  PK_VAULT_SYNTHETIC_ROOT: join(directory, "vault-test-resources"),
+  PK_ALLOW_SYNTHETIC_SETUP: verifyVault ? "true" : "false",
 });
 const sql = execFileSync(
   "npx",
@@ -79,6 +84,7 @@ for (const capability of [
   "bookkeeping",
   "qa",
   "payments",
+  ...(verifyVault ? ["vault_read", "vault_upload", "high_risk_access", "tax_information_access"] : []),
 ])
   await prisma.capabilityGrant.create({
     data: { userId, capability, scope: "CLIENT", clientId: "synthetic-client" },
@@ -135,7 +141,17 @@ try {
   const context = await browser.newContext({ hasTouch: true });
   const page = await context.newPage();
   const errors: string[] = [];
+  const consoleCounts = { unexpectedErrors: 0, preExistingBaseUIWarnings: 0, expectedDenialOrOfflineErrors: 0 };
   page.on("pageerror", () => errors.push("pageerror"));
+  if (verifyVault) page.on("console", message => {
+    if (!["error", "warning"].includes(message.type())) return;
+    const text = message.text();
+    if (text.includes("Base UI: A component that acts as a button")) consoleCounts.preExistingBaseUIWarnings++;
+    else if (message.type() === "error") {
+      if (/ERR_INTERNET_DISCONNECTED|status of (401|403|404)/.test(text)) consoleCounts.expectedDenialOrOfflineErrors++;
+      else consoleCounts.unexpectedErrors++;
+    }
+  });
   const cdp = await context.newCDPSession(page);
   await cdp.send("WebAuthn.enable");
   let virtualAuthenticator = await cdp.send(
@@ -274,6 +290,118 @@ try {
       true,
     );
     check(`staff context banner responsive ${width}`);
+    await page.goto(`${origin}/security`);
+    await page.getByRole("heading", { name: "Your authenticators" }).waitFor();
+  }
+  if (verifyVault) {
+    const headers = { "x-pk-client-context": "synthetic-client" };
+    const syntheticPdf = Buffer.from("%PDF-1.4\n% PK_SYNTHETIC_VAULT_V1 SYNTHETIC_BROWSER_VAULT_CANARY\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF\n");
+    // Valid synthetic PNG with a controlled canary; no real imagery or client metadata.
+    function chunk(type: string, bytes: Buffer) {
+      const size = Buffer.alloc(4); size.writeUInt32BE(bytes.length);
+      const data = Buffer.concat([Buffer.from(type), bytes]);
+      let crc = 0xffffffff;
+      for (const byte of data) { crc ^= byte; for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0); }
+      const checksum = Buffer.alloc(4); checksum.writeUInt32BE((crc ^ 0xffffffff) >>> 0);
+      return Buffer.concat([size, data, checksum]);
+    }
+    const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(1, 0); ihdr.writeUInt32BE(1, 4); ihdr[8] = 8; ihdr[9] = 2;
+    const syntheticPng = Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]), chunk("IHDR", ihdr), chunk("tEXt", Buffer.from("Synthetic\0PK_SYNTHETIC_VAULT_V1")), chunk("IDAT", deflateSync(Buffer.from([0,255,0,128]))), chunk("IEND", Buffer.alloc(0))]);
+    await page.goto(`${origin}/vault`);
+    await page.evaluate(async () => {
+      await navigator.serviceWorker.register("/sw.js");
+      await navigator.serviceWorker.ready;
+    });
+    await page.waitForFunction(() => !!navigator.serviceWorker.controller);
+    check("actual PWA service worker controls synthetic Vault browser");
+    await page.getByLabel("Engagement", { exact: true }).selectOption("synthetic-engagement");
+    await page.getByLabel("Synthetic document", { exact: true }).setInputFiles({ name: "synthetic-confidential-original.pdf", mimeType: "application/pdf", buffer: syntheticPdf });
+    await page.getByRole("button", { name: "Upload for security checks" }).tap();
+    await page.getByRole("status").filter({ hasText: "Document status: RELEASED" }).waitFor();
+    check("touch upload intent, quarantine, scan and release");
+    await page.getByLabel("Synthetic document", { exact: true }).setInputFiles({ name: "synthetic-image.png", mimeType: "image/png", buffer: syntheticPng });
+    await page.getByRole("button", { name: "Upload for security checks" }).tap();
+    await page.locator("article").filter({ hasText: "RELEASED" }).nth(1).waitFor();
+    check("image bytes validated and released through touch flow");
+    const listed = await page.request.get(`${origin}/api/vault?requestId=synthetic-engagement`, { headers });
+    assert.equal(listed.status(), 200);
+    const docs = (await listed.json()).documents;
+    assert.equal(docs.length, 2);
+    assert.equal(JSON.stringify(docs).includes("original.pdf"), false);
+    assert.equal(JSON.stringify(docs).includes("SYNTHETIC_BROWSER_VAULT_CANARY"), false);
+    check("document filenames/content absent from metadata");
+    const pdfDoc = docs.find((d: { canView: boolean }) => !d.canView);
+    const downloaded = await page.request.get(`${origin}/api/vault/${pdfDoc.id}`, { headers });
+    assert.equal(downloaded.status(), 200);
+    assert.equal(await downloaded.text(), syntheticPdf.toString());
+    assert.match(downloaded.headers()["cache-control"], /no-store/);
+    assert.equal(downloaded.headers()["x-content-type-options"], "nosniff");
+    check("authenticated broker download with no-store and nosniff");
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download approved copy" }).first().tap();
+    await (await download).delete();
+    check("touch download without desktop dependency");
+    await page.getByRole("button", { name: "View image securely" }).tap();
+    await page.getByRole("img", { name: "Authorized confidential document preview" }).waitFor();
+    assert.ok(await page.getByRole("img", { name: "Authorized confidential document preview" }).evaluate((img: HTMLImageElement) => img.src.startsWith("blob:")));
+    await page.getByRole("button", { name: "Close preview" }).tap();
+    check("authenticated in-memory image preview closed/revoked");
+    for (const width of [390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      const targets = await page.locator("#main-content button, #main-content select, #main-content input[type=file]").evaluateAll(elements => elements.map(e => e.getBoundingClientRect().height));
+      assert.ok(targets.every(height => height >= 44));
+      check(`Vault touch targets and responsive layout ${width}`);
+      const result = await new AxeBuilder({ page }).include("#main-content").withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+      assert.equal(result.violations.length, 0, result.violations.map(v => v.id).join(","));
+      check(`Vault accessibility ${width}`);
+      await page.evaluate(() => {
+        (document.activeElement as HTMLElement | null)?.blur();
+        document.documentElement.style.scrollBehavior = "auto";
+        window.scrollTo({ top: 0, behavior: "instant" });
+      });
+      await page.waitForFunction(() => window.scrollY === 0);
+      // Screenshot only hides framework development chrome, never application content/errors.
+      await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+      await page.screenshot({ path: join(directory, `vault-${width}.png`), fullPage: true });
+    }
+    const denied = await page.request.get(`${origin}/api/vault/${pdfDoc.id}`, { headers: { "x-pk-client-context": "unauthorized-client" } });
+    assert.equal(denied.status(), 404);
+    check("broker wrong-client denial discloses no object");
+    const anonymous = await fetch(`${origin}/api/vault/${pdfDoc.id}`, { headers });
+    assert.equal(anonymous.status, 401);
+    check("anonymous broker denies access");
+    const audit = await prisma.auditLog.findMany({ where: { resource: "secure_vault" } });
+    assert.equal(JSON.stringify(audit).includes("SYNTHETIC_BROWSER_VAULT_CANARY"), false);
+    check("browser canary absent from audit");
+    const cacheKeys = await page.evaluate(async () => {
+      const names = await caches.keys();
+      const result: string[] = [];
+      for (const name of names) for (const request of await (await caches.open(name)).keys()) result.push(request.url);
+      return result;
+    });
+    assert.equal(cacheKeys.some(key => key.includes("/api/vault")), false);
+    check("Vault file bytes absent from CacheStorage");
+    const cacheContainsCanary = await page.evaluate(async () => {
+      for (const name of await caches.keys()) {
+        const cache = await caches.open(name);
+        for (const request of await cache.keys()) {
+          const response = await cache.match(request);
+          if (response && (await response.text()).includes("SYNTHETIC_BROWSER_VAULT_CANARY")) return true;
+        }
+      }
+      return false;
+    });
+    assert.equal(cacheContainsCanary, false);
+    check("active service worker cache contains no synthetic file canary");
+    await context.setOffline(true);
+    const offlineFileUnavailable = await page.evaluate(async (id) => {
+      try { await fetch(`/api/vault/${id}`, { cache: "no-store", headers: { "x-pk-client-context": "synthetic-client" } }); return false; }
+      catch { return true; }
+    }, pdfDoc.id);
+    await context.setOffline(false);
+    assert.equal(offlineFileUnavailable, true);
+    check("offline Vault file retrieval fails without cached content");
     await page.goto(`${origin}/security`);
     await page.getByRole("heading", { name: "Your authenticators" }).waitFor();
   }
@@ -508,11 +636,16 @@ try {
   check("security response denies browser caching");
   assert.equal(errors.length, 0);
   check("no browser page errors");
+  if (verifyVault) {
+    assert.equal(consoleCounts.unexpectedErrors, 0);
+    check("no unexpected console errors; pre-existing Base UI warning and expected denials reported separately");
+  }
   writeFileSync(
     join(directory, "results.json"),
     JSON.stringify(
       {
         checks: results,
+        ...(verifyVault ? { consoleCounts } : {}),
         deviceStatus:
           "Samsung hardware NOT VERIFIED; virtual Chromium platform authenticator only",
       },
@@ -523,6 +656,7 @@ try {
   console.log(
     JSON.stringify({
       passed: results.length,
+      ...(verifyVault ? { consoleCounts } : {}),
       checks: results,
       artifactDirectory: directory,
     }),
@@ -539,4 +673,5 @@ try {
   // Keep only synthetic screenshots/results; no persistent synthetic credential database.
   rmSync(database, { force: true });
   rmSync(`${database}-journal`, { force: true });
+  if (verifyVault) rmSync(join(directory, "vault-test-resources"), { recursive: true, force: true });
 }

@@ -112,6 +112,7 @@ export default function SecurityPage() {
   return (
     <div className="mx-auto max-w-xl space-y-6 px-4 py-12">
       <h1 className="text-3xl font-semibold">Account security</h1>
+      <Link href="/vault" className="inline-flex min-h-12 items-center underline">Secure Client Vault</Link>
       <p>
         Use your device’s passkey or an optional FIDO2 authenticator. A physical
         security key is not required.
