@@ -1,3 +1,4 @@
+import { requireAdminApiAccess } from "@/lib/admin-access";
 import { requireDocumentRequestAccess } from "@/lib/document-access";
 import { prisma } from "@/lib/prisma";
 import {
@@ -14,6 +15,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const token = getSessionTokenFromRequest(request);
     const user = await getSessionUser(token);
     if (!user || !hasRole(user, "ADMIN", "STAFF")) throw ApiError.forbidden();

@@ -1,0 +1,212 @@
+{
+  "phase1bSecurity": {
+    "passed": 44,
+    "failed": 0
+  },
+  "phase1aRegression": {
+    "passed": 63,
+    "failed": 0
+  },
+  "cardCheckout": {
+    "passed": 18,
+    "realCharges": 0
+  },
+  "browser": {
+    "passed": 38,
+    "pageErrors": 0,
+    "viewports": [
+      390,
+      768,
+      1440
+    ],
+    "hardware": "NOT VERIFIED"
+  },
+  "migration": {
+    "syntheticLegacyChecksPassed": 4,
+    "productionApplied": false
+  },
+  "build": "PASS (two pre-existing filesystem tracing warnings)",
+  "typescript": "PASS",
+  "lint": {
+    "baseline": "f7271dad749d61329449c1109fb7e0d28176950c",
+    "changed": {
+      "newErrors": 0,
+      "newWarnings": 0,
+      "preExistingErrors": 9,
+      "preExistingWarnings": 14
+    },
+    "findings": [
+      {
+        "file": "src/app/admin/layout.tsx",
+        "line": 12,
+        "rule": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/admin/layout.tsx",
+        "line": 17,
+        "rule": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/admin/layout.tsx",
+        "line": 64,
+        "rule": "@next/next/no-location-assign-relative-destination",
+        "severity": 1,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/admin/layout.tsx",
+        "line": 67,
+        "rule": "@next/next/no-location-assign-relative-destination",
+        "severity": 1,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/admin/layout.tsx",
+        "line": 70,
+        "rule": "@next/next/no-location-assign-relative-destination",
+        "severity": 1,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/admin/layout.tsx",
+        "line": 80,
+        "rule": "@next/next/no-location-assign-relative-destination",
+        "severity": 1,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/admin/requests/[id]/page.tsx",
+        "line": 5,
+        "rule": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/admin/requests/[id]/page.tsx",
+        "line": 5,
+        "rule": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/admin/requests/[id]/page.tsx",
+        "line": 7,
+        "rule": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/admin/requests/[id]/page.tsx",
+        "line": 94,
+        "rule": "react-hooks/immutability",
+        "severity": 2,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/admin/requests/[id]/page.tsx",
+        "line": 95,
+        "rule": "react-hooks/immutability",
+        "severity": 2,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/admin/requests/[id]/page.tsx",
+        "line": 96,
+        "rule": "react-hooks/immutability",
+        "severity": 2,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/admin/requests/[id]/page.tsx",
+        "line": 101,
+        "rule": "react-hooks/set-state-in-effect",
+        "severity": 2,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/admin/requests/[id]/page.tsx",
+        "line": 122,
+        "rule": "react-hooks/immutability",
+        "severity": 2,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/admin/requests/[id]/page.tsx",
+        "line": 360,
+        "rule": "@next/next/no-location-assign-relative-destination",
+        "severity": 1,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/admin/requests/[id]/page.tsx",
+        "line": 734,
+        "rule": "react-hooks/immutability",
+        "severity": 2,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/admin/requests/[id]/page.tsx",
+        "line": 739,
+        "rule": "react-hooks/immutability",
+        "severity": 2,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/admin/requests/[id]/page.tsx",
+        "line": 755,
+        "rule": "react-hooks/purity",
+        "severity": 2,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/api/admin/invoices/[id]/actions/route.ts",
+        "line": 12,
+        "rule": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/api/admin/invoices/[id]/route.ts",
+        "line": 19,
+        "rule": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/api/admin/requests/[id]/qb-review/route.ts",
+        "line": 372,
+        "rule": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/api/admin/team/route.ts",
+        "line": 61,
+        "rule": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "preExisting": true
+      },
+      {
+        "file": "src/app/portal/team/page.tsx",
+        "line": 37,
+        "rule": "react-hooks/set-state-in-effect",
+        "severity": 2,
+        "preExisting": true
+      }
+    ],
+    "fullRepository": {
+      "errors": 21,
+      "warnings": 40
+    }
+  },
+  "status": {
+    "deployed": false,
+    "published": false,
+    "productionVerified": false,
+    "phase1cImplemented": false
+  }
+}

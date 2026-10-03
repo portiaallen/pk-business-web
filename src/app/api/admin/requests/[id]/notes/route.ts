@@ -1,3 +1,4 @@
+import { requireAdminApiAccess } from "@/lib/admin-access";
 import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -15,10 +16,11 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id } = await params;
     const token = getSessionTokenFromRequest(request);
     const user = await getSessionUser(token);
-    if (!user || !hasRole(user, "ADMIN")) throw ApiError.forbidden();
+    if (!user || !hasRole(user, "ADMIN", "STAFF")) throw ApiError.forbidden();
 
     const req = await prisma.verificationRequest.findUnique({
       where: { id },
@@ -62,6 +64,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id } = await params;
     const admin = await requireAdminForDelete(request);
     const noteId = await readDeleteId(request);

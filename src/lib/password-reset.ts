@@ -195,11 +195,12 @@ export async function confirmPasswordReset(
 
     await tx.user.update({
       where: { id: resetToken.userId },
-      data: { passwordHash },
+      data: { passwordHash, securityVersion: { increment: 1 } },
     });
     // Revoke every session for this user.
     await tx.session.deleteMany({ where: { userId: resetToken.userId } });
     // Revoke any other reset tokens for this user.
+    await tx.securityChallenge.deleteMany({ where: { userId: resetToken.userId } });
     await tx.passwordResetToken.deleteMany({
       where: { userId: resetToken.userId, id: { not: resetToken.id } },
     });

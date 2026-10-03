@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
     },
   },
   async headers() {
-    const confidential = ["/api/:path*", "/portal/:path*", "/admin/:path*", "/b2b/:path*", "/forgot-password"];
+    const confidential = ["/api/:path*", "/portal/:path*", "/admin/:path*", "/b2b/:path*", "/forgot-password", "/security"];
     return [
       { source: "/:path*", headers: [
         { key: "X-Content-Type-Options", value: "nosniff" },

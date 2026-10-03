@@ -1,3 +1,4 @@
+import { requireAdminApiAccess } from "@/lib/admin-access";
 import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
@@ -13,9 +14,10 @@ import { AuditAction } from "@/generated/prisma/client";
 
 export async function GET(request: Request) {
   try {
+    await requireAdminApiAccess(request);
     const token = getSessionTokenFromRequest(request);
     const user = await getSessionUser(token);
-    if (!user || !hasRole(user, "ADMIN")) throw ApiError.forbidden();
+    if (!user || !hasRole(user, "ADMIN", "STAFF")) throw ApiError.forbidden();
 
     const clients = await prisma.client.findMany({
       include: {
@@ -54,9 +56,10 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  */
 export async function POST(request: Request) {
   try {
+    await requireAdminApiAccess(request);
     const token = getSessionTokenFromRequest(request);
     const admin = await getSessionUser(token);
-    if (!admin || !hasRole(admin, "ADMIN")) throw ApiError.forbidden();
+    if (!admin || !hasRole(admin, "ADMIN", "STAFF")) throw ApiError.forbidden();
 
     const body = await request.json();
     const email =

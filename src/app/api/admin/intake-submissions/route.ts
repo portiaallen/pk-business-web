@@ -1,3 +1,4 @@
+import { requireAdminApiAccess } from "@/lib/admin-access";
 import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -17,9 +18,10 @@ function serviceLabel(slug: string): string {
 /** GET — list consultation submissions (newest first) for the admin portal. */
 export async function GET(request: Request) {
   try {
+    await requireAdminApiAccess(request);
     const token = getSessionTokenFromRequest(request);
     const user = await getSessionUser(token);
-    if (!user || !hasRole(user, "ADMIN")) throw ApiError.forbidden();
+    if (!user || !hasRole(user, "ADMIN", "STAFF")) throw ApiError.forbidden();
 
     const submissions = await prisma.intakeSubmission.findMany({
       orderBy: { createdAt: "desc" },
@@ -48,6 +50,7 @@ export async function GET(request: Request) {
 /** DELETE — permanently remove a consultation submission (ADMIN only). */
 export async function DELETE(request: Request) {
   try {
+    await requireAdminApiAccess(request);
     const admin = await requireAdminForDelete(request);
     const id = await readDeleteId(request);
 
@@ -81,9 +84,10 @@ export async function DELETE(request: Request) {
 /** PATCH — mark a submission processed/unprocessed. */
 export async function PATCH(request: Request) {
   try {
+    await requireAdminApiAccess(request);
     const token = getSessionTokenFromRequest(request);
     const user = await getSessionUser(token);
-    if (!user || !hasRole(user, "ADMIN")) throw ApiError.forbidden();
+    if (!user || !hasRole(user, "ADMIN", "STAFF")) throw ApiError.forbidden();
 
     const body = (await request.json().catch(() => null)) as {
       id?: string;

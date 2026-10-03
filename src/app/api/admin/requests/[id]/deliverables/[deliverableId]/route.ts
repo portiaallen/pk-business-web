@@ -1,3 +1,4 @@
+import { requireAdminApiAccess } from "@/lib/admin-access";
 import { safeAuditMetadata } from "@/lib/security-log";
 import { requireDocumentRequestAccess } from "@/lib/document-access";
 import { NextResponse } from "next/server";
@@ -17,6 +18,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string; deliverableId: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id, deliverableId } = await params;
     const token = getSessionTokenFromRequest(request);
     const user = await getSessionUser(token);
@@ -59,6 +61,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; deliverableId: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id, deliverableId } = await params;
     const admin = await requireAdminForDelete(request);
 
@@ -109,11 +112,12 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; deliverableId: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id, deliverableId } = await params;
     const token = getSessionTokenFromRequest(request);
     const user = await getSessionUser(token);
     // Release is a material client-facing action — ADMIN only.
-    if (!user || !hasRole(user, "ADMIN")) throw ApiError.forbidden();
+    if (!user || !hasRole(user, "ADMIN", "STAFF")) throw ApiError.forbidden();
 
     const body = (await request.json().catch(() => null)) as { visibility?: string } | null;
     if (!body || (body.visibility !== "RELEASED" && body.visibility !== "DRAFT")) {

@@ -65,7 +65,7 @@ type Detail = {
   timeCategories: string[];
 };
 
-type Staff = { id: string; name: string; email: string; role: string };
+type Staff = { id: string; name: string; email: string; role: string; securityVersion: number };
 
 const STATUSES = [
   "DRAFT", "SUBMITTED", "DOCUMENTS_REQUIRED", "UNDER_REVIEW",
@@ -295,16 +295,23 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
     setSaving(true);
     setError("");
     try {
-      const res = await fetch(`/api/admin/requests/${id}`, {
-        method: "PATCH",
+      const assignment = "assignedStaffId" in data;
+      const targetId = assignment ? (data.assignedStaffId || detail?.assignedStaff?.id) : null;
+      const target = staff.find(s => s.id === targetId);
+      if (assignment && !target) { setError("Choose an active staff member. Manage offboarding in security administration."); return; }
+      const payload = assignment ? { action: "assign", targetId, requestId: id, expectedVersion: target!.securityVersion, clearAssignment: !data.assignedStaffId, reason: "CLIENT_ASSIGNMENT_CHANGE" } : data;
+      const res = await fetch(assignment ? "/api/admin/security" : `/api/admin/requests/${id}`, {
+        method: assignment ? "POST" : "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
         setError(j.error || "Update failed");
       } else {
         await load();
+        const staffResponse = await fetch("/api/admin/staff");
+        if (staffResponse.ok) setStaff(await staffResponse.json());
       }
     } finally {
       setSaving(false);

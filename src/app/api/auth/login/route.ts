@@ -1,3 +1,4 @@
+import { startChallenge } from "@/lib/webauthn";
 import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -84,21 +85,15 @@ export async function POST(request: Request) {
     // Successful authentication — clear failed-attempt state
     await clearFailedLogins(email);
 
-    if (adminMode && !hasRole(user, "ADMIN")) {
-      throw ApiError.forbidden("Administrator access is required.");
+    if (adminMode && !hasRole(user, "ADMIN", "STAFF")) {
+      throw ApiError.forbidden("PK staff access is required.");
     }
 
+    if (user.role !== "CLIENT") {
+      const count = await prisma.webAuthnCredential.count({ where: { userId: user.id } });
+      return NextResponse.json({ mfaRequired: true, ...await startChallenge(user.id, count ? "LOGIN" : "ENROLL") });
+    }
     const token = await createSession(user.id);
-
-    // Audit log
-    await prisma.auditLog.create({
-      data: {
-        actorId: user.id,
-        action: AuditAction.LOGIN,
-        resource: "auth",
-        metadata: safeAuditMetadata({ email: user.email }),
-      },
-    });
 
     // Determine redirect destination
     const isAdmin = hasRole(user, "ADMIN");

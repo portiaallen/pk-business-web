@@ -30,8 +30,8 @@ function harness({env={},prisma={},mocks={},inventory=false,fetchMock}={}) {
  return {load,logs,calls};
 }
 const prod={NODE_ENV:'production',PK_ENVIRONMENT:'production',PK_AUTH_ENVIRONMENT:'production',AUTH_SECRET:'synthetic-test-only-secret'};
-const user={id:'synthetic-staff',role:'STAFF',status:'ACTIVE',name:'Synthetic',email:'synthetic@example.test'};
-const session={expiresAt:new Date(Date.now()+60000),user};
+const user={securityVersion:0,assurance:'WEBAUTHN',sessionId:'synthetic-session',activeClientId:'synthetic-client',passwordVerifiedAt:new Date(),mfaVerifiedAt:new Date(),id:'synthetic-staff',role:'STAFF',status:'ACTIVE',name:'Synthetic',email:'synthetic@example.test'};
+const session={securityVersion:0,assurance:'WEBAUTHN',lastSeenAt:new Date(),passwordVerifiedAt:new Date(),mfaVerifiedAt:new Date(),activeClientId:null,expiresAt:new Date(Date.now()+60000),user};
 const authMock={getSessionTokenFromRequest:()=> 'fixture',getSessionUser:async()=>user,hasRole:(u,...roles)=>roles.includes(u.role)};
 test('logger drops unrecognized content and errors never disclose exception content',()=>{
  const h=harness();h.load('src/lib/security-log.ts').logSecurityEvent(canary);
@@ -67,12 +67,12 @@ for(const [label,members,expected] of [
  ['inactive',[{clientId:'synthetic-client',role:'OWNER',client:{status:'INACTIVE'}}],false],
  ['none',[],false],['ambiguous',[{clientId:'one'},{clientId:'two'}],false],
 ])test(`client context: ${label}`,async()=>{
- const h=harness({env:prod,prisma:{session:{findUnique:async()=>({...session,user:{...user,role:"CLIENT"}})},clientMember:{findMany:async()=>members}}});
+ const h=harness({env:prod,prisma:{session:{updateMany:async()=>({count:1}),findUnique:async()=>({...session,user:{...user,role:"CLIENT"}})},clientMember:{findMany:async()=>members}}});
  const ctx=await h.load('src/lib/auth.ts').getAuthContext('fixture');assert.equal(Boolean(ctx),expected);
 });
 test('expired and inactive sessions are denied',async()=>{
  for(const fixture of [{...session,expiresAt:new Date(0)},{...session,user:{...user,status:'INACTIVE'}}]){
-  const h=harness({env:prod,prisma:{session:{findUnique:async()=>fixture,delete:async()=>{}}}});
+  const h=harness({env:prod,prisma:{session:{updateMany:async()=>({count:1}),findUnique:async()=>fixture,delete:async()=>{}}}});
   assert.equal(await h.load('src/lib/auth.ts').getSessionUser('fixture'),null);
  }
 });
@@ -85,23 +85,23 @@ test('cookie parser rejects malformed, old, inventory, and duplicate credentials
 });
 for(const [label,role,assigned,status,allow] of [
  ['assigned staff','STAFF',user.id,'ACTIVE',true],['unassigned staff','STAFF','other','ACTIVE',false],
- ['client role','CLIENT',user.id,'ACTIVE',false],['inactive client','ADMIN',null,'INACTIVE',false],['admin','ADMIN',null,'ACTIVE',true],
+ ['client role','CLIENT',user.id,'ACTIVE',false],['inactive client','ADMIN',null,'INACTIVE',false],['admin without grant','ADMIN',null,'ACTIVE',false],
 ])test(`document scope: ${label}`,async()=>{
- const h=harness({prisma:{verificationRequest:{findUnique:async()=>({assignedStaffId:assigned,client:{status}})}}});
+ const h=harness({prisma:{user:{findUnique:async()=>({status:'ACTIVE',securityVersion:0})},capabilityGrant:{findMany:async()=>assigned===user.id?[{capability:'confidential_access',scope:'REQUEST',clientId:'synthetic-client',requestId:'synthetic-request'}]:[]},client:{findUnique:async()=>({status})},verificationRequest:{findUnique:async()=>({clientId:'synthetic-client',assignedStaffId:assigned,client:{status}})}}});
  const call=()=>h.load('src/lib/document-access.ts').requireDocumentRequestAccess({...user,role},'synthetic-request');
  if(allow)await call();else await assert.rejects(call);
 });
 test('unassigned staff download never reaches object storage',async()=>{
  let reads=0;
- const h=harness({mocks:{'@/lib/auth':authMock,'@/lib/storage':{getObject:async()=>{reads++;return Buffer.from(canary);}}},prisma:{document:{findUnique:async()=>({requestId:'synthetic-request',uploadStatus:'UPLOADED',retentionStatus:'ACTIVE'})},verificationRequest:{findUnique:async()=>({assignedStaffId:'other',client:{status:'ACTIVE'}})}}});
- assert.equal((await h.load('src/app/api/admin/documents/[id]/route.ts').GET(new Request('https://pk.example.test'),{params:Promise.resolve({id:'synthetic-doc'})})).status,404);assert.equal(reads,0);
+ const h=harness({mocks:{'@/lib/auth':authMock,'@/lib/admin-access':{requireAdminApiAccess:async()=>user},'@/lib/storage':{getObject:async()=>{reads++;return Buffer.from(canary);}}},prisma:{document:{findUnique:async()=>({requestId:'synthetic-request',uploadStatus:'UPLOADED',retentionStatus:'ACTIVE'})},user:{findUnique:async()=>({status:'ACTIVE',securityVersion:0})},capabilityGrant:{findMany:async()=>[]},verificationRequest:{findUnique:async()=>({clientId:'synthetic-client',assignedStaffId:'other',client:{status:'ACTIVE'}})}}});
+ assert.equal((await h.load('src/app/api/admin/documents/[id]/route.ts').GET(new Request('https://pk.example.test'),{params:Promise.resolve({id:'synthetic-doc'})})).status,403);assert.equal(reads,0);
 });
 test('assigned staff download returns private content',async()=>{
- const h=harness({mocks:{'@/lib/auth':authMock,'@/lib/storage':{getObject:async()=>Buffer.from(canary)}},prisma:{document:{findUnique:async()=>({requestId:'synthetic-request',uploadStatus:'UPLOADED',retentionStatus:'ACTIVE',fileName:'synthetic.txt',mimeType:'text/plain'})},verificationRequest:{findUnique:async()=>({assignedStaffId:user.id,client:{status:'ACTIVE'}})}}});
+ const h=harness({mocks:{'@/lib/auth':authMock,'@/lib/admin-access':{requireAdminApiAccess:async()=>user},'@/lib/storage':{getObject:async()=>Buffer.from(canary)}},prisma:{document:{findUnique:async()=>({requestId:'synthetic-request',uploadStatus:'UPLOADED',retentionStatus:'ACTIVE',fileName:'synthetic.txt',mimeType:'text/plain'})},user:{findUnique:async()=>({status:'ACTIVE',securityVersion:0})},client:{findUnique:async()=>({status:'ACTIVE'})},capabilityGrant:{findMany:async()=>[{capability:'confidential_access',scope:'REQUEST',clientId:'synthetic-client',requestId:'synthetic-request'}]},verificationRequest:{findUnique:async()=>({clientId:'synthetic-client',assignedStaffId:user.id,client:{status:'ACTIVE'}})}}});
  const response=await h.load('src/app/api/admin/documents/[id]/route.ts').GET(new Request('https://pk.example.test'),{params:Promise.resolve({id:'synthetic-doc'})});assert.equal(response.status,200);assert.ok(response.headers.get('cache-control').includes('no-store'));assert.equal(await response.text(),canary);
 });
 test('external chat blocked even with provider credential configured; no context reads or writes',async()=>{
- const h=harness({env:{ANTHROPIC_API_KEY:'synthetic-not-a-key'},mocks:{'@/lib/auth':{...authMock,getSessionUser:async()=>({...user,role:'ADMIN'})},'@/lib/ai/context':{getEngagementContext:()=>{throw new Error('Unexpected context read');}},'@/lib/ai/activity':{getOrCreateAiReview:()=>{throw new Error('Unexpected write');}}}});
+ const h=harness({env:{ANTHROPIC_API_KEY:'synthetic-not-a-key'},mocks:{'@/lib/admin-access':{requireAdminApiAccess:async()=>user},'@/lib/auth':{...authMock,getSessionUser:async()=>({...user,role:'ADMIN'})},'@/lib/ai/context':{getEngagementContext:()=>{throw new Error('Unexpected context read');}},'@/lib/ai/activity':{getOrCreateAiReview:()=>{throw new Error('Unexpected write');}}}});
  const response=await h.load('src/app/api/admin/requests/[id]/ai-assistant/route.ts').POST(new Request('https://pk.example.test',{method:'POST',body:JSON.stringify({action:'chat',message:canary})}),{params:Promise.resolve({id:'synthetic-request'})});assert.equal(response.status,403);assert.equal(h.calls.length,0);
 });
 test('no provider imports/calls remain in client engagement engine or API',()=>{
@@ -119,7 +119,7 @@ test('new storage keys do not contain original filename',()=>{
  const h=harness();const key=h.load('src/lib/storage.ts').buildStorageKey('synthetic-client','synthetic-request',canary+'.pdf');assert.ok(!key.includes(canary));assert.match(key,/^clients\/synthetic-client\/synthetic-request\/[a-f0-9-]+$/);
 });
 test('cookie verifier domains differ even with the same synthetic secret and token',async()=>{
- const hashes=[];const prisma={session:{findUnique:async q=>{hashes.push(q.where.tokenHash);return null;}}};
+ const hashes=[];const prisma={session:{updateMany:async()=>({count:1}),findUnique:async q=>{hashes.push(q.where.tokenHash);return null;}}};
  await harness({env:prod,prisma}).load('src/lib/auth.ts').getSessionUser('synthetic-token');
  await harness({inventory:true,env:{...prod,PK_INVENTORY_AUTH_ENVIRONMENT:'production'},prisma}).load('apps/inventory-tracker/src/server/auth/session.ts').getSessionUser('synthetic-token');assert.notEqual(hashes[0],hashes[1]);
 });
@@ -184,7 +184,7 @@ test('consultation persists before failed generic notification, with content-fre
  assert.equal(response.status,200);const result=await response.json();assert.equal(result.success,true);assert.equal(result.emailSent,false);assert.equal(records[0].data.description,canary);assert.ok(!JSON.stringify(h.logs).includes(canary));
 });
 test('logout verifies session user, revokes hashed session and audits actor',async()=>{
- let deleted,actor;const h=harness({env:prod,prisma:{session:{findUnique:async()=>session,deleteMany:async q=>{deleted=q.where.tokenHash;}},auditLog:{create:async q=>{actor=q.data.actorId;}}}});
+ let deleted,actor;const persistence={session:{findUnique:async()=>({...session,userId:user.id}),deleteMany:async q=>{deleted=q.where.tokenHash;}},auditLog:{create:async q=>{actor=q.data.actorId;}}};const h=harness({env:prod,prisma:{$transaction:async fn=>fn(persistence)}});
  const response=await h.load('src/app/api/auth/logout/route.ts').POST(new Request('https://pk.example.test/api/auth/logout',{method:'POST',headers:{cookie:'pk_business_session='+ 'a'.repeat(64)}}));assert.equal(response.status,200);assert.notEqual(deleted,'a'.repeat(64));assert.equal(actor,user.id);assert.ok(response.headers.get('set-cookie').includes('Max-Age=0'));
 });
 test('inventory unprovisioned membership is denied without creating owner',async()=>{
@@ -206,5 +206,5 @@ for(const endpoint of ['http://synthetic.r2.cloudflarestorage.com','https://evil
  await assert.rejects(()=>h.load('src/lib/storage-r2.ts').r2Put('synthetic',Buffer.from('synthetic')));assert.equal(constructed,0);assert.equal(h.calls.length,0);
 });
 test('internal staff membership cannot bypass assignment through the client portal',async()=>{
- const h=harness({env:prod,prisma:{session:{findUnique:async()=>session},clientMember:{findMany:async()=>[{clientId:'synthetic-client',role:'OWNER',client:{status:'ACTIVE'}}]}}});assert.equal(await h.load('src/lib/auth.ts').getAuthContext('synthetic-token'),null);
+ const h=harness({env:prod,prisma:{session:{updateMany:async()=>({count:1}),findUnique:async()=>session},clientMember:{findMany:async()=>[{clientId:'synthetic-client',role:'OWNER',client:{status:'ACTIVE'}}]}}});assert.equal(await h.load('src/lib/auth.ts').getAuthContext('synthetic-token'),null);
 });

@@ -1,3 +1,4 @@
+import { requireAdminApiAccess } from "@/lib/admin-access";
 import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -21,7 +22,7 @@ import { parseCalendarDate } from "@/lib/calendar-date";
 async function requireAdmin(request: Request) {
   const token = getSessionTokenFromRequest(request);
   const user = await getSessionUser(token);
-  if (!user || !hasRole(user, "ADMIN")) throw ApiError.forbidden();
+  if (!user || !hasRole(user, "ADMIN", "STAFF")) throw ApiError.forbidden();
   return user;
 }
 
@@ -30,6 +31,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     await requireAdmin(request);
     const { id } = await params;
     const invoice = await getInvoiceOr404(id);
@@ -93,6 +95,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const admin = await requireAdminForDelete(request);
     const { id } = await params;
 
@@ -197,6 +200,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const admin = await requireAdmin(request);
     const { id } = await params;
     const invoice = await getInvoiceOr404(id);

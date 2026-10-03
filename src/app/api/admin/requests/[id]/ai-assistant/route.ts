@@ -1,3 +1,4 @@
+import { requireAdminApiAccess } from "@/lib/admin-access";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -14,7 +15,7 @@ import { selectRelevantQuestions, type TriggerCondition } from "@/lib/ai/questio
 async function requireAdmin(request: Request) {
   const token = getSessionTokenFromRequest(request);
   const user = await getSessionUser(token);
-  if (!user || !hasRole(user, "ADMIN")) throw ApiError.forbidden();
+  if (!user || !hasRole(user, "ADMIN", "STAFF")) throw ApiError.forbidden();
   return user;
 }
 
@@ -24,6 +25,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     await requireAdmin(request);
     const { id: requestId } = await params;
 
@@ -105,6 +107,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const admin = await requireAdmin(request);
     const { id: requestId } = await params;
     const body = await request.json();

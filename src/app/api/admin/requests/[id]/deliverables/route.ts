@@ -1,3 +1,4 @@
+import { requireAdminApiAccess } from "@/lib/admin-access";
 import { requireDocumentRequestAccess } from "@/lib/document-access";
 import { logSecurityEvent, safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
@@ -21,6 +22,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id } = await params;
     const token = getSessionTokenFromRequest(request);
     const user = await getSessionUser(token);

@@ -1,3 +1,5 @@
+import { confidentialRequestFilter } from "@/lib/capabilities";
+import { requireAdminApiAccess } from "@/lib/admin-access";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -9,24 +11,27 @@ import { ApiError, handleApiError } from "@/lib/api-error";
 
 export async function GET(request: Request) {
   try {
+    await requireAdminApiAccess(request);
     const token = getSessionTokenFromRequest(request);
     const user = await getSessionUser(token);
-    if (!user || !hasRole(user, "ADMIN")) throw ApiError.forbidden();
+    if (!user || !hasRole(user, "ADMIN", "STAFF")) throw ApiError.forbidden();
 
+    const scopedRequests = await confidentialRequestFilter(user);
     const [totalClients, activeClients, totalRequests, openRequests, pendingDocuments] =
       await Promise.all([
-        prisma.client.count(),
-        prisma.client.count({ where: { status: "ACTIVE" } }),
-        prisma.verificationRequest.count(),
+        prisma.client.count({ where: { id: user.activeClientId! } }),
+        prisma.client.count({ where: { id: user.activeClientId!, status: "ACTIVE" } }),
+        prisma.verificationRequest.count({ where: scopedRequests }),
         prisma.verificationRequest.count({
-          where: { status: { notIn: ["COMPLETED", "CANCELLED", "REJECTED"] } },
+          where: { ...scopedRequests, status: { notIn: ["COMPLETED", "CANCELLED", "REJECTED"] } },
         }),
         prisma.documentRequest.count({
-          where: { status: { in: ["REQUESTED", "CHANGES_REQUESTED"] } },
+          where: { request: scopedRequests, status: { in: ["REQUESTED", "CHANGES_REQUESTED"] } },
         }),
       ]);
 
     const recentRequests = await prisma.verificationRequest.findMany({
+      where: scopedRequests,
       include: {
         client: { select: { name: true } },
         service: { select: { name: true } },

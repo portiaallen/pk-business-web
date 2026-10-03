@@ -219,6 +219,13 @@ model User {
   role         UserRole   @default(CLIENT)
   status       UserStatus @default(ACTIVE)
   lastLoginAt  DateTime?
+  securityVersion Int @default(0)
+  mfaEnrollmentAllowed Boolean @default(false)
+  mfaEnrollmentExpiresAt DateTime?
+  webauthnCredentials WebAuthnCredential[]
+  recoveryCodes RecoveryCode[]
+  securityChallenges SecurityChallenge[]
+  capabilityGrants CapabilityGrant[]
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -247,6 +254,12 @@ model Session {
   expiresAt DateTime
   createdAt DateTime @default(now())
 
+  securityVersion Int @default(-1)
+  assurance String @default("PASSWORD")
+  passwordVerifiedAt DateTime @default(now())
+  mfaVerifiedAt DateTime?
+  lastSeenAt DateTime @default(now())
+  activeClientId String?
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -1086,4 +1099,58 @@ model InventoryTransaction {
   @@index([performedById])
   @@index([transactionType])
   @@index([createdAt])
+}
+
+// Phase 1B: public authenticator material only; no private keys.
+model WebAuthnCredential {
+  id String @id
+  userId String
+  publicKey Bytes
+  counter BigInt @default(0)
+  transports String @default("[]")
+  label String
+  deviceType String
+  backedUp Boolean
+  createdAt DateTime @default(now())
+  lastUsedAt DateTime?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
+model SecurityChallenge {
+  id String @id @default(cuid())
+  userId String
+  tokenHash String @unique
+  challenge String
+  purpose String
+  passwordVerifiedAt DateTime @default(now())
+  securityVersion Int
+  sessionId String?
+  attempts Int @default(0)
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
+model RecoveryCode {
+  id String @id @default(cuid())
+  userId String
+  codeHash String @unique
+  usedAt DateTime?
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
+// scope is GLOBAL, CLIENT or REQUEST. Specialized client authorities are never role-derived.
+model CapabilityGrant {
+  id String @id @default(cuid())
+  userId String
+  capability String
+  scope String
+  clientId String @default("")
+  requestId String @default("")
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, capability, scope, clientId, requestId])
+  @@index([userId, clientId])
 }

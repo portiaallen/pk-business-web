@@ -3,6 +3,7 @@ import {
   getSessionUser,
   getSessionTokenFromRequest,
   hasRole,
+  requireRecentAuthentication,
   type SessionUser,
 } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
@@ -20,6 +21,7 @@ export async function requireAdminForDelete(
   const token = getSessionTokenFromRequest(request);
   const user = await getSessionUser(token);
   if (!user || !hasRole(user, "ADMIN")) throw ApiError.forbidden();
+  requireRecentAuthentication(user);
   return user;
 }
 
