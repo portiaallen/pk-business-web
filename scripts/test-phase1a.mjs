@@ -208,3 +208,27 @@ for(const endpoint of ['http://synthetic.r2.cloudflarestorage.com','https://evil
 test('internal staff membership cannot bypass assignment through the client portal',async()=>{
  const h=harness({env:prod,prisma:{session:{updateMany:async()=>({count:1}),findUnique:async()=>session},clientMember:{findMany:async()=>[{clientId:'synthetic-client',role:'OWNER',client:{status:'ACTIVE'}}]}}});assert.equal(await h.load('src/lib/auth.ts').getAuthContext('synthetic-token'),null);
 });
+
+// Host portability must preserve containment on both Netlify and Vercel.
+for (const [label, env, expected] of [
+ ['Netlify production', {NETLIFY:'true',CONTEXT:'production',PK_ENVIRONMENT:'production'}, 'production'],
+ ['Netlify preview', {NETLIFY:'true',CONTEXT:'deploy-preview',PK_ENVIRONMENT:'preview'}, 'preview'],
+ ['Netlify branch', {NETLIFY:'true',CONTEXT:'branch-deploy',PK_ENVIRONMENT:'preview'}, 'preview'],
+ ['Netlify dev', {NETLIFY:'true',CONTEXT:'dev',PK_ENVIRONMENT:'development'}, 'development'],
+ ['Netlify missing context', {NETLIFY:'true',PK_ENVIRONMENT:'production'}, null],
+ ['Netlify missing declaration', {NETLIFY:'true',CONTEXT:'production'}, null],
+ ['Netlify mismatched production', {NETLIFY:'true',CONTEXT:'deploy-preview',PK_ENVIRONMENT:'production'}, null],
+ ['Netlify unknown context', {NETLIFY:'true',CONTEXT:'unknown',PK_ENVIRONMENT:'preview'}, null],
+ ['conflicting providers', {VERCEL:'1',VERCEL_ENV:'preview',NETLIFY:'true',CONTEXT:'deploy-preview',PK_ENVIRONMENT:'preview'}, null],
+ ['Vercel missing context', {VERCEL:'1',PK_ENVIRONMENT:'production'}, null],
+]) test(`host portability: ${label}`, () => {
+ const security=harness({env}).load('src/lib/security-environment.ts');
+ if(expected)assert.equal(security.securityEnvironment(),expected);else assert.throws(()=>security.securityEnvironment());
+});
+for (const context of ['production','deploy-preview','branch-deploy','dev']) test(`Netlify ${context} cannot enable local setup or synthetic Vault`,()=>{
+ const env={NETLIFY:'true',CONTEXT:context,PK_ENVIRONMENT:context==='production'?'production':context==='dev'?'development':'preview',PK_ALLOW_SYNTHETIC_SETUP:'true',PK_VAULT_SYNTHETIC:'true',DATABASE_URL:'file:synthetic.db'};
+ const h=harness({env});
+ assert.equal(h.load('src/lib/security-environment.ts').localSyntheticSetupAllowed(),false);
+ assert.equal(h.load('src/lib/vault/providers.ts').syntheticAllowed(),false);
+ assert.equal(h.load('src/lib/prisma.ts').isDatabaseConfigured(),false);
+});

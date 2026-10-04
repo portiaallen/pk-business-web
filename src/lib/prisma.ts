@@ -1,4 +1,4 @@
-import { assertResourceEnvironment, securityEnvironment } from "@/lib/security-environment";
+import { assertResourceEnvironment, securityEnvironment, isHostedRuntime } from "@/lib/security-environment";
 import { PrismaClient, type Prisma } from "@/generated/prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
@@ -9,17 +9,13 @@ function cleanEnv(value: string | undefined): string | undefined {
   return value?.trim().replace(/^["']|["']$/g, "");
 }
 
-function isVercelRuntime(): boolean {
-  return Boolean(process.env.VERCEL);
-}
-
 function resolveDatabaseUrl(): string {
   const configured = cleanEnv(process.env.DATABASE_URL);
   if (configured) return configured;
 
-  if (isVercelRuntime()) {
+  if (isHostedRuntime()) {
     throw new Error(
-      "DATABASE_URL is not configured. Add a Turso libsql:// URL in Vercel environment settings."
+      "DATABASE_URL is not configured. Configure the approved remote database for this hosting environment."
     );
   }
 
@@ -31,7 +27,7 @@ function createPrismaClient(): PrismaClient {
   if (!databaseUrl.startsWith("file:") && !databaseUrl.startsWith("libsql:")) throw new Error("Unsupported database provider");
   const environment = securityEnvironment();
   if (!databaseUrl.startsWith("file:")) assertResourceEnvironment("DATABASE");
-  if (environment === "production" && databaseUrl.startsWith("file:")) throw new Error("Production database must be remote");
+  if ((environment === "production" || isHostedRuntime()) && databaseUrl.startsWith("file:")) throw new Error("Production database must be remote");
 
   const log: Prisma.LogLevel[] =
     [];
@@ -81,7 +77,7 @@ export function isDatabaseConfigured(): boolean {
   const url = cleanEnv(process.env.DATABASE_URL);
   if (!url) return false;
   if (url.startsWith("file:")) {
-    return !isVercelRuntime();
+    return !isHostedRuntime();
   }
   if (url.startsWith("libsql:")) {
     return Boolean(cleanEnv(process.env.DATABASE_AUTH_TOKEN));

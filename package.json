@@ -11,7 +11,10 @@
     "test:security:phase1b": "prisma generate && node --import tsx --test scripts/test-phase1b.mts",
     "test:browser:phase1b": "prisma generate && node --import tsx scripts/verify-phase1b-browser.mts",
     "test:security:phase1c": "prisma generate && node --import tsx --test scripts/test-phase1c.mts",
-    "test:browser:phase1c": "prisma generate && node --import tsx scripts/verify-phase1b-browser.mts --vault"
+    "test:browser:phase1c": "prisma generate && node --import tsx scripts/verify-phase1b-browser.mts --vault",
+    "qualify:netlify:local": "node scripts/qualify-netlify-local.mjs && node scripts/test-netlify-artifact.mjs && node scripts/test-netlify-handler.mjs",
+    "test:netlify:artifact": "node scripts/test-netlify-artifact.mjs",
+    "test:netlify:handler": "node scripts/test-netlify-handler.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",
@@ -39,6 +42,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
+    "@netlify/plugin-nextjs": "5.16.1",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",

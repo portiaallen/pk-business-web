@@ -1,0 +1,69 @@
+{
+  "baseline": "37ee874a34f35b8f3a784ebabe55a59bf1aac746",
+  "classification": "YELLOW",
+  "data": "synthetic only",
+  "deployed": false,
+  "published": false,
+  "vaultEnabled": false,
+  "adapter": "@netlify/plugin-nextjs@5.16.1",
+  "next": "16.3.3",
+  "localAdapterLifecycle": "PASS",
+  "productionBuild": {
+    "result": "PASS",
+    "preExistingWarnings": 2,
+    "newWarnings": 0
+  },
+  "artifactChecks": {
+    "pass": 15
+  },
+  "packagedHandlerSmoke": {
+    "pass": 4,
+    "cache": "synthetic context and mocked misses",
+    "externalRequests": 0
+  },
+  "phase1a": {
+    "pass": 77,
+    "existingTests": 63,
+    "newHostCases": 14
+  },
+  "checkout": {
+    "pass": 18,
+    "mode": "mocked",
+    "realCharges": 0
+  },
+  "phase1b": {
+    "pass": 44
+  },
+  "phase1c": {
+    "pass": 61
+  },
+  "browser": {
+    "pass": 58,
+    "widths": [
+      390,
+      768,
+      1440
+    ],
+    "unexpectedConsoleErrors": 0,
+    "pageErrors": 0,
+    "preExistingBaseUIWarnings": 15,
+    "expectedDenialOrOfflineErrors": 5,
+    "runtime": "local Next, virtual platform authenticator"
+  },
+  "typescript": "PASS",
+  "changedFileLint": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "fullRepositoryLint": {
+    "preExistingErrors": 21,
+    "preExistingWarnings": 40
+  },
+  "hostedRuntime": "NOT VERIFIED",
+  "fullSizeTransfer": "NOT IMPLEMENTED / NOT VERIFIED",
+  "providerTracingRedaction": "REQUIRES SYNTHETIC VERIFICATION",
+  "AndroidHardware": "NOT VERIFIED",
+  "schemaChanges": false,
+  "localNode": "24.19.0",
+  "configuredNode": "24 / nodejs24.x (hosted runtime not verified)"
+}

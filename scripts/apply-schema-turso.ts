@@ -1,5 +1,5 @@
 // Schema changes require a separate explicit non-production operator action.
-if (process.env.VERCEL || process.env.NODE_ENV === "production" ||
+if (process.env.VERCEL || process.env.VERCEL_ENV || process.env.NETLIFY || process.env.CONTEXT || process.env.NODE_ENV === "production" ||
     !["development", "test"].includes(process.env.PK_ENVIRONMENT ?? "") ||
     process.env.PK_ALLOW_SCHEMA_CHANGE !== "true") {
   throw new Error("Automatic or production schema changes are disabled");

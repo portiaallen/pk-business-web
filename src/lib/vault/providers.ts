@@ -17,7 +17,7 @@ import {
 } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
-import { securityEnvironment } from "@/lib/security-environment";
+import { securityEnvironment, isHostedRuntime } from "@/lib/security-environment";
 import { ApiError } from "@/lib/api-error";
 
 export type Zone = "quarantine" | "released" | "backup" | "ledger";
@@ -108,7 +108,7 @@ export async function decrypt(
 }
 export function syntheticAllowed(): boolean {
   return (
-    !process.env.VERCEL &&
+    !isHostedRuntime() &&
     process.env.NODE_ENV !== "production" &&
     ["test", "development"].includes(securityEnvironment()) &&
     process.env.PK_VAULT_SYNTHETIC === "true" &&

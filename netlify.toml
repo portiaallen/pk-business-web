@@ -1,0 +1,24 @@
+# Qualification preparation only. No deployment/domain/resource activation authorized.
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "24"
+  AWS_LAMBDA_JS_RUNTIME = "nodejs24.x"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Only non-secret declarations. Provider credentials must be independently scoped.
+[context.production.environment]
+  PK_ENVIRONMENT = "production"
+
+[context.deploy-preview.environment]
+  PK_ENVIRONMENT = "preview"
+
+[context.branch-deploy.environment]
+  PK_ENVIRONMENT = "preview"
+
+# No SPA wildcard redirects, production credentials, schema push or Vault enablement.
