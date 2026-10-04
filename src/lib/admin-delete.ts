@@ -62,6 +62,8 @@ export async function deleteStorageObjects(keys: string[]): Promise<void> {
  * records via onDelete: SetNull.
  */
 export async function deleteRequestCascade(requestId: string): Promise<string[]> {
+  if (await prisma.ordinaryTransferIntent.count({where:{requestId, operation:'UPLOAD',status:{notIn:['EXPIRED','DISPOSED']}}})) throw ApiError.conflict("Resolve managed ordinary transfers before deleting this engagement");
+  if (await prisma.document.count({where:{requestId,ordinaryLegalHold:true}}) || await prisma.deliverable.count({where:{requestId,ordinaryLegalHold:true}})) throw ApiError.conflict("Document is on hold");
   const [documents, deliverables] = await Promise.all([
     prisma.document.findMany({
       where: { requestId },
@@ -110,6 +112,8 @@ export type ClientDeleteResult = {
 export async function deleteClientCascade(
   clientId: string
 ): Promise<ClientDeleteResult> {
+  if (await prisma.ordinaryTransferIntent.count({where:{clientId,operation:'UPLOAD',status:{notIn:['EXPIRED','DISPOSED']}}})) throw ApiError.conflict("Resolve managed ordinary transfers before deleting this client");
+  if (await prisma.document.count({where:{request:{clientId},ordinaryLegalHold:true}}) || await prisma.deliverable.count({where:{request:{clientId},ordinaryLegalHold:true}})) throw ApiError.conflict("Document is on hold");
   const paymentCount = await prisma.payment.count({ where: { clientId } });
   if (paymentCount > 0) {
     throw ApiError.conflict(

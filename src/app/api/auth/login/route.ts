@@ -1,3 +1,4 @@
+import { safeReturnTo } from "@/lib/url-privacy";
 import { startChallenge } from "@/lib/webauthn";
 import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
@@ -16,20 +17,6 @@ import {
   genericLoginError,
 } from "@/lib/rate-limit";
 import { AuditAction } from "@/generated/prisma/client";
-
-function safeReturnTo(value: unknown): string | null {
-  if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) {
-    return null;
-  }
-  try {
-    const base = new URL("https://pk-business.invalid");
-    const target = new URL(value, base);
-    if (target.origin !== base.origin) return null;
-    return `${target.pathname}${target.search}${target.hash}`;
-  } catch {
-    return null;
-  }
-}
 
 export async function POST(request: Request) {
   try {

@@ -1,4 +1,5 @@
 "use client";
+import { OrdinaryDownload } from "@/components/documents/OrdinaryDownload";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -109,13 +110,12 @@ export default function PortalDocumentsPage() {
                   {doc.reviewStatus}
                 </span>
                 {doc.uploadStatus === "UPLOADED" && (
-                  <a
-                    href={`/api/portal/documents/${doc.id}`}
+                  <OrdinaryDownload href={`/api/portal/documents/${doc.id}`}
                     className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-charcoal hover:bg-muted"
                   >
                     <Download className="size-4" />
                     <span>Download</span>
-                  </a>
+                  </OrdinaryDownload>
                 )}
               </div>
             </div>

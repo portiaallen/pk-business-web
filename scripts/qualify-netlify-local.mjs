@@ -1,3 +1,4 @@
+import { onBuild as hardenNetlify } from '../netlify/plugins/url-privacy/index.mjs';
 /** Local synthetic adapter hooks only: no Netlify CLI/API, login, site or deploy operation. */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -36,6 +37,8 @@ try {
   if(build.status!==0)throw new Error('Local Next build failed');
   report.stages.push({stage:'Next production build',result:'PASS'});save();
   await plugin.onBuild(options);
+  hardenNetlify();
+  report.stages.push({stage:'adapter URL privacy',result:'PASS'});save();
   report.stages.push({stage:'adapter packaging',result:'PASS'});save();
   // Post-build mutates publish directories; local artifacts only, never application resources.
   await plugin.onPostBuild(options);

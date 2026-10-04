@@ -1,4 +1,5 @@
 "use client";
+import { safeReturnTo as checkedReturnTo } from "@/lib/url-privacy";
 
 import { useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
@@ -12,15 +13,7 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const adminMode = searchParams.get("admin") === "1";
   const requestedReturnTo = searchParams.get("returnTo");
-  const safeReturnTo =
-    requestedReturnTo?.startsWith("/") &&
-    !requestedReturnTo.startsWith("//") &&
-    !requestedReturnTo.includes("\\");
-  const returnTo = safeReturnTo
-    ? requestedReturnTo
-    : adminMode
-      ? "/admin/dashboard"
-      : "/portal/dashboard";
+  const returnTo = checkedReturnTo(requestedReturnTo) || (adminMode ? "/admin/dashboard" : "/portal/dashboard");
 
   const [challenge, setChallenge] = useState<{ticket: string; options: Parameters<typeof startRegistration>[0]["optionsJSON"] | Parameters<typeof startAuthentication>[0]["optionsJSON"]; enrollment: boolean} | null>(null);
   const [recoveryCode, setRecoveryCode] = useState("");
@@ -49,7 +42,7 @@ export default function LoginPage() {
       }
 
       if (data.mfaRequired) { setChallenge(data); setPassword(""); return; }
-      window.location.href = data.redirectUrl || returnTo;
+      window.location.href = checkedReturnTo(data.redirectUrl) || returnTo;
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -67,7 +60,7 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/webauthn", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "verify", ticket: challenge.ticket, response }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Passkey verification failed. Sign in again.");
-      window.location.href = data.redirectUrl;
+      window.location.href = checkedReturnTo(data.redirectUrl) || returnTo;
     } catch { setError("Passkey verification could not be completed. Start again if the challenge expired or was used."); }
     finally { setIsSubmitting(false); }
   }

@@ -194,7 +194,14 @@ export async function getSessionUser(
     where: { tokenHash: hashToken(token) },
     include: { user: true },
   });
-  if (!session || !sessionValid(session)) return null;
+  return hydrateSession(session);
+}
+/** Internal transfer service lookup: caller must possess a scoped intent, never a public session ID. */
+export async function getTransferSessionUser(id: string): Promise<SessionUser | null> {
+  return hydrateSession(await prisma.session.findUnique({ where: { id }, include: { user: true } }));
+}
+async function hydrateSession(session: Awaited<ReturnType<typeof prisma.session.findUnique>> & { user?: User } | null): Promise<SessionUser | null> {
+  if (!session || !session.user || !sessionValid({ ...session, user: session.user })) return null;
   const touched = await prisma.session.updateMany({
     where: {
       id: session.id,

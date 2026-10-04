@@ -12,9 +12,10 @@
     "test:browser:phase1b": "prisma generate && node --import tsx scripts/verify-phase1b-browser.mts",
     "test:security:phase1c": "prisma generate && node --import tsx --test scripts/test-phase1c.mts",
     "test:browser:phase1c": "prisma generate && node --import tsx scripts/verify-phase1b-browser.mts --vault",
-    "qualify:netlify:local": "node scripts/qualify-netlify-local.mjs && node scripts/test-netlify-artifact.mjs && node scripts/test-netlify-handler.mjs",
+    "qualify:netlify:local": "node scripts/qualify-netlify-local.mjs && node scripts/test-netlify-artifact.mjs && node scripts/test-netlify-handler.mjs && node scripts/test-netlify-privacy.mjs",
     "test:netlify:artifact": "node scripts/test-netlify-artifact.mjs",
-    "test:netlify:handler": "node scripts/test-netlify-handler.mjs"
+    "test:netlify:handler": "node scripts/test-netlify-handler.mjs",
+    "test:ordinary-transfer": "prisma generate && node --import tsx --test scripts/test-ordinary-transfer.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",

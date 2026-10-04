@@ -1,3 +1,4 @@
+import { forbidNetlifyPayload } from "@/lib/ordinary-transfer/provider";
 import { requireAdminApiAccess } from "@/lib/admin-access";
 import { requireDocumentRequestAccess } from "@/lib/document-access";
 import { logSecurityEvent, safeAuditMetadata } from "@/lib/security-log";
@@ -35,6 +36,7 @@ export async function POST(
     });
     if (!req) throw ApiError.notFound("Request not found");
 
+    forbidNetlifyPayload();
     const form = await request.formData();
     const file = form.get("file");
     const titleRaw = form.get("title");

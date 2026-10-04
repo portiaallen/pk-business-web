@@ -1,3 +1,4 @@
+import { forbidNetlifyPayload } from "@/lib/ordinary-transfer/provider";
 import { logSecurityEvent, safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
     const token = getSessionTokenFromRequest(request);
     const ctx = await requireMemberWriteContext(token);
 
+    forbidNetlifyPayload();
     const form = await request.formData();
     const file = form.get("file");
     const requestId = typeof form.get("requestId") === "string" ? (form.get("requestId") as string) : "";

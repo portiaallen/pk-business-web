@@ -1,3 +1,4 @@
+import { safeOrigin } from "@/lib/url-privacy";
 import { assertResourceEnvironment, securityEnvironment } from "@/lib/security-environment";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
@@ -140,10 +141,15 @@ export async function nextInvoiceNumber(): Promise<string> {
   return `${prefix}${String(lastSeq + 1).padStart(3, "0")}`;
 }
 
-export const PUBLIC_PAY_URL =
-  process.env.NEXT_PUBLIC_APP_URL
-    ? `${process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "")}/pay`
-    : "https://www.pkservices.business/pay";
+export const PUBLIC_PAY_URL = (() => {
+  const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (!configured) {
+    try { return securityEnvironment() === "production" ? "https://www.pkservices.business/pay" : "/pay"; }
+    catch { return "/pay"; }
+  }
+  try { return `${safeOrigin(configured)}/pay`; }
+  catch { return "/pay"; } // Never return configuration credentials/query data to a browser.
+})();
 
 export function buildInvoiceEmailHtml(opts: {
   invoiceNumber: string;

@@ -1,4 +1,6 @@
 "use client";
+import { deleteOrdinaryFile } from "@/lib/ordinary-transfer/client";
+import { OrdinaryDownload } from "@/components/documents/OrdinaryDownload";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -20,6 +22,7 @@ type Document = {
   fileName: string;
   category: string;
   uploadStatus: string;
+  transferDeleteState?: string;
   reviewStatus: string;
   fileSizeBytes: number;
   clientId: string;
@@ -64,13 +67,11 @@ export default function AdminDocumentsPage() {
     setDeletingId(d.id);
     setActionError("");
     try {
-      const res = await fetch("/api/admin/documents", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: d.id }),
-      });
+      const res = await deleteOrdinaryFile(`/api/admin/documents/${d.id}`);
       if (res.ok) {
-        setDocuments((prev) => prev.filter((x) => x.id !== d.id));
+        const result = await res.json().catch(() => ({}));
+        if (result.status === "DELETE_PENDING" || result.status === "DELETE_COMPLETE") setDocuments(prev => prev.map(x => x.id === d.id ? {...x,uploadStatus:"FAILED",transferDeleteState:result.status === "DELETE_PENDING" ? "PENDING" : "COMPLETE"} : x));
+        else setDocuments((prev) => prev.filter((x) => x.id !== d.id));
       } else {
         const data = await res.json().catch(() => ({}));
         setActionError(data.error || `Delete failed (${res.status})`);
@@ -245,7 +246,7 @@ export default function AdminDocumentsPage() {
                         d.uploadStatus === "PENDING" ? "text-amber-600" :
                         "text-red-600"
                       }`}>
-                        {d.uploadStatus}
+                        {d.transferDeleteState === "PENDING" ? "Deletion pending" : d.transferDeleteState === "COMPLETE" ? "Deletion verified" : d.uploadStatus}
                       </span>
                     </div>
                   </td>
@@ -253,14 +254,13 @@ export default function AdminDocumentsPage() {
                   <td className="px-4 py-3 text-muted-foreground">{formatDate(d.createdAt)}</td>
                   <td className="px-4 py-3">
                     {d.uploadStatus === "UPLOADED" && (
-                      <a
-                        href={`/api/admin/documents/${d.id}`}
+                      <OrdinaryDownload href={`/api/admin/documents/${d.id}`}
                         target="_blank"
                         rel="noopener"
                         className="inline-flex items-center gap-1 text-charcoal hover:text-gold text-sm"
                       >
                         <Download className="size-3.5" /> Download
-                      </a>
+                      </OrdinaryDownload>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">

@@ -2,8 +2,11 @@
 const EVENTS = new Set([
   "API_FAILURE", "CONTACT_EMAIL_FAILURE", "CONTACT_SUBMISSION_FAILURE",
   "DOCUMENT_STORAGE_FAILURE", "DELIVERABLE_STORAGE_FAILURE",
-  "CHECKOUT_NETWORK_FAILURE", "CHECKOUT_PROVIDER_FAILURE", "RESET_EMAIL_FAILURE",
+  "TRANSFER_FAILURE", "CHECKOUT_NETWORK_FAILURE", "CHECKOUT_PROVIDER_FAILURE", "RESET_EMAIL_FAILURE",
 ]);
+export function safeRuntimeEvent(event: unknown): string {
+  return typeof event === "string" && EVENTS.has(event) ? event : "PK_RUNTIME_EVENT";
+}
 export function logSecurityEvent(event: string): void {
   console.error(JSON.stringify({ event: EVENTS.has(event) ? event : "SECURITY_FAILURE" }));
 }

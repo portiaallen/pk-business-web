@@ -1,3 +1,4 @@
+import { forbidNetlifyPayload } from "@/lib/ordinary-transfer/provider";
 import { requireAdminApiAccess } from "@/lib/admin-access";
 import { safeAuditMetadata } from "@/lib/security-log";
 import { requireDocumentRequestAccess } from "@/lib/document-access";
@@ -32,11 +33,12 @@ export async function GET(
     });
 
     // Mismatched request/deliverable pair and unknown IDs are indistinguishable
-    if (!deliverable || deliverable.requestId !== id) {
+    if (!deliverable || deliverable.requestId !== id || ("transferDeleteState" in deliverable && deliverable.transferDeleteState !== "NONE")) {
       throw ApiError.notFound("Deliverable not found");
     }
 
     await requireDocumentRequestAccess(user, id);
+    forbidNetlifyPayload();
     const data = await getObject(deliverable.storageKey);
     if (!data) throw ApiError.notFound("File not found");
 
@@ -71,13 +73,18 @@ export async function DELETE(
         id: true,
         requestId: true,
         storageKey: true,
+        ordinaryLegalHold: true,
+        transferDeleteState: true,
         title: true,
         request: { select: { clientId: true } },
       },
     });
-    if (!deliverable || deliverable.requestId !== id) {
+    if (!deliverable || deliverable.requestId !== id || ("transferDeleteState" in deliverable && deliverable.transferDeleteState !== "NONE")) {
       throw ApiError.notFound("Deliverable not found");
     }
+
+    if (deliverable.ordinaryLegalHold) throw ApiError.conflict("Document is on hold");
+    if (await prisma.ordinaryTransferIntent.findFirst({where:{resourceId:deliverable.id,operation:'UPLOAD',status:'COMPLETE'}})) throw ApiError.conflict("Use the secure file transfer action");
 
     await prisma.deliverable.delete({ where: { id: deliverable.id } });
     await deleteStorageObjects([deliverable.storageKey]);
@@ -126,9 +133,9 @@ export async function PATCH(
 
     const deliverable = await prisma.deliverable.findUnique({
       where: { id: deliverableId },
-      select: { id: true, requestId: true, visibility: true, title: true },
+      select: { id: true, requestId: true, visibility: true, title: true, transferDeleteState: true },
     });
-    if (!deliverable || deliverable.requestId !== id) {
+    if (!deliverable || deliverable.requestId !== id || ("transferDeleteState" in deliverable && deliverable.transferDeleteState !== "NONE")) {
       throw ApiError.notFound("Deliverable not found");
     }
 

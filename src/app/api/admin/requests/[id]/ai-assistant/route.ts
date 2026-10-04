@@ -144,7 +144,7 @@ export async function POST(
         "Not an Issue": "REVIEWED_NO_ISSUE",
       };
       const newStatus = STATUS_BY_DECISION[decision];
-      if (!newStatus) throw ApiError.badRequest(`Unknown decision: ${decision}`);
+      if (!newStatus) throw ApiError.badRequest("Unknown decision");
 
       await prisma.$transaction([
         prisma.aiFinding.update({
@@ -261,7 +261,7 @@ export async function POST(
       throw ApiError.forbidden("External AI is disabled for client engagements.");
     }
 
-    throw ApiError.badRequest(`Unknown action: ${action || "(none)"}`);
+    throw ApiError.badRequest("Unknown action");
   } catch (error) {
     return handleApiError(error);
   }

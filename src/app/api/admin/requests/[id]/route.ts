@@ -120,7 +120,7 @@ export async function GET(
         createdAt: n.createdAt.toISOString(),
       })),
       deliverables: req.deliverables.map((d) => ({
-        id: d.id, title: d.title, fileName: d.fileName, visibility: d.visibility,
+        id: d.id, title: d.title, fileName: d.fileName, visibility: d.visibility, transferDeleteState:d.transferDeleteState,
         createdAt: d.createdAt.toISOString(),
       })),
     });

@@ -10,6 +10,6 @@ const {default:handler}=await import(root+'/___netlify-server-handler.mjs');
 for(const [path,method,expected] of [['/api/vault/documents','GET',503],['/api/setup/seed','POST',403],['/api/portal/documents','GET',401],['/api/stripe/webhook','POST',503]]){
  try{
  const res=await handler(new Request('https://pk-qualification.example.test'+path,{method,headers:{origin:'https://pk-qualification.example.test'}}),{account:{id:'synthetic'},site:{id:'synthetic'},deploy:{id:'synthetic'},requestId:'synthetic'});
- console.log(JSON.stringify({path,status:res.status,expected,pass:res.status===expected}));if(res.status!==expected)process.exitCode=1;
- }catch{console.log(JSON.stringify({path,pass:false,reason:'LOCAL_HANDLER_RUNTIME_FAILED'}));process.exitCode=1;}
+ process.stdout.write(JSON.stringify({path,status:res.status,expected,pass:res.status===expected})+'\n');if(res.status!==expected)process.exitCode=1;
+ }catch{process.stdout.write(JSON.stringify({path,pass:false,reason:'LOCAL_HANDLER_RUNTIME_FAILED'})+'\n');process.exitCode=1;}
 }

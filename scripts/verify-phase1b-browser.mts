@@ -475,6 +475,39 @@ try {
     1,
   );
   check("client request submission binds displayed context");
+  // Browser-only synthetic transport interception. Server-side authorization is tested separately.
+  const transferOrigin = "https://pk-transfer-browser.example.test";
+  const metadataSizes: number[] = [];
+  let transferredBytes = 0;
+  await clientPage.route("**/api/ordinary-transfer/config", route => route.fulfill({json:{available:true,required:true}}));
+  await clientPage.route("**/api/ordinary-transfer", route => {
+    metadataSizes.push(route.request().postDataBuffer()?.length || 0);
+    return route.fulfill({json:{intentId:"synthetic-transfer",endpoint:transferOrigin+"/transfer",authorization:"Bearer "+"A".repeat(64),mime:"text/plain"}});
+  });
+  await clientPage.route("**/api/ordinary-transfer/confirm", route => {
+    metadataSizes.push(route.request().postDataBuffer()?.length || 0);
+    return route.fulfill({json:{id:"synthetic-document",fileName:"Synthetic.txt"}});
+  });
+  await clientPage.route(transferOrigin+"/transfer", route => {
+    transferredBytes=route.request().postDataBuffer()?.length || 0;
+    assert.equal(route.request().headers()["referer"],undefined);
+    return route.fulfill({json:{received:true},headers:{"Access-Control-Allow-Origin":origin}});
+  });
+  for(const width of [390,768,1440]) {
+    await clientPage.setViewportSize({width,height:900});
+    await clientPage.locator('input[type="file"]').first().setInputFiles({name:"Synthetic.txt",mimeType:"text/plain",buffer:Buffer.alloc(25*1024*1024,65)});
+    await clientPage.getByRole("button",{name:"Upload document",exact:true}).tap();
+    await clientPage.getByRole("button",{name:"Upload document",exact:true}).waitFor();
+    assert.equal(transferredBytes,25*1024*1024);
+    assert.ok(metadataSizes.every(size=>size>0 && size<8192));
+    assert.equal(await clientPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    check(`ordinary 25 MiB browser bypass and touch upload ${width}`);
+  }
+  await clientPage.unroute("**/api/ordinary-transfer/config");
+  await clientPage.unroute("**/api/ordinary-transfer");
+  await clientPage.unroute("**/api/ordinary-transfer/confirm");
+  await clientPage.unroute(transferOrigin+"/transfer");
+
   await clientPage.goto(`${origin}/portal/team`);
   await clientPage
     .getByRole("button", { name: "Invite member", exact: true })
@@ -634,6 +667,13 @@ try {
   const secureResponse = await page.request.get(`${origin}/api/auth/security`);
   assert.ok(secureResponse.headers()["cache-control"]?.includes("no-store"));
   check("security response denies browser caching");
+  const resetPage = await context.newPage();
+  await resetPage.goto(`${origin}/forgot-password#token=SYNTHETIC_BROWSER_RESET_CANARY`);
+  await resetPage.getByRole("heading",{name:"Choose a new password",exact:true}).waitFor();
+  assert.equal(new URL(resetPage.url()).hash,"");
+  assert.equal(new URL(resetPage.url()).search,"");
+  check("reset fragment consumed into memory and removed from visible URL");
+  await resetPage.close();
   assert.equal(errors.length, 0);
   check("no browser page errors");
   if (verifyVault) {

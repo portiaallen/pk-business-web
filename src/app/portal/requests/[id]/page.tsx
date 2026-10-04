@@ -1,4 +1,6 @@
 "use client";
+import { OrdinaryDownload } from "@/components/documents/OrdinaryDownload";
+import { uploadOrdinaryFile } from "@/lib/ordinary-transfer/client";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -156,10 +158,7 @@ export default function RequestDetailPage() {
     setUploadError("");
     setUploading(true);
     try {
-      const res = await fetch("/api/portal/documents/upload", {
-        method: "POST",
-        body: data,
-      });
+      const res = await uploadOrdinaryFile("/api/portal/documents/upload", data);
       if (!res.ok) {
         const result = await res.json().catch(() => ({}));
         setUploadError(result.error || `Upload failed (${res.status})`);
@@ -387,14 +386,13 @@ export default function RequestDetailPage() {
                       <p className="text-xs text-muted-gray">{doc.category}</p>
                     </div>
                     {doc.uploadStatus === "UPLOADED" && (
-                      <a
-                        href={`/api/portal/documents/${doc.id}`}
+                      <OrdinaryDownload href={`/api/portal/documents/${doc.id}`}
                         className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-charcoal hover:bg-muted"
                         download
                       >
                         <Download className="size-4" />
                         <span>Download</span>
-                      </a>
+                      </OrdinaryDownload>
                     )}
                   </div>
                 ))
@@ -474,15 +472,14 @@ export default function RequestDetailPage() {
                       <p className="text-sm font-medium text-charcoal">{del.title}</p>
                       <p className="text-xs text-muted-gray">{del.fileName}</p>
                     </div>
-                    <a
-                      href={`/api/portal/requests/${req.id}/deliverables/${del.id}`}
+                    <OrdinaryDownload href={`/api/portal/requests/${req.id}/deliverables/${del.id}`}
                       className="flex min-h-[44px] shrink-0 items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-charcoal transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                       download
                     >
                       <Download className="size-4 shrink-0" aria-hidden="true" />
                       <span>Download</span>
                       <span className="sr-only">{del.title}</span>
-                    </a>
+                    </OrdinaryDownload>
                   </div>
                 ))}
               </div>

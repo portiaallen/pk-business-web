@@ -446,6 +446,9 @@ model Document {
 
   @@index([requestId])
   @@index([category])
+  ordinaryLegalHold Boolean @default(false)
+  transferDeleteState String @default("NONE")
+
 }
 
 // ─── Client paperwork ──────────────────────────────────────────────────────────
@@ -541,6 +544,9 @@ model Deliverable {
   releasedBy User?               @relation("DeliverableReleaser", fields: [releasedById], references: [id], onDelete: SetNull)
 
   @@index([requestId])
+  ordinaryLegalHold Boolean @default(false)
+  transferDeleteState String @default("NONE")
+
 }
 
 model IntakeSubmission {
@@ -1227,4 +1233,33 @@ model VaultRetentionPolicy {
   durationDays   Int?
   approved       Boolean @default(false)
   @@unique([category, policyVersion])
+}
+
+// Ordinary-file authorization metadata only. No Vault identity, credentials or bytes.
+model OrdinaryTransferIntent {
+  id String @id
+  tokenHash String @unique
+  userId String
+  sessionId String
+  securityVersion Int
+  clientId String
+  requestId String
+  operation String
+  kind String
+  objectKey String
+  resourceId String?
+  fileName String
+  title String?
+  category String?
+  documentRequestId String?
+  size Int
+  mime String
+  digest String?
+  origin String
+  status String @default("PENDING")
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status, expiresAt])
+  @@index([clientId, requestId])
 }

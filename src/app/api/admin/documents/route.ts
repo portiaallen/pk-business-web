@@ -71,6 +71,7 @@ export async function GET(request: Request) {
           fileName: d.fileName,
           category: d.category,
           uploadStatus: d.uploadStatus,
+          transferDeleteState: d.transferDeleteState,
           reviewStatus: d.reviewStatus,
           fileSizeBytes: d.fileSizeBytes,
           clientId: d.request.clientId,
@@ -100,10 +101,12 @@ export async function DELETE(request: Request) {
 
     const doc = await prisma.document.findUnique({
       where: { id },
-      select: { id: true, fileName: true, storageKey: true, request: { select: { clientId: true } } },
+      select: { id: true, fileName: true, storageKey: true, ordinaryLegalHold: true, request: { select: { clientId: true } } },
     });
     if (!doc) throw ApiError.notFound("Document not found");
 
+    if (doc.ordinaryLegalHold) throw ApiError.conflict("Document is on hold");
+    if (await prisma.ordinaryTransferIntent.findFirst({where:{resourceId:doc.id,operation:'UPLOAD',status:'COMPLETE'}})) throw ApiError.conflict("Use the secure file transfer action");
     await prisma.document.delete({ where: { id } });
     await deleteStorageObjects([doc.storageKey]);
 

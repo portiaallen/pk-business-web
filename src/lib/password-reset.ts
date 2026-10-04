@@ -1,3 +1,4 @@
+import { safeOrigin } from "@/lib/url-privacy";
 import { assertResourceEnvironment, securityEnvironment } from "@/lib/security-environment";
 import { logSecurityEvent, safeAuditMetadata } from "@/lib/security-log";
 import { randomBytes, createHash, createHmac } from "crypto";
@@ -19,9 +20,10 @@ export const MIN_PASSWORD_LENGTH = 12;
 /** Production origin used in reset links. */
 export function getSiteOrigin(): string {
   const origin = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  return origin && origin.startsWith("https://")
-    ? origin.replace(/\/$/, "")
-    : "https://www.pkservices.business";
+  const result = safeOrigin(origin || "https://www.pkservices.business");
+  const expected = process.env.PK_WEBAUTHN_ORIGIN?.trim();
+  if ((securityEnvironment() === "preview" && (!origin || !expected)) || (expected && safeOrigin(expected) !== result)) throw new Error("Explicit preview origin required");
+  return result;
 }
 
 // ─── Token utilities ──────────────────────────────────────────────────────────
@@ -88,12 +90,11 @@ export async function requestPasswordReset(
     data: { userId: user.id, tokenHash: hashResetToken(token), expiresAt },
   });
 
-  const resetUrl = `${getSiteOrigin()}/forgot-password?token=${encodeURIComponent(token)}`;
-
   // If the email cannot be sent, roll the token back so the user can retry
   // immediately (no cooldown penalty for a failed send). The response is the
   // same generic message either way.
   try {
+    const resetUrl = `${getSiteOrigin()}/forgot-password#token=${encodeURIComponent(token)}`;
     await sendResetEmail(resetUrl);
   } catch {
     await prisma.passwordResetToken.delete({ where: { id: created.id } }).catch(() => {});

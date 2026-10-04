@@ -1,3 +1,4 @@
+import { forbidNetlifyPayload } from "@/lib/ordinary-transfer/provider";
 import { requireAdminApiAccess } from "@/lib/admin-access";
 import { requireDocumentRequestAccess } from "@/lib/document-access";
 import { prisma } from "@/lib/prisma";
@@ -41,6 +42,7 @@ export async function GET(
     }
 
     await requireDocumentRequestAccess(user, document.requestId);
+    forbidNetlifyPayload();
     const data = await getObject(document.storageKey);
     if (!data) throw ApiError.notFound("Document content missing");
 

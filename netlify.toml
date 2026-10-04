@@ -11,6 +11,10 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
+# Ordered after Next packaging. This local plugin removes bearer URL telemetry.
+[[plugins]]
+  package = "./netlify/plugins/url-privacy"
+
 # Only non-secret declarations. Provider credentials must be independently scoped.
 [context.production.environment]
   PK_ENVIRONMENT = "production"

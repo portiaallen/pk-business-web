@@ -1,3 +1,5 @@
+import { safeOrigin } from "@/lib/url-privacy";
+import { isHostedRuntime } from "@/lib/security-environment";
 import { logSecurityEvent } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -56,9 +58,11 @@ export async function POST(
     }
 
     const portalInvoiceUrl = `/portal/invoices?invoice=${encodeURIComponent(invoice.id)}`;
-    const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "") ||
-      new URL(request.url).origin;
+    let appUrl: string;
+    try {
+      appUrl = safeOrigin(process.env.NEXT_PUBLIC_APP_URL?.trim() || new URL(request.url).origin);
+      if (isHostedRuntime() && appUrl !== process.env.PK_WEBAUTHN_ORIGIN?.trim()) throw new Error();
+    } catch { throw new ApiError(503,"Payment return origin is not configured."); }
     const form = new URLSearchParams();
     form.set("mode", "payment");
     form.set("payment_method_types[0]", "card");
@@ -117,7 +121,7 @@ export async function POST(
       session.metadata?.clientId !== invoice.clientId ||
       session.metadata?.balanceCents !== String(balanceCents) ||
       checkoutUrl.protocol !== "https:" ||
-      checkoutUrl.hostname !== "checkout.stripe.com"
+      checkoutUrl.hostname !== "checkout.stripe.com" || checkoutUrl.username !== "" || checkoutUrl.password !== "" || checkoutUrl.port !== ""
     ) {
       throw new ApiError(502, "Stripe returned an invalid checkout session.");
     }

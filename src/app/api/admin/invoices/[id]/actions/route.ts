@@ -210,7 +210,7 @@ export async function POST(
       return NextResponse.json({ ok: true });
     }
 
-    throw ApiError.badRequest(`Unknown action: ${action || "(none)"}`);
+    throw ApiError.badRequest("Unknown action");
   } catch (error) {
     return handleApiError(error);
   }

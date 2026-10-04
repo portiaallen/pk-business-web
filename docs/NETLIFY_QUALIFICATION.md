@@ -1,5 +1,8 @@
 # Netlify Free qualification preparation
 
+> Historical preparation baseline. Current LOCAL gates: **GREEN for separately authorized synthetic hosted verification**, per [the final local gate report](netlify/FINAL_LOCAL_GATE_REPORT.md). Production migration and Vault activation remain unapproved.
+
+
 ## Decision
 
 **YELLOW — specific remaining engineering and hosted verification required.**
@@ -89,3 +92,7 @@ Changed-file lint has no errors or warnings. Full lint remains 21 pre-existing e
 Implement and locally adversarially qualify the ordinary 25 MiB transfer boundary, and validate/redact adapter-level URL tracing with synthetic canaries. Then return an explicit synthetic Netlify deployment runbook and readiness decision. Cloud deployment, secrets, DNS, paid services, real data and Vault activation remain separately prohibited unless Portia authorizes them.
 
 Provider references: [Next.js adapter](https://docs.netlify.com/build/frameworks/framework-setup-guides/nextjs/overview/), [Function limits](https://docs.netlify.com/build/functions/configuration/), [environment scopes](https://docs.netlify.com/build/environment-variables/overview/), [current credits](https://docs.netlify.com/manage/accounts-and-billing/billing/billing-for-credit-based-plans/how-credits-work/). The original audit remains the decision baseline, not evidence of deployed configuration.
+
+## Final LOCAL gate follow-up
+
+The two earlier application gates are superseded by [the final local gate report](netlify/FINAL_LOCAL_GATE_REPORT.md). Ordinary transfer/privacy contracts, synthetic provider/RPC, browser payload proof and ordered artifact hardening are implemented locally. This is readiness for separately authorized synthetic hosted verification, not approval to migrate or open confidential uploads. Production private-storage/durable fencing adapters remain a separate infrastructure prerequisite.

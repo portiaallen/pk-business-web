@@ -1,0 +1,43 @@
+{
+  "baseline": "bb43bafc3a1a92c2be847e5df77394c93b0b8c32",
+  "branch": "feat/pk-would-work-here",
+  "classification": "GREEN: separately authorized synthetic hosted verification only",
+  "deployed": false,
+  "published": false,
+  "productionChanged": false,
+  "vaultProductionUploadsOpen": false,
+  "build": "PASS",
+  "netlifyAdapter": "5.16.1",
+  "packaging": "PASS",
+  "typecheck": "PASS",
+  "tests": {
+    "phase1a": 77,
+    "phase1b": 44,
+    "vault": 61,
+    "checkoutMock": 22,
+    "transferPrivacy": 61,
+    "browser": 62,
+    "artifact": 15,
+    "packagedHandlerMock": 4,
+    "generatedWrapperPrivacy": 6
+  },
+  "lint": {
+    "fullPreExistingErrors": 21,
+    "fullPreExistingWarnings": 40,
+    "newErrors": 0,
+    "newWarnings": 0,
+    "preExistingErrors": 8,
+    "preExistingWarnings": 10,
+    "files": 53
+  },
+  "browserConsole": {
+    "unexpectedErrors": 0,
+    "preExistingBaseUIWarnings": 15,
+    "expectedDenialOrOfflineErrors": 5
+  },
+  "deviceHardwareVerified": false,
+  "providerProductionStorageAdapterImplemented": false,
+  "productionPrivateStorageRequired": "reviewed durable private storage/atomic fence, environment isolation and live acceptance; disposable provider is not production storage",
+  "schema": "OrdinaryTransferIntent plus two flags each on Document and Deliverable; additive SQL tested only on disposable baseline, no production migration",
+  "payloadProof": "25 MiB provider body; PK authorization/confirmation/RPC bounded to 8 KiB; local synthetic proofs only"
+}
