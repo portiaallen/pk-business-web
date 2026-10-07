@@ -1,0 +1,200 @@
+
+> pk-business-services@0.1.0 build
+> prisma generate && next build
+
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+
+✔ Generated Prisma Client (7.10.0) to ./src/generated/prisma in 477ms
+
+▲ Next.js 16.3.3 (Turbopack)
+✓ Running next.config.ts took 26ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 1359ms
+  Running TypeScript ...
+  Finished TypeScript in 3.7s ...
+  Collecting page data using 2 workers ...
+  Generating static pages using 2 workers (0/83) ...
+  Generating static pages using 2 workers (20/83) 
+  Generating static pages using 2 workers (41/83) 
+  Generating static pages using 2 workers (62/83) 
+✓ Generating static pages using 2 workers (83/83) in 765ms
+Turbopack build encountered 2 warnings:
+./src/lib/storage.ts:102:18
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m100 |[0m   }
+  [90m101 |[0m   [36mtry[0m {
+[33m[1m>[0m [90m102 |[0m     [36mreturn[0m [36mawait[0m readFile(resolveSafe(storageKey));
+  [90m    |[0m                  [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m103 |[0m   } [36mcatch[0m {
+  [90m104 |[0m     [36mreturn[0m [36mnull[0m;
+  [90m105 |[0m   }
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.readFile(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import trace:
+  App Route:
+    ./src/lib/storage.ts
+    ./src/app/api/portal/requests/[id]/deliverables/[deliverableId]/route.ts
+
+
+./src/lib/storage.ts:77:24
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m75 |[0m [36mfunction[0m resolveSafe(storageKey: string): string {
+  [90m76 |[0m   [36mconst[0m full = path.resolve([33mSTORAGE_ROOT[0m, storageKey);
+[33m[1m>[0m [90m77 |[0m   [36mif[0m (!full.startsWith(path.resolve([33mSTORAGE_ROOT[0m) + path.sep)) {
+  [90m   |[0m                        [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m78 |[0m     [36mthrow[0m [36mnew[0m [33mError[0m([32m"INVALID_STORAGE_KEY"[0m);
+  [90m79 |[0m   }
+  [90m80 |[0m   [36mreturn[0m full;
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: path.resolve(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import trace:
+  App Route:
+    ./src/lib/storage.ts
+    ./src/app/api/portal/requests/[id]/deliverables/[deliverableId]/route.ts
+
+
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /about
+├ ○ /admin/activity
+├ ○ /admin/clients
+├ ƒ /admin/clients/[id]
+├ ○ /admin/consultations
+├ ○ /admin/dashboard
+├ ○ /admin/documents
+├ ○ /admin/invoices
+├ ƒ /admin/invoices/[id]
+├ ƒ /admin/invoices/[id]/edit
+├ ○ /admin/invoices/new
+├ ○ /admin/readiness
+├ ƒ /admin/readiness/[id]
+├ ○ /admin/readiness/recommendations
+├ ○ /admin/requests
+├ ƒ /admin/requests/[id]
+├ ƒ /admin/requests/[id]/ai-assistant
+├ ƒ /admin/requests/[id]/qb-review
+├ ○ /admin/services
+├ ○ /admin/team
+├ ƒ /api/admin/activity
+├ ƒ /api/admin/clients
+├ ƒ /api/admin/clients/[id]
+├ ƒ /api/admin/dashboard
+├ ƒ /api/admin/documents
+├ ƒ /api/admin/documents/[id]
+├ ƒ /api/admin/intake-submissions
+├ ƒ /api/admin/invoices
+├ ƒ /api/admin/invoices/[id]
+├ ƒ /api/admin/invoices/[id]/actions
+├ ƒ /api/admin/readiness
+├ ƒ /api/admin/readiness/[id]
+├ ƒ /api/admin/readiness/[id]/report
+├ ƒ /api/admin/readiness/[id]/services
+├ ƒ /api/admin/readiness/notifications
+├ ƒ /api/admin/readiness/recommendations
+├ ƒ /api/admin/requests
+├ ƒ /api/admin/requests/[id]
+├ ƒ /api/admin/requests/[id]/ai-assistant
+├ ƒ /api/admin/requests/[id]/deliverables
+├ ƒ /api/admin/requests/[id]/deliverables/[deliverableId]
+├ ƒ /api/admin/requests/[id]/document-requests
+├ ƒ /api/admin/requests/[id]/notes
+├ ƒ /api/admin/requests/[id]/qb-review
+├ ƒ /api/admin/requests/[id]/reply
+├ ƒ /api/admin/requests/[id]/time-entries
+├ ƒ /api/admin/security
+├ ƒ /api/admin/services
+├ ƒ /api/admin/staff
+├ ƒ /api/admin/team
+├ ƒ /api/auth/client-context
+├ ƒ /api/auth/forgot-password
+├ ƒ /api/auth/login
+├ ƒ /api/auth/logout
+├ ƒ /api/auth/reset-password
+├ ƒ /api/auth/security
+├ ƒ /api/auth/session
+├ ƒ /api/auth/webauthn
+├ ƒ /api/contact
+├ ƒ /api/health
+├ ƒ /api/ordinary-transfer
+├ ƒ /api/ordinary-transfer/config
+├ ƒ /api/ordinary-transfer/confirm
+├ ƒ /api/ordinary-transfer/internal
+├ ƒ /api/portal/dashboard
+├ ƒ /api/portal/documents
+├ ƒ /api/portal/documents/[id]
+├ ƒ /api/portal/documents/upload
+├ ƒ /api/portal/invoices
+├ ƒ /api/portal/invoices/[id]/checkout
+├ ƒ /api/portal/members
+├ ƒ /api/portal/messages
+├ ƒ /api/portal/messages/read
+├ ƒ /api/portal/payments
+├ ƒ /api/portal/readiness
+├ ƒ /api/portal/readiness/[id]
+├ ƒ /api/portal/readiness/[id]/report
+├ ƒ /api/portal/requests
+├ ƒ /api/portal/requests/[id]
+├ ƒ /api/portal/requests/[id]/deliverables/[deliverableId]
+├ ƒ /api/portal/requests/[id]/document-requests
+├ ƒ /api/portal/requests/[id]/messages
+├ ƒ /api/portal/services
+├ ƒ /api/readiness/analytics
+├ ƒ /api/readiness/checkout
+├ ƒ /api/readiness/onboard
+├ ƒ /api/readiness/start
+├ ƒ /api/readiness/status
+├ ƒ /api/setup/seed
+├ ƒ /api/stripe/webhook
+├ ƒ /api/vault
+├ ƒ /api/vault/[id]
+├ ○ /contact
+├ ○ /forgot-password
+├ ƒ /pay
+├ ○ /portal/dashboard
+├ ○ /portal/documents
+├ ○ /portal/invoices
+├ ○ /portal/login
+├ ○ /portal/messages
+├ ○ /portal/payments
+├ ○ /portal/profile
+├ ○ /portal/readiness
+├ ƒ /portal/readiness/[id]
+├ ○ /portal/requests
+├ ƒ /portal/requests/[id]
+├ ○ /portal/requests/new
+├ ○ /portal/services
+├ ○ /portal/team
+├ ƒ /readiness
+├ ○ /readiness/start
+├ ○ /security
+├ ○ /services
+└ ○ /vault
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

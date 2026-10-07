@@ -1,0 +1,75 @@
+[
+  {
+    "state": "landing",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "impact": "serious"
+      }
+    ],
+    "passes": [
+      "aria-allowed-attr",
+      "aria-conditional-attr",
+      "aria-deprecated-role",
+      "aria-hidden-body",
+      "aria-hidden-focus",
+      "aria-prohibited-attr",
+      "aria-required-attr",
+      "aria-required-children",
+      "aria-required-parent",
+      "aria-roles",
+      "aria-valid-attr-value",
+      "aria-valid-attr",
+      "button-name",
+      "bypass",
+      "color-contrast",
+      "definition-list",
+      "dlitem",
+      "document-title",
+      "duplicate-id-aria",
+      "form-field-multiple-labels",
+      "html-has-lang",
+      "html-lang-valid",
+      "image-alt",
+      "label",
+      "link-name",
+      "list",
+      "listitem",
+      "meta-viewport",
+      "nested-interactive",
+      "summary-name"
+    ]
+  },
+  {
+    "state": "preliminary-modal",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "impact": "serious"
+      }
+    ],
+    "passes": [
+      "aria-allowed-attr",
+      "aria-conditional-attr",
+      "aria-deprecated-role",
+      "aria-hidden-body",
+      "aria-hidden-focus",
+      "aria-prohibited-attr",
+      "aria-required-attr",
+      "aria-roles",
+      "aria-valid-attr-value",
+      "aria-valid-attr",
+      "autocomplete-valid",
+      "button-name",
+      "duplicate-id-aria",
+      "form-field-multiple-labels",
+      "label",
+      "meta-viewport",
+      "nested-interactive",
+      "scrollable-region-focusable",
+      "select-name"
+    ]
+  }
+]

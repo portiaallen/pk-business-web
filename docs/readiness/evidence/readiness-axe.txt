@@ -1,0 +1,2 @@
+PASS landing: zero automated WCAG A/AA violations; manual keyboard/focus checks covered in landing suite.
+PASS preliminary-modal: zero automated WCAG A/AA violations; manual keyboard/focus checks covered in landing suite.

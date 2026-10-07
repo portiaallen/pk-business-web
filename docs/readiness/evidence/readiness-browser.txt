@@ -1,0 +1,11 @@
+
+> pk-business-services@0.1.0 test:browser:readiness
+> prisma generate && node --import tsx scripts/verify-readiness-browser.mts
+
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+
+✔ Generated Prisma Client (7.10.0) to ./src/generated/prisma in 460ms
+
+PASS real local HTTP/browser lifecycle: Arena CTA → preliminary intake → synthetic checkout → signed webhook twice → existing account binding → intake + canonical submission → scoped Admin finding editor → preview + human QA → immutable final → secure portal delivery → timely credit claim → approval → $99 qualifying invoice credit. Mobile and desktop screenshots saved. No real charge or external transport.

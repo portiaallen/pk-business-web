@@ -1,0 +1,60 @@
+
+> pk-business-services@0.1.0 test:readiness
+> prisma generate && node --test scripts/test-readiness-migration.mjs && node --import tsx --test scripts/test-readiness-domain.mts
+
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+
+✔ Generated Prisma Client (7.10.0) to ./src/generated/prisma in 490ms
+
+✔ forward migration preserves ordinary notification rows; backup and replay verified (116.107442ms)
+✔ migration error rolls back all feature tables; rejects hosted/automatic action (99.063738ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1272.888983
+✔ forward migration: foreign keys and schema integrity (2.835268ms)
+✔ production/hosting cannot enable synthetic purchasing (151.179472ms)
+✔ public boundary rejects pricing injection, SSN and free concern (6.810839ms)
+✔ same-origin boundary rejects CSRF before persistence (1.498746ms)
+✔ one provisional assessment and immutable $99 for retries (134.231392ms)
+✔ checkout uses fixed price and provider idempotency key (53.779203ms)
+✔ redirect alone, cancelled/unpaid, unsigned and wrong amount never pay (10.677065ms)
+✔ verified payment and repeated webhook create exactly one payment (17.979006ms)
+✔ paid email-code account setup stores hashes, limits attempts, binds owner (339.532798ms)
+✔ anonymous, viewer, unassigned ADMIN and stale context denied (45.642526ms)
+✔ view-only library role and expired step-up cannot mutate (23.829858ms)
+✔ structured intake, exact acknowledgment and duplicate submission (64.06411ms)
+✔ SLA begins only when review ready, secure evidence blocks incomplete review (26.139774ms)
+✔ Vault integration requires released same-engagement document and explicit staff grant (38.735627ms)
+✔ legacy ordinary upload denied for readiness requests (73.61042ms)
+✔ library CRUD, defaults, disclosure controls, duplicate and stale update (15.78463ms)
+✔ QA/finalization reject incomplete six-area rubric; status is independent of disposition (82.987574ms)
+✔ multiple recommendations, immutable assignment, one-off optionally saved (44.631355ms)
+✔ preview client-safe, human QA, immutable final version and unauthorized report denial (47.764917ms)
+✔ failed secure delivery and failed audit do not start clocks (26.328518ms)
+✔ successful portal delivery atomically starts clocks; retries do not reset (15.317645ms)
+✔ credit never auto approves, unrelated claim rejected, timely claim idempotent (42.637952ms)
+✔ credit invoice boundaries, capped partial application, exactly once no split (67.389659ms)
+✔ calendar-month deadlines clamp month end and leap years (0.268064ms)
+✔ analytics stores controlled event only; rejects sensitive details (9.787975ms)
+✔ notifications deduplicated and content-free; dispatch retry-safe locally (22.986818ms)
+✔ notification failure is isolated, retry scheduled, and retry publishes once (10.892561ms)
+✔ editing library after delivery cannot rewrite frozen report bytes (7.880812ms)
+✔ expired claim and redemption persist expiry; no late application (20.800272ms)
+✔ factual correction invalidates QA, freezes new version and preserves clocks (57.827989ms)
+✔ provider refunds reconcile without initiating charges/refunds or deleting history (12.739812ms)
+✔ revoked security version denies stale session and tenant queue excludes others (7.931873ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 32
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3053.794121

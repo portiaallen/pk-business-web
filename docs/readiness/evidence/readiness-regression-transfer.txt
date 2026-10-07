@@ -1,0 +1,81 @@
+
+> pk-business-services@0.1.0 test:ordinary-transfer
+> prisma generate && node --import tsx --test scripts/test-ordinary-transfer.mts
+
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+
+✔ Generated Prisma Client (7.10.0) to ./src/generated/prisma in 490ms
+
+✔ anonymous intent denied (12.909444ms)
+✔ unassigned staff denied (15.250036ms)
+✔ ADMIN is not global authority (4.399621ms)
+✔ inactive client denied (2.878876ms)
+✔ cross-client intent denied (2.940236ms)
+✔ wrong engagement denied (3.772201ms)
+✔ DATA ENTRY boundary (4.122643ms)
+✔ 25 MiB plus one rejected (1.966329ms)
+✔ MIME policy rejects executable (1.607778ms)
+✔ arbitrary object injection rejected (1.73972ms)
+✔ preview/origin confusion denied (1.464264ms)
+✔ expired intent rejected (55.866843ms)
+✔ single-use replay denied (27.512369ms)
+✔ body MIME mismatch denied (18.83294ms)
+✔ interrupted short upload denied (17.507596ms)
+✔ oversized stream denied (34.28759ms)
+✔ browser completion cannot create metadata (9.707193ms)
+✔ opaque identifiers and sanitized filenames (16.275528ms)
+✔ metadata confirmation verified once (28.653665ms)
+✔ revoked session cannot consume intent (11.78172ms)
+✔ permission revocation prevents completion (19.985668ms)
+✔ download authorization and pre-delivery audit (46.194543ms)
+✔ cross-client download denied (26.664644ms)
+✔ expired download denied (41.289098ms)
+✔ legal hold blocks deletion (25.264436ms)
+{"event":"TRANSFER_FAILURE"}
+✔ deletion failure remains pending and revokes access (50.591736ms)
+✔ ambiguous client fails closed (4.57824ms)
+✔ 25 MiB bytes bypass application control requests (115.360459ms)
+✔ small metadata reader blocks payload path (0.572567ms)
+✔ audit metadata excludes filenames URLs tokens (0.092939ms)
+✔ runtime console suppresses signed URL and filenames (0.885693ms)
+✔ returnTo rejects //evil.test (0.130139ms)
+✔ returnTo rejects /\evil.test (0.052754ms)
+✔ returnTo rejects /portal/%2f%2fevil.test (0.054994ms)
+✔ returnTo rejects /portal/%252fadmin (0.075413ms)
+✔ returnTo rejects /portal/../public (0.104605ms)
+✔ returnTo rejects https://evil.test (0.026298ms)
+✔ returnTo rejects /portal/%0aevil (0.026899ms)
+✔ returnTo strips credential query and fragments (0.082209ms)
+✔ provider errors with sensitive URL suppressed (0.185615ms)
+✔ origin rejects userinfo/query/qualification confusion (0.211547ms)
+✔ new reset links use fragment, never query (0.22898ms)
+✔ audit outage blocks download bytes (62.806769ms)
+✔ simultaneous claim admits only one use (26.255665ms)
+✔ permission change after claim blocks byte delivery (36.125015ms)
+✔ provider outage never produces metadata (30.059559ms)
+✔ SQL artifact applies only to disposable baseline (1125.580668ms)
+✔ actual browser upload helper sends 25 MiB only to transfer origin (138.671683ms)
+✔ Netlify missing adapter never falls back to multipart (0.784843ms)
+✔ 25 MiB download bypasses PK body response (176.243559ms)
+✔ external authority RPC accepts only bounded metadata and hides errors (7.769508ms)
+✔ declared PDF with binary spoof rejected (12.968915ms)
+✔ expired failed upload is reconciled with fenced storage deletion (18.448038ms)
+✔ remote protocol round trip separates metadata from private bytes (30.420358ms)
+✔ anonymous and unassigned download intent denied (26.188075ms)
+✔ previously issued download fails after verified disposal (51.021584ms)
+✔ concurrent upload confirmation creates one record (39.778877ms)
+✔ hosted qualification origin cannot issue grant for another host (6.500285ms)
+✔ reset preview origin must match explicit qualification origin (27.816302ms)
+✔ disposable qualification provider listens only locally and denies untrusted control (152.053104ms)
+{"event":"TRANSFER_FAILURE"}
+✔ authorized fresh session can resume pending deletion without stale-session reuse (62.1918ms)
+ℹ tests 61
+ℹ suites 0
+ℹ pass 61
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4256.466625

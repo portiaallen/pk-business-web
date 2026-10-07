@@ -1,0 +1,67 @@
+
+> pk-business-services@0.1.0 test:security:phase1b
+> prisma generate && node --import tsx --test scripts/test-phase1b.mts
+
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+
+✔ Generated Prisma Client (7.10.0) to ./src/generated/prisma in 450ms
+
+✔ staff password alone cannot create a privileged session (11.616991ms)
+✔ staff login denies unauthorized initial enrollment and sends no session cookie (381.412106ms)
+✔ client password login remains functional (297.519721ms)
+✔ ADMIN has no implicit confidential, QA or filing authority (4.23589ms)
+✔ support and data-entry have no inherited professional capabilities (13.795958ms)
+✔ self escalation is denied (4.987944ms)
+✔ unauthorized capability grants are denied (6.035067ms)
+✔ unauthorized assignment is denied (6.372235ms)
+✔ permission grant revokes old sessions and is audited (19.397279ms)
+✔ explicit client context is required (6.204251ms)
+✔ authorized context succeeds; cross-client context fails (16.942887ms)
+✔ ambiguous client membership denies context until explicit selection (11.879245ms)
+✔ inactive clients cannot be selected or accessed (6.175556ms)
+✔ QA does not imply filing; REQUEST grants do not imply other engagements (0.191658ms)
+✔ concurrent permission changes accept one expected security version (13.980155ms)
+{"event":"API_FAILURE"}
+✔ audit failure rolls back grant and security version (28.970249ms)
+✔ audit failure prevents session establishment (7.143494ms)
+✔ privileged action requires recent step-up (2.547483ms)
+✔ idle and absolute staff expiration fail closed (8.789292ms)
+✔ revoked session replay is rejected (4.153115ms)
+✔ recovery codes generated as hashes, revoke all sessions and replace old codes (16.006741ms)
+✔ unauthorized initial enrollment is denied (1.00143ms)
+✔ authorized initial enrollment expires (9.186817ms)
+✔ challenge expiration, replay, disablement and security reset are denied (0.337057ms)
+{"event":"API_FAILURE"}
+(node:9341) ExperimentalWarning: The supports Web Crypto API method is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9341) ExperimentalWarning: The ML-DSA-44 Web Crypto API algorithm is an experimental feature and might change at any time
+✔ cryptographic verification cannot be bypassed with arbitrary response (12.87604ms)
+✔ recovery-code use grants only enrollment, and code reuse is denied (28.403594ms)
+✔ failed recovery burns the attempt and is audited (6.016001ms)
+✔ inventory cookie never authenticates PK (0.294349ms)
+✔ request grants restrict collection queries and unassigned records (14.34473ms)
+✔ bulk export, filing and legal-hold reusable gates require step-up (6.430413ms)
+✔ role change invalidates all target sessions without granting specialized authority (9.136093ms)
+✔ manual recovery cannot be invoked without recorded policy verification (9.189743ms)
+✔ other-tab client changes cannot silently redirect request creation (23.183706ms)
+✔ client membership step-up refreshes password assurance without staff authority (302.860601ms)
+✔ client revoke-all requires password verification (592.367418ms)
+✔ validly signed assertion without user verification is denied (10.110391ms)
+✔ bookkeeping QA/payment release rules remain unchanged (5.10226ms)
+✔ assignment-only role cannot inherit confidential access (6.301321ms)
+✔ legacy document download remains authorized, private and client scoped (146.128214ms)
+✔ invoice creation and synthetic manual payment preserve existing rules (38.119101ms)
+✔ deliverable release still requires QA and recorded payment (22.71606ms)
+✔ offboarding invalidates sessions, grants, recovery and enrollment (13.795071ms)
+✔ password reset invalidates sessions and challenges while preserving MFA (348.587492ms)
+✔ staff security sessions preserve the actual password assurance timestamp (3.78024ms)
+ℹ tests 44
+ℹ suites 0
+ℹ pass 44
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4382.085056
