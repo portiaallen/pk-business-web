@@ -1,6 +1,7 @@
 import { safeReturnTo } from "@/lib/url-privacy";
 import { startChallenge } from "@/lib/webauthn";
-import { safeAuditMetadata } from "@/lib/security-log";
+import { logSecurityEvent, safeAuditMetadata } from "@/lib/security-log";
+import { authenticationDatabaseFailureEvent } from "@/lib/database-diagnostics";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -31,7 +32,12 @@ export async function POST(request: Request) {
     }
 
     // Rate limiting (persistent, per-email, generic responses)
-    await assertNotRateLimited(email);
+    try {
+      await assertNotRateLimited(email);
+    } catch (error) {
+      if (!(error instanceof ApiError)) logSecurityEvent(authenticationDatabaseFailureEvent(error));
+      throw error;
+    }
 
     const user = await prisma.user.findUnique({ where: { email } });
 

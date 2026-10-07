@@ -33,6 +33,21 @@ const prod={NODE_ENV:'production',PK_ENVIRONMENT:'production',PK_AUTH_ENVIRONMEN
 const user={securityVersion:0,assurance:'WEBAUTHN',sessionId:'synthetic-session',activeClientId:'synthetic-client',passwordVerifiedAt:new Date(),mfaVerifiedAt:new Date(),id:'synthetic-staff',role:'STAFF',status:'ACTIVE',name:'Synthetic',email:'synthetic@example.test'};
 const session={securityVersion:0,assurance:'WEBAUTHN',lastSeenAt:new Date(),passwordVerifiedAt:new Date(),mfaVerifiedAt:new Date(),activeClientId:null,expiresAt:new Date(Date.now()+60000),user};
 const authMock={getSessionTokenFromRequest:()=> 'fixture',getSessionUser:async()=>user,hasRole:(u,...roles)=>roles.includes(u.role)};
+test('login database failure records only bounded category and preserves generic response',async()=>{
+ const h=harness({prisma:{loginRateLimit:{findUnique:async()=>{throw {code:'UNAUTHORIZED',message:canary,url:canary};}}}});
+ const response=await h.load('src/app/api/auth/login/route.ts').POST(new Request('https://qualification.example.test/api/auth/login',{method:'POST',body:JSON.stringify({email:'synthetic@example.test',password:'synthetic-only'})}));
+ assert.equal(response.status,500);
+ assert.equal((await response.json()).error,'An unexpected error occurred');
+ assert.ok(JSON.stringify(h.logs).includes('AUTH_DATABASE_AUTHORIZATION_FAILURE'));
+ assert.ok(!JSON.stringify(h.logs).includes(canary));
+});
+test('login rate-limit denial remains generic without database-failure diagnostic',async()=>{
+ const h=harness({prisma:{loginRateLimit:{findUnique:async()=>({lockedUntil:new Date(Date.now()+60000)})}}});
+ const response=await h.load('src/app/api/auth/login/route.ts').POST(new Request('https://qualification.example.test/api/auth/login',{method:'POST',body:JSON.stringify({email:'synthetic@example.test',password:'synthetic-only'})}));
+ assert.equal(response.status,429);
+ assert.equal((await response.json()).error,'Invalid email or password');
+ assert.ok(!JSON.stringify(h.logs).includes('AUTH_DATABASE_'));
+});
 test('logger drops unrecognized content and errors never disclose exception content',()=>{
  const h=harness();h.load('src/lib/security-log.ts').logSecurityEvent(canary);
  const response=h.load('src/lib/api-error.ts').handleApiError(new Error(canary));
