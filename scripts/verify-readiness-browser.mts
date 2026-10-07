@@ -392,7 +392,7 @@ try {
   await review
     .getByRole("button", { name: "Preview current client report" })
     .click();
-  await review.locator("iframe").waitFor();
+  await review.frameLocator("iframe").getByRole("heading", { name: "PK Readiness Report", exact: true }).waitFor();
   await review.screenshot({
     path: "docs/readiness/evidence/admin-preview-1440.png",
     fullPage: true,
@@ -420,7 +420,7 @@ try {
     .getByRole("button", { name: "View report version" })
     .first()
     .click();
-  await page.locator("iframe").waitFor();
+  await page.frameLocator("iframe").getByRole("heading", { name: "PK Readiness Report", exact: true }).waitFor();
   assert.ok(
     !(await page.locator("iframe").getAttribute("srcdoc"))?.includes(
       "PRIVATE_",
