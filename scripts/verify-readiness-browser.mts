@@ -392,7 +392,16 @@ try {
   await review
     .getByRole("button", { name: "Preview current client report" })
     .click();
-  await review.frameLocator("iframe").getByRole("heading", { name: "PK Readiness Report", exact: true }).waitFor();
+  await review
+    .frameLocator("iframe")
+    .getByRole("heading", { name: "PK Readiness Report", exact: true })
+    .waitFor();
+  await review.locator("iframe").scrollIntoViewIfNeeded();
+  await review
+    .locator("iframe")
+    .screenshot({
+      path: "docs/readiness/evidence/admin-report-rendered-1440.png",
+    });
   await review.screenshot({
     path: "docs/readiness/evidence/admin-preview-1440.png",
     fullPage: true,
@@ -420,11 +429,24 @@ try {
     .getByRole("button", { name: "View report version" })
     .first()
     .click();
-  await page.frameLocator("iframe").getByRole("heading", { name: "PK Readiness Report", exact: true }).waitFor();
+  await page
+    .frameLocator("iframe")
+    .getByRole("heading", { name: "PK Readiness Report", exact: true })
+    .waitFor();
   assert.ok(
     !(await page.locator("iframe").getAttribute("srcdoc"))?.includes(
       "PRIVATE_",
     ),
+  );
+  await page.locator("iframe").scrollIntoViewIfNeeded();
+  await page
+    .locator("iframe")
+    .screenshot({
+      path: "docs/readiness/evidence/client-report-rendered-375.png",
+    });
+  writeFileSync(
+    "docs/readiness/evidence/synthetic-final-report.html",
+    (await page.locator("iframe").getAttribute("srcdoc"))!,
   );
   await page
     .getByRole("button", { name: "Express interest & claim for PK review" })
