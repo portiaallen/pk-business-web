@@ -1,9 +1,11 @@
+import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   getSessionTokenFromRequest,
   requireAuthContext,
   requireMemberWriteContext,
+  requireExpectedClient,
 } from "@/lib/auth";
 import { ApiError, handleApiError } from "@/lib/api-error";
 
@@ -37,6 +39,7 @@ export async function POST(request: Request) {
   try {
     const token = getSessionTokenFromRequest(request);
     const ctx = await requireMemberWriteContext(token);
+    requireExpectedClient(request, ctx);
 
     const body = await request.json();
     const serviceSlug = typeof body.serviceSlug === "string" ? body.serviceSlug : "";
@@ -74,7 +77,7 @@ export async function POST(request: Request) {
         action: "REQUEST_CREATED",
         resource: "verification_request",
         resourceId: req.id,
-        metadata: JSON.stringify({ service: service.name }),
+        metadata: safeAuditMetadata({ service: service.name }),
       },
     });
 

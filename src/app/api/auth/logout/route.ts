@@ -1,36 +1,36 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
-  destroySession,
   clearSessionCookie,
   getSessionTokenFromRequest,
+  hashToken,
 } from "@/lib/auth";
-import { AuditAction } from "@/generated/prisma/client";
-
+import { handleApiError } from "@/lib/api-error";
 export async function POST(request: Request) {
-  const token = getSessionTokenFromRequest(request);
-
-  if (token) {
-    // Find user for audit log before destroying session
-    const session = await prisma.session.findUnique({
-      where: { tokenHash: token },
-      select: { userId: true },
-    });
-
-    await destroySession(token);
-
-    if (session) {
-      await prisma.auditLog.create({
-        data: {
-          actorId: session.userId,
-          action: AuditAction.LOGOUT,
-          resource: "auth",
-        },
+  try {
+    const token = getSessionTokenFromRequest(request);
+    if (token)
+      await prisma.$transaction(async (tx) => {
+        const session = await tx.session.findUnique({
+          where: { tokenHash: hashToken(token) },
+        });
+        await tx.session.deleteMany({ where: { tokenHash: hashToken(token) } });
+        if (session)
+          await tx.auditLog.create({
+            data: {
+              actorId: session.userId,
+              action: "LOGOUT",
+              resource: "auth",
+            },
+          });
       });
-    }
+    const response = NextResponse.json({ success: true });
+    response.headers.set("Set-Cookie", clearSessionCookie());
+    return response;
+  } catch (error) {
+    // Never claim server revocation succeeded if persistence/auditing failed.
+    const response = handleApiError(error);
+    response.headers.set("Set-Cookie", clearSessionCookie());
+    return response;
   }
-
-  const response = NextResponse.json({ success: true });
-  response.headers.set("Set-Cookie", clearSessionCookie());
-  return response;
 }

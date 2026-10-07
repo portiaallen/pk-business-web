@@ -1,3 +1,6 @@
+import { forbidNetlifyPayload } from "@/lib/ordinary-transfer/provider";
+import { requireAdminApiAccess } from "@/lib/admin-access";
+import { requireDocumentRequestAccess } from "@/lib/document-access";
 import { prisma } from "@/lib/prisma";
 import {
   getSessionTokenFromRequest,
@@ -13,6 +16,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const token = getSessionTokenFromRequest(request);
     const user = await getSessionUser(token);
     if (!user || !hasRole(user, "ADMIN", "STAFF")) throw ApiError.forbidden();
@@ -21,6 +25,7 @@ export async function GET(
     const document = await prisma.document.findUnique({
       where: { id },
       select: {
+        requestId: true,
         fileName: true,
         mimeType: true,
         storageKey: true,
@@ -36,6 +41,8 @@ export async function GET(
       throw ApiError.notFound("Document not found");
     }
 
+    await requireDocumentRequestAccess(user, document.requestId);
+    forbidNetlifyPayload();
     const data = await getObject(document.storageKey);
     if (!data) throw ApiError.notFound("Document content missing");
 

@@ -8,8 +8,10 @@ export async function logAiActivity(
   actorType: "AI_GENERATED" | "SYSTEM_GENERATED" | "HUMAN_CREATED" = "SYSTEM_GENERATED",
   actorId?: string | null
 ) {
+  // Content belongs in scoped engagement records, never the activity log.
+  void detail;
   await prisma.aiActivityLog.create({
-    data: { reviewId, action, detail: detail ?? null, actorType, actorId: actorId ?? null },
+    data: { reviewId, action, detail: null, actorType, actorId: actorId ?? null },
   });
 }
 

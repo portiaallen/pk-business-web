@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser, getSessionTokenFromRequest } from "@/lib/auth";
-import { ApiError, handleApiError } from "@/lib/api-error";
+import { requireAuthContext, getSessionTokenFromRequest } from "@/lib/auth";
+import { handleApiError } from "@/lib/api-error";
 import {
   effectiveStatus,
   paidCentsOf,
@@ -17,17 +17,10 @@ import {
 export async function GET(request: Request) {
   try {
     const token = getSessionTokenFromRequest(request);
-    const user = await getSessionUser(token);
-    if (!user) throw ApiError.unauthorized();
-
-    const membership = await prisma.clientMember.findFirst({
-      where: { userId: user.id },
-      select: { clientId: true },
-    });
-    if (!membership) throw ApiError.forbidden();
+    const ctx = await requireAuthContext(token);
 
     const invoices = await prisma.invoice.findMany({
-      where: { clientId: membership.clientId },
+      where: { clientId: ctx.clientId },
       include: { payments: { select: { status: true, amountCents: true } } },
       orderBy: { createdAt: "desc" },
     });

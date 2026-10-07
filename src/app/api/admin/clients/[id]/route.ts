@@ -1,3 +1,5 @@
+import { requireAdminApiAccess } from "@/lib/admin-access";
+import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -15,7 +17,7 @@ import {
 async function requireAdmin(request: Request) {
   const token = getSessionTokenFromRequest(request);
   const user = await getSessionUser(token);
-  if (!user || !hasRole(user, "ADMIN")) throw ApiError.forbidden();
+  if (!user || !hasRole(user, "ADMIN", "STAFF")) throw ApiError.forbidden();
   return user;
 }
 
@@ -25,6 +27,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id } = await params;
     await requireAdmin(request);
 
@@ -159,6 +162,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id } = await params;
     const admin = await requireAdminForDelete(request);
 
@@ -177,7 +181,7 @@ export async function DELETE(
         action: "ADMIN_ACTION",
         resource: "client",
         resourceId: id,
-        metadata: JSON.stringify({
+        metadata: safeAuditMetadata({
           action: "CLIENT_HARD_DELETED",
           clientName: existing.name,
           ...result.counts,
@@ -198,6 +202,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id } = await params;
     const admin = await requireAdmin(request);
 
@@ -238,7 +243,7 @@ export async function PATCH(
         action: "ADMIN_ACTION",
         resource: "client",
         resourceId: id,
-        metadata: JSON.stringify({ changes: data, clientName: existing.name }),
+        metadata: safeAuditMetadata({ action: "CLIENT_UPDATED", from: existing.status, to: updated.status, fieldsChanged: Object.keys(data) }),
       },
     });
 

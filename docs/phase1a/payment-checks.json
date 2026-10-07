@@ -1,0 +1,18 @@
+{
+  "results": [
+    "configured/mobile: correct availability, no overflow, zero WCAG violations",
+    "configured/tablet: correct availability, no overflow, zero WCAG violations",
+    "configured/desktop: correct availability, no overflow, zero WCAG violations",
+    "Card entry: anonymous login preserves invoice return path; mocked authenticated exact-balance checkout POST and Stripe navigation succeed; no real charge",
+    "missing/mobile: correct availability, no overflow, zero WCAG violations",
+    "missing/tablet: correct availability, no overflow, zero WCAG violations",
+    "missing/desktop: correct availability, no overflow, zero WCAG violations",
+    "key-only/mobile: correct availability, no overflow, zero WCAG violations",
+    "key-only/tablet: correct availability, no overflow, zero WCAG violations",
+    "key-only/desktop: correct availability, no overflow, zero WCAG violations",
+    "webhook-only/mobile: correct availability, no overflow, zero WCAG violations",
+    "webhook-only/tablet: correct availability, no overflow, zero WCAG violations",
+    "webhook-only/desktop: correct availability, no overflow, zero WCAG violations"
+  ],
+  "errors": []
+}

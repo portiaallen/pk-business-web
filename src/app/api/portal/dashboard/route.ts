@@ -1,30 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
-  getSessionUser,
+  requireAuthContext,
   getSessionTokenFromRequest,
-  hasRole,
 } from "@/lib/auth";
-import { ApiError, handleApiError } from "@/lib/api-error";
+import { handleApiError } from "@/lib/api-error";
 
 export async function GET(request: Request) {
   try {
     const token = getSessionTokenFromRequest(request);
-    const user = await getSessionUser(token);
-
-    if (!user) throw ApiError.unauthorized();
-
-    // Resolve client membership
-    const membership = await prisma.clientMember.findFirst({
-      where: { userId: user.id },
-      include: { client: true },
-    });
-
-    if (!membership || membership.client.status !== "ACTIVE") {
-      throw ApiError.forbidden("No active client account");
-    }
-
-    const clientId = membership.clientId;
+    const ctx = await requireAuthContext(token);
+    const clientId = ctx.clientId;
 
     // Active services count
     const activeServices = await prisma.service.count({
@@ -53,7 +39,7 @@ export async function GET(request: Request) {
     const unreadMessages = await prisma.clientMessage.count({
       where: {
         request: { clientId },
-        authorId: { not: user.id },
+        authorId: { not: ctx.user.id },
       },
     });
 

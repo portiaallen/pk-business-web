@@ -1,8 +1,11 @@
+import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   getSessionTokenFromRequest,
   requireAuthContext,
+  requireRecentPassword,
+  requireExpectedClient,
   hasClientMemberRole,
 } from "@/lib/auth";
 import { ApiError, handleApiError } from "@/lib/api-error";
@@ -43,6 +46,8 @@ export async function POST(request: Request) {
   try {
     const token = getSessionTokenFromRequest(request);
     const ctx = await requireAuthContext(token);
+    requireRecentPassword(ctx.user);
+    requireExpectedClient(request, ctx);
     if (!hasClientMemberRole(ctx.memberRole, "MANAGER")) {
       throw ApiError.forbidden("Only managers and owners can invite members");
     }
@@ -68,6 +73,7 @@ export async function POST(request: Request) {
     }
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser && (existingUser.role !== "CLIENT" || existingUser.status !== "ACTIVE")) throw ApiError.forbidden();
     if (existingUser) {
       const existingMember = await prisma.clientMember.findFirst({
         where: { userId: existingUser.id, clientId: ctx.clientId },
@@ -76,28 +82,20 @@ export async function POST(request: Request) {
     }
 
     const passwordHash = await hashPassword(password);
-    const user = existingUser
-      ? existingUser
-      : await prisma.user.create({
-          data: { email, name, passwordHash, role: "CLIENT", status: "ACTIVE" },
-        });
-
-    const member = await prisma.clientMember.create({
-      data: { clientId: ctx.clientId, userId: user.id, role: role as never },
+    const result = await prisma.$transaction(async tx => {
+      const actorMembership = await tx.clientMember.findUnique({ where: { clientId_userId: { clientId: ctx.clientId, userId: ctx.user.id } } });
+      const actor = await tx.user.findUniqueOrThrow({ where: { id: ctx.user.id } });
+      if (actorMembership?.role !== ctx.memberRole || actor.status !== "ACTIVE" || actor.securityVersion !== ctx.user.securityVersion) throw ApiError.forbidden();
+      const user = existingUser ? await tx.user.findUniqueOrThrow({ where: { id: existingUser.id } })
+        : await tx.user.create({ data: { email, name, passwordHash, role: "CLIENT", status: "ACTIVE" } });
+      if (user.role !== "CLIENT" || user.status !== "ACTIVE") throw ApiError.forbidden();
+      const member = await tx.clientMember.create({ data: { clientId: ctx.clientId, userId: user.id, role: role as never } });
+      await tx.user.update({ where: { id: user.id }, data: { securityVersion: { increment: 1 } } });
+      await tx.session.deleteMany({ where: { userId: user.id } });
+      await tx.auditLog.create({ data: { actorId: ctx.user.id, clientId: ctx.clientId, action: "CLIENT_MEMBER_ADDED", resource: "client_member", resourceId: member.id, metadata: safeAuditMetadata({ role }) } });
+      return { id: member.id, email: user.email, role: member.role };
     });
-
-    await prisma.auditLog.create({
-      data: {
-        actorId: ctx.user.id,
-        clientId: ctx.clientId,
-        action: "CLIENT_MEMBER_ADDED",
-        resource: "client_member",
-        resourceId: member.id,
-        metadata: JSON.stringify({ email, role }),
-      },
-    });
-
-    return NextResponse.json({ id: member.id, email: user.email, role: member.role });
+    return NextResponse.json(result);
   } catch (error) {
     return handleApiError(error);
   }
@@ -108,6 +106,8 @@ export async function PATCH(request: Request) {
   try {
     const token = getSessionTokenFromRequest(request);
     const ctx = await requireAuthContext(token);
+    requireRecentPassword(ctx.user);
+    requireExpectedClient(request, ctx);
     if (!hasClientMemberRole(ctx.memberRole, "MANAGER")) {
       throw ApiError.forbidden("Only managers and owners can change roles");
     }
@@ -137,17 +137,16 @@ export async function PATCH(request: Request) {
       throw ApiError.forbidden("Only owners can manage owner or manager roles");
     }
 
-    await prisma.clientMember.update({ where: { id: memberId }, data: { role: role as never } });
-
-    await prisma.auditLog.create({
-      data: {
-        actorId: ctx.user.id,
-        clientId: ctx.clientId,
-        action: "ADMIN_ACTION",
-        resource: "client_member",
-        resourceId: memberId,
-        metadata: JSON.stringify({ roleChange: role }),
-      },
+    await prisma.$transaction(async tx => {
+      const freshActor = await tx.user.findUniqueOrThrow({ where: { id: ctx.user.id } });
+      if (freshActor.status !== "ACTIVE" || freshActor.securityVersion !== ctx.user.securityVersion) throw ApiError.unauthorized();
+      const actorMember = await tx.clientMember.findUnique({ where: { clientId_userId: { clientId: ctx.clientId, userId: ctx.user.id } } });
+      if (actorMember?.role !== ctx.memberRole) throw ApiError.forbidden();
+      const changed = await tx.clientMember.updateMany({ where: { id: memberId, role: member.role }, data: { role: role as never } });
+      if (changed.count !== 1) throw ApiError.conflict("Membership changed");
+      await tx.user.update({ where: { id: member.userId }, data: { securityVersion: { increment: 1 } } });
+      await tx.session.deleteMany({ where: { userId: member.userId } });
+      await tx.auditLog.create({ data: { actorId: ctx.user.id, clientId: ctx.clientId, action: "ADMIN_ACTION", resource: "client_member", resourceId: memberId, metadata: safeAuditMetadata({ from: member.role, to: role }) } });
     });
 
     return NextResponse.json({ success: true });
@@ -161,7 +160,10 @@ export async function DELETE(request: Request) {
   try {
     const token = getSessionTokenFromRequest(request);
     const ctx = await requireAuthContext(token);
+    requireRecentPassword(ctx.user);
+    requireExpectedClient(request, ctx);
 
+    if (ctx.memberRole !== "OWNER") throw ApiError.forbidden();
     const url = new URL(request.url);
     const memberId = url.searchParams.get("memberId") || "";
     if (!memberId) throw ApiError.badRequest("memberId is required");
@@ -179,17 +181,15 @@ export async function DELETE(request: Request) {
       throw ApiError.forbidden("Only owners can remove owners");
     }
 
-    await prisma.clientMember.delete({ where: { id: memberId } });
-
-    await prisma.auditLog.create({
-      data: {
-        actorId: ctx.user.id,
-        clientId: ctx.clientId,
-        action: "CLIENT_MEMBER_REMOVED",
-        resource: "client_member",
-        resourceId: memberId,
-        metadata: JSON.stringify({ removedUserId: member.userId }),
-      },
+    await prisma.$transaction(async tx => {
+      const freshActor = await tx.user.findUniqueOrThrow({ where: { id: ctx.user.id } });
+      if (freshActor.status !== "ACTIVE" || freshActor.securityVersion !== ctx.user.securityVersion) throw ApiError.unauthorized();
+      const owner = await tx.clientMember.findUnique({ where: { clientId_userId: { clientId: ctx.clientId, userId: ctx.user.id } } });
+      if (owner?.role !== "OWNER") throw ApiError.forbidden();
+      await tx.clientMember.delete({ where: { id: memberId } });
+      await tx.user.update({ where: { id: member.userId }, data: { securityVersion: { increment: 1 } } });
+      await tx.session.deleteMany({ where: { userId: member.userId } });
+      await tx.auditLog.create({ data: { actorId: ctx.user.id, clientId: ctx.clientId, action: "CLIENT_MEMBER_REMOVED", resource: "client_member", resourceId: memberId, metadata: safeAuditMetadata({ removedUserId: member.userId }) } });
     });
 
     return NextResponse.json({ success: true });

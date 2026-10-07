@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ApiError, handleApiError } from "@/lib/api-error";
-import { paidCentsOf } from "@/lib/invoices";
+import { paidCentsOf, isStripeConfigured } from "@/lib/invoices";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
   try {
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
     const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
-    if (!webhookSecret || !secretKey) {
+    if (!isStripeConfigured() || !webhookSecret || !secretKey) {
       throw new ApiError(503, "Stripe webhook processing is not configured.");
     }
     const keyMode = configuredStripeMode(secretKey);

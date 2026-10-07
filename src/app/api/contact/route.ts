@@ -1,3 +1,4 @@
+import { logSecurityEvent } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -87,11 +88,11 @@ export async function POST(request: Request) {
 
     let emailSent = false;
     try {
-      await sendContactEmail(payload);
+      await sendContactEmail();
       emailSent = true;
-    } catch (emailError) {
+    } catch {
       // The record is safe; surface the email failure without losing the submission.
-      console.error("Contact form email failed:", emailError);
+      logSecurityEvent("CONTACT_EMAIL_FAILURE");
     }
 
     return NextResponse.json({
@@ -99,8 +100,8 @@ export async function POST(request: Request) {
       id: submission.id,
       emailSent,
     });
-  } catch (error) {
-    console.error("Contact form submission failed:", error);
+  } catch {
+    logSecurityEvent("CONTACT_SUBMISSION_FAILURE");
 
     return NextResponse.json(
       {

@@ -17,7 +17,8 @@ const ROLE_RANK: Record<string, number> = { VIEWER: 1, STAFF: 2, MANAGER: 3, OWN
 const ROLES = ["VIEWER", "STAFF", "MANAGER", "OWNER"];
 
 export default function TeamPage() {
-  const { memberRole } = useAuth() as { memberRole?: string };
+  const { client } = useAuth();
+  const memberRole = client?.role;
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -39,7 +40,7 @@ export default function TeamPage() {
     setError("");
     const res = await fetch("/api/portal/members", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-pk-client-context": client?.id || "" },
       body: JSON.stringify(form),
     });
     if (res.ok) {
@@ -56,7 +57,7 @@ export default function TeamPage() {
     setError("");
     const res = await fetch("/api/portal/members", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-pk-client-context": client?.id || "" },
       body: JSON.stringify({ memberId, role }),
     });
     if (res.ok) await load();
@@ -70,6 +71,7 @@ export default function TeamPage() {
     setError("");
     const res = await fetch(`/api/portal/members?memberId=${encodeURIComponent(memberId)}`, {
       method: "DELETE",
+      headers: { "x-pk-client-context": client?.id || "" },
     });
     if (res.ok) await load();
     else {

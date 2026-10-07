@@ -1,3 +1,6 @@
+import { safeOrigin } from "@/lib/url-privacy";
+import { assertResourceEnvironment, securityEnvironment } from "@/lib/security-environment";
+import { logSecurityEvent, safeAuditMetadata } from "@/lib/security-log";
 import { randomBytes, createHash, createHmac } from "crypto";
 import nodemailer from "nodemailer";
 import bcrypt from "bcryptjs";
@@ -17,9 +20,10 @@ export const MIN_PASSWORD_LENGTH = 12;
 /** Production origin used in reset links. */
 export function getSiteOrigin(): string {
   const origin = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  return origin && origin.startsWith("https://")
-    ? origin.replace(/\/$/, "")
-    : "https://www.pkservices.business";
+  const result = safeOrigin(origin || "https://www.pkservices.business");
+  const expected = process.env.PK_WEBAUTHN_ORIGIN?.trim();
+  if ((securityEnvironment() === "preview" && (!origin || !expected)) || (expected && safeOrigin(expected) !== result)) throw new Error("Explicit preview origin required");
+  return result;
 }
 
 // ─── Token utilities ──────────────────────────────────────────────────────────
@@ -29,17 +33,19 @@ export function generateResetToken(): string {
 }
 
 export function hashResetToken(token: string): string {
+  const environment = securityEnvironment();
   const secret = process.env.AUTH_SECRET?.trim();
+  if (secret) assertResourceEnvironment("AUTH");
   if (secret) {
-    return createHmac("sha256", secret).update(token).digest("hex");
+    return createHmac("sha256", secret).update(`pk-business-reset:${token}`).digest("hex");
   }
   // Fail-safe: never silently weaken token hashing in production.
-  if (process.env.NODE_ENV === "production") {
+  if (environment === "production" || environment === "preview") {
     throw new Error(
       "AUTH_SECRET is required in production for password reset token hashing."
     );
   }
-  return createHash("sha256").update(token).digest("hex");
+  return createHash("sha256").update(`pk-business-reset:${token}`).digest("hex");
 }
 
 // ─── Request flow ─────────────────────────────────────────────────────────────
@@ -84,17 +90,16 @@ export async function requestPasswordReset(
     data: { userId: user.id, tokenHash: hashResetToken(token), expiresAt },
   });
 
-  const resetUrl = `${getSiteOrigin()}/forgot-password?token=${encodeURIComponent(token)}`;
-
   // If the email cannot be sent, roll the token back so the user can retry
   // immediately (no cooldown penalty for a failed send). The response is the
   // same generic message either way.
   try {
+    const resetUrl = `${getSiteOrigin()}/forgot-password#token=${encodeURIComponent(token)}`;
     await sendResetEmail(resetUrl);
-  } catch (error) {
+  } catch {
     await prisma.passwordResetToken.delete({ where: { id: created.id } }).catch(() => {});
     if (process.env.NODE_ENV !== "production") {
-      console.error("Password reset email failed:", error);
+      logSecurityEvent("RESET_EMAIL_FAILURE");
     }
     return { accepted: true };
   }
@@ -105,7 +110,7 @@ export async function requestPasswordReset(
       action: AuditAction.PASSWORD_RESET_REQUESTED,
       resource: "auth",
       resourceId: user.id,
-      metadata: JSON.stringify({ recipient: PASSWORD_RESET_RECIPIENT_EMAIL }),
+      metadata: safeAuditMetadata({ recipient: PASSWORD_RESET_RECIPIENT_EMAIL }),
     },
   });
 
@@ -132,6 +137,7 @@ async function sendResetEmail(resetUrl: string): Promise<void> {
     "This link can be used once. If you did not request this, ignore this email.",
   ].join("\n");
 
+  assertResourceEnvironment("EMAIL");
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: { user: gmailUser, pass: gmailAppPassword },
@@ -190,11 +196,12 @@ export async function confirmPasswordReset(
 
     await tx.user.update({
       where: { id: resetToken.userId },
-      data: { passwordHash },
+      data: { passwordHash, securityVersion: { increment: 1 } },
     });
     // Revoke every session for this user.
     await tx.session.deleteMany({ where: { userId: resetToken.userId } });
     // Revoke any other reset tokens for this user.
+    await tx.securityChallenge.deleteMany({ where: { userId: resetToken.userId } });
     await tx.passwordResetToken.deleteMany({
       where: { userId: resetToken.userId, id: { not: resetToken.id } },
     });
@@ -204,7 +211,7 @@ export async function confirmPasswordReset(
         action: AuditAction.PASSWORD_RESET_COMPLETED,
         resource: "auth",
         resourceId: resetToken.userId,
-        metadata: JSON.stringify({ method: "self_service_reset" }),
+        metadata: safeAuditMetadata({ method: "self_service_reset" }),
       },
     });
   });

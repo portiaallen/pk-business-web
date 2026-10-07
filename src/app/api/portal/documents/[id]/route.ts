@@ -1,3 +1,5 @@
+import { forbidNetlifyPayload } from "@/lib/ordinary-transfer/provider";
+import { safeAuditMetadata } from "@/lib/security-log";
 import { prisma } from "@/lib/prisma";
 import {
   getSessionTokenFromRequest,
@@ -40,6 +42,7 @@ export async function GET(
       throw ApiError.notFound("Document not available");
     }
 
+    forbidNetlifyPayload();
     const data = await getObject(document.storageKey);
     if (!data) throw ApiError.notFound("Document content missing");
 
@@ -75,6 +78,9 @@ export async function DELETE(
       throw ApiError.notFound("Document not found");
     }
 
+    if (document.ordinaryLegalHold) throw ApiError.conflict("Document is on hold");
+    if (await prisma.ordinaryTransferIntent.findFirst({where:{resourceId:document.id,operation:'UPLOAD',status:'COMPLETE'}})) throw ApiError.conflict("Use the secure file transfer action");
+
     await prisma.document.update({
       where: { id: document.id },
       data: { retentionStatus: "DELETED", uploadStatus: "FAILED" },
@@ -87,7 +93,7 @@ export async function DELETE(
         action: "DOCUMENT_DELETED",
         resource: "document",
         resourceId: document.id,
-        metadata: JSON.stringify({ fileName: document.fileName }),
+        metadata: safeAuditMetadata({ action: "DOCUMENT_ACCESS_REVOKED" }),
       },
     });
 

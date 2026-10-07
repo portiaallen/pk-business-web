@@ -1,3 +1,4 @@
+import { assertResourceEnvironment, securityEnvironment } from "@/lib/security-environment";
 import { mkdir, readFile, writeFile, unlink } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
@@ -19,8 +20,12 @@ const STORAGE_ROOT = process.env.STORAGE_DIR || path.join(process.cwd(), ".stora
  * fallback in the auth layer, and storage behaves the same way by convention:
  * document this in the deploy checklist.
  */
-function useR2(): boolean {
-  if (isR2Configured()) return true;
+function usesR2Backend(): boolean {
+  if (isR2Configured()) {
+    assertResourceEnvironment("STORAGE");
+    return true;
+  }
+  securityEnvironment();
 
   // Fail closed: never silently write client documents to the local
   // filesystem in production, and fail loudly when S3 storage was
@@ -63,7 +68,8 @@ export function buildStorageKey(
   requestId: string,
   originalName: string
 ): string {
-  return `clients/${clientId}/${requestId}/${randomUUID()}-${sanitizeFileName(originalName)}`;
+  void originalName;
+  return `clients/${clientId}/${requestId}/${randomUUID()}`;
 }
 
 function resolveSafe(storageKey: string): string {
@@ -79,7 +85,7 @@ export async function putObject(
   data: Buffer,
   contentType?: string
 ): Promise<void> {
-  if (useR2()) {
+  if (usesR2Backend()) {
     await r2Put(storageKey, data, contentType);
     return;
   }
@@ -89,7 +95,7 @@ export async function putObject(
 }
 
 export async function getObject(storageKey: string): Promise<Buffer | null> {
-  if (useR2()) {
+  if (usesR2Backend()) {
     return r2Get(storageKey);
   }
   try {
@@ -100,7 +106,7 @@ export async function getObject(storageKey: string): Promise<Buffer | null> {
 }
 
 export async function deleteObject(storageKey: string): Promise<void> {
-  if (useR2()) {
+  if (usesR2Backend()) {
     await r2Delete(storageKey);
     return;
   }

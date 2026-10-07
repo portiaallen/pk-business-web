@@ -62,7 +62,7 @@ export function toErrorResponse(error: unknown) {
     };
   }
 
-  console.error("Unhandled API error:", error);
+  console.error(JSON.stringify({ event: "INVENTORY_API_FAILURE" }));
 
   return {
     status: 500,

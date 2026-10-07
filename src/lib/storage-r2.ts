@@ -64,9 +64,15 @@ function getClient(): S3Client {
         "R2 storage is not configured. Required env vars: R2_ACCOUNT_ID (or S3_ENDPOINT), R2_ACCESS_KEY_ID (or S3_ACCESS_KEY_ID), R2_SECRET_ACCESS_KEY (or S3_SECRET_ACCESS_KEY), R2_BUCKET_NAME (or S3_BUCKET)"
       );
     }
+    const endpoint = new URL(ENDPOINT || `https://${ACCOUNT_ID}.r2.cloudflarestorage.com`);
+    if (endpoint.protocol !== "https:" || endpoint.hostname !== `${ACCOUNT_ID}.r2.cloudflarestorage.com` ||
+        endpoint.username || endpoint.password || endpoint.search || endpoint.hash ||
+        (endpoint.pathname !== "/" && endpoint.pathname !== "")) {
+      throw new Error("Storage endpoint is not an approved private R2 API endpoint");
+    }
     client = new S3Client({
       region: REGION,
-      endpoint: ENDPOINT || `https://${ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      endpoint: endpoint.toString(),
       credentials: {
         accessKeyId: ACCESS_KEY_ID!,
         secretAccessKey: SECRET_ACCESS_KEY!,

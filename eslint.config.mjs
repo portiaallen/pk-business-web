@@ -8,7 +8,10 @@ const eslintConfig = defineConfig([
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
-    ".next/**",
+    "**/.next/**",
+    "**/.netlify/**",
+    "**/src/generated/**",
+    "**/next-env.d.ts",
     "out/**",
     "build/**",
     "next-env.d.ts",

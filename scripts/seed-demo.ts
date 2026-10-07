@@ -1,8 +1,11 @@
+import { localSyntheticSetupAllowed } from "../src/lib/security-environment";
 import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import bcrypt from "bcryptjs";
+
+if (!localSyntheticSetupAllowed()) throw new Error("Synthetic seed requires opted-in local test storage");
 
 process.env.DATABASE_URL = process.env.DATABASE_URL || "file:./prisma/dev.db";
 const dbUrl = process.env.DATABASE_URL;

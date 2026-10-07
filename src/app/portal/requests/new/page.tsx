@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { Briefcase, Loader2 } from "lucide-react";
 
 type Service = {
@@ -14,6 +15,7 @@ type Service = {
 
 export default function NewRequestPage() {
   const router = useRouter();
+  const { client } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSlug, setSelectedSlug] = useState("");
@@ -64,7 +66,7 @@ export default function NewRequestPage() {
     try {
       const res = await fetch("/api/portal/requests", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-pk-client-context": client?.id || "" },
         body: JSON.stringify({ serviceSlug: selectedSlug, description: description.trim() }),
       });
       const data = await res.json().catch(() => ({}));

@@ -1,3 +1,5 @@
+import { publicError } from "@/lib/url-privacy";
+import { logSecurityEvent } from "@/lib/security-log";
 export class ApiError extends Error {
   public readonly statusCode: number;
 
@@ -35,12 +37,12 @@ export class ApiError extends Error {
 export function handleApiError(error: unknown) {
   if (error instanceof ApiError) {
     return Response.json(
-      { error: error.message },
+      { error: publicError(error.message) },
       { status: error.statusCode }
     );
   }
 
-  console.error("Unhandled API error:", error);
+  logSecurityEvent("API_FAILURE");
   return Response.json(
     { error: "An unexpected error occurred" },
     { status: 500 }

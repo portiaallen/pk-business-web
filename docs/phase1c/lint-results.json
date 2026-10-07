@@ -1,0 +1,14 @@
+{
+  "baseline": "ba7a0f12db3f8b50201e693090c01291786cba36",
+  "changed": {
+    "newErrors": 0,
+    "newWarnings": 0,
+    "preExistingErrors": 0,
+    "preExistingWarnings": 0
+  },
+  "findings": [],
+  "fullRepository": {
+    "errors": 21,
+    "warnings": 40
+  }
+}

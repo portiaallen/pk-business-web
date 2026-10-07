@@ -1,3 +1,5 @@
+import { requireAdminApiAccess } from "@/lib/admin-access";
+import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -42,6 +44,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id } = await params;
     await requireAdmin(request);
 
@@ -116,6 +119,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id } = await params;
     const admin = await requireAdmin(request);
 
@@ -187,7 +191,7 @@ export async function POST(
         action: "ADMIN_ACTION",
         resource: "time_entry",
         resourceId: entry.id,
-        metadata: JSON.stringify({
+        metadata: safeAuditMetadata({
           action: isManual ? "manual_entry_created" : "timer_started",
           requestId: id,
           category,
@@ -219,6 +223,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id } = await params;
     const admin = await requireAdmin(request);
 
@@ -249,7 +254,7 @@ export async function PATCH(
           action: "ADMIN_ACTION",
           resource: "time_entry",
           resourceId: entryId,
-          metadata: JSON.stringify({
+          metadata: safeAuditMetadata({
             action: "timer_stopped",
             category: existing.category,
             durationSeconds,
@@ -293,7 +298,7 @@ export async function PATCH(
           action: "ADMIN_ACTION",
           resource: "time_entry",
           resourceId: entryId,
-          metadata: JSON.stringify({
+          metadata: safeAuditMetadata({
             action: "time_entry_edited",
             previousCategory: existing.category,
             newCategory: newCategory,
@@ -325,6 +330,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id } = await params;
     const admin = await requireAdmin(request);
 
@@ -348,7 +354,7 @@ export async function DELETE(
         action: "ADMIN_ACTION",
         resource: "time_entry",
         resourceId: entryId,
-        metadata: JSON.stringify({
+        metadata: safeAuditMetadata({
           action: "time_entry_deleted",
           category: existing.category,
           durationSeconds: existing.durationSeconds,

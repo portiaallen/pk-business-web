@@ -21,6 +21,7 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import { cn } from "@/lib/utils";
 
 const navItems = [
+  { href: "/security", label: "Security & client context", icon: User },
   { href: "/portal/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/portal/services", label: "Services", icon: Briefcase },
   { href: "/portal/requests", label: "Requests", icon: FileText },
@@ -43,6 +44,10 @@ function PortalShell({ children }: { children: React.ReactNode }) {
         <p className="text-sm text-muted-gray">Loading...</p>
       </div>
     );
+  }
+
+  if (user?.role === "CLIENT" && !client && pathname !== "/portal/login") {
+    return <section aria-label="Client selection" className="mx-auto max-w-xl space-y-4 px-4 py-12"><h1 className="text-2xl font-semibold">Choose your client context</h1><p>Select an authorized active client before opening records or taking an action.</p><Link className="inline-flex min-h-12 items-center rounded border px-4" href="/security">Choose a client</Link></section>;
   }
 
   if (!user) {

@@ -1,3 +1,4 @@
+import { forbidNetlifyPayload } from "@/lib/ordinary-transfer/provider";
 import { prisma } from "@/lib/prisma";
 import {
   getSessionTokenFromRequest,
@@ -34,11 +35,12 @@ export async function GET(
       !deliverable ||
       deliverable.requestId !== id ||
       deliverable.request.clientId !== ctx.clientId ||
-      deliverable.visibility !== "RELEASED"
+      deliverable.visibility !== "RELEASED" || deliverable.transferDeleteState !== "NONE"
     ) {
       throw ApiError.notFound("Deliverable not found");
     }
 
+    forbidNetlifyPayload();
     const data = await getObject(deliverable.storageKey);
     if (!data) throw ApiError.notFound("Deliverable not found");
 

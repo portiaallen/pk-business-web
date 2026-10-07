@@ -1,0 +1,138 @@
+{
+  "baseline": "ba7a0f12db3f8b50201e693090c01291786cba36",
+  "data": "synthetic only",
+  "deployed": false,
+  "published": false,
+  "productionReady": false,
+  "commands": [
+    {
+      "command": "npm run test:security:phase1a",
+      "result": "PASS",
+      "phase1aTests": 63,
+      "mockedCardCheckoutChecks": 18,
+      "realCharges": 0
+    },
+    {
+      "command": "npm run test:security:phase1b",
+      "result": "PASS",
+      "tests": 44
+    },
+    {
+      "command": "npm run test:security:phase1c",
+      "result": "PASS",
+      "tests": 61
+    },
+    {
+      "command": "node scripts/test-phase1c-migration.mjs",
+      "result": "PASS",
+      "checks": 6
+    },
+    {
+      "command": "npm run test:browser:phase1c",
+      "result": "PASS",
+      "checks": 58,
+      "viewportWidths": [
+        390,
+        768,
+        1440
+      ],
+      "consoleCounts": {
+        "unexpectedErrors": 0,
+        "preExistingBaseUIWarnings": 15,
+        "expectedDenialOrOfflineErrors": 5
+      },
+      "pageErrors": 0,
+      "axeViolations": 0
+    },
+    {
+      "command": "npm run build",
+      "result": "PASS",
+      "preExistingWarnings": 2,
+      "newWarnings": 0
+    },
+    {
+      "command": "npx tsc --noEmit",
+      "result": "PASS"
+    },
+    {
+      "command": "node scripts/check-phase1c-lint.mjs",
+      "result": "PASS_CHANGED_FILES",
+      "changed": {
+        "newErrors": 0,
+        "newWarnings": 0,
+        "preExistingErrors": 0,
+        "preExistingWarnings": 0
+      },
+      "fullRepository": {
+        "errors": 21,
+        "warnings": 40
+      }
+    }
+  ],
+  "vaultTestNames": [
+    "isolated resources and encrypted bytes; opaque identifiers",
+    "anonymous access denied before confidential bytes",
+    "ADMIN without scoped Vault authority denied",
+    "support and data-entry do not inherit access",
+    "cross-client IDOR denied",
+    "wrong engagement scope denied",
+    "unassigned/no-grant staff denied",
+    "explicit context required; ambiguous context cannot auto-select",
+    "inactive client denied",
+    "classification requires independent specialized authority",
+    "taxonomy cannot under-classify tax/identity documents",
+    "client membership is not an unapproved Vault grant",
+    "quarantined object cannot download",
+    "scan outage fails closed; release denied",
+    "malicious synthetic marker is rejected",
+    "unknown scanning result requires review, not release",
+    "spoofed MIME and malformed file rejected",
+    "extension mismatch rejected without retaining filename",
+    "oversized intent rejected before storage",
+    "stream bound rejects excessive/incomplete bytes",
+    "idempotent intent returns same object; changed intent denied",
+    "duplicate/replayed upload cannot overwrite released bytes",
+    "concurrent upload claim has one winner",
+    "download audited before delivery and uses private no-store",
+    "audit outage blocks byte delivery",
+    "unsafe PDF inline preview denied",
+    "permanent/signed public URL not present anywhere in object metadata",
+    "unset retention is not immediate deletion permission",
+    "legal hold blocks disposal and version protects concurrent hold changes",
+    "step-up required for hold/disposal",
+    "storage deletion failure is pending; access revoked, retry verifiable",
+    "a lying delete result cannot complete disposal",
+    "synthetic backup restore reconciles metadata + encrypted objects + integrity",
+    "restore from old snapshot never resurrects disposed records, even after database tombstone loss",
+    "tampered ciphertext fails integrity; no bytes delivered",
+    "interrupted upload reconciles into inaccessible cancellation",
+    "stale permissions/security version fail closed",
+    "session revocation/replay rejected",
+    "inventory cookie cannot confer PK authority",
+    "no canary/file content in audit records",
+    "prohibited destinations rejected; no AI/email/Drive/Dropbox transports",
+    "PWA never caches Vault API/file bytes",
+    "IDOR/not-found has identical public response and no canary in errors/logs",
+    "production/preview cannot opt into mock scanner, storage or ephemeral key authority",
+    "resource aliasing rejected, prefix alone not separation",
+    "intent audit failure rolls back metadata creation",
+    "concurrent disposal is serialized, never falsely completes twice",
+    "storage read outage yields no confidential response",
+    "revoked capability affects current session immediately",
+    "expired upload intent cannot be reused",
+    "scan-time permission revocation prevents release",
+    "audit outage after storage deletion remains pending and recoverable",
+    "disposal ledger failure blocks deletion and remains pending",
+    "fake successful storage copy cannot release a missing object",
+    "recovery integrity failure does not approve restored metadata",
+    "bounded JSON cannot allocate an unbounded payload",
+    "unknown/unapproved retention policy cannot authorize disposal",
+    "approved policy with unset period remains ineligible for disposal",
+    "disposal fence prevents stale processor from resurrecting bytes",
+    "anonymous object enumeration returns identical authentication denial",
+    "unmarked files cannot enter disposable synthetic storage"
+  ],
+  "syntheticRestore": "PASS: restored missing metadata/object into new isolated resources; independent ledger prevented resurrecting disposed object after database tombstone loss",
+  "SamsungHardware": "NOT VERIFIED",
+  "productionResourceConfiguration": "UNKNOWN / NOT PROVISIONED"
+}

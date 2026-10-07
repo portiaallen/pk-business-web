@@ -1,3 +1,5 @@
+import { requireAdminApiAccess } from "@/lib/admin-access";
+import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -20,7 +22,7 @@ const VALID_STATUSES = [
 async function requireAdmin(request: Request) {
   const token = getSessionTokenFromRequest(request);
   const user = await getSessionUser(token);
-  if (!user || !hasRole(user, "ADMIN")) throw ApiError.forbidden();
+  if (!user || !hasRole(user, "ADMIN", "STAFF")) throw ApiError.forbidden();
   return user;
 }
 
@@ -30,6 +32,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id } = await params;
     await requireAdmin(request);
 
@@ -117,7 +120,7 @@ export async function GET(
         createdAt: n.createdAt.toISOString(),
       })),
       deliverables: req.deliverables.map((d) => ({
-        id: d.id, title: d.title, fileName: d.fileName, visibility: d.visibility,
+        id: d.id, title: d.title, fileName: d.fileName, visibility: d.visibility, transferDeleteState:d.transferDeleteState,
         createdAt: d.createdAt.toISOString(),
       })),
     });
@@ -137,6 +140,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id } = await params;
     const admin = await requireAdminForDelete(request);
 
@@ -156,7 +160,7 @@ export async function DELETE(
         action: "ADMIN_ACTION",
         resource: "verification_request",
         resourceId: id,
-        metadata: JSON.stringify({
+        metadata: safeAuditMetadata({
           action: "REQUEST_HARD_DELETED",
           requestType: existing.requestType,
           filesRemoved: storageKeys.length,
@@ -176,6 +180,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id } = await params;
     const admin = await requireAdmin(request);
 
@@ -223,7 +228,7 @@ export async function PATCH(
           action: "REQUEST_STATUS_CHANGED",
           resource: "verification_request",
           resourceId: id,
-          metadata: JSON.stringify({ from: existing.status, to: body.status }),
+          metadata: safeAuditMetadata({ from: existing.status, to: body.status }),
         },
       });
     }
@@ -235,7 +240,7 @@ export async function PATCH(
           action: "REQUEST_ASSIGNED",
           resource: "verification_request",
           resourceId: id,
-          metadata: JSON.stringify({ assignedStaffId: body.assignedStaffId }),
+          metadata: safeAuditMetadata({ assignedStaffId: body.assignedStaffId }),
         },
       });
     }

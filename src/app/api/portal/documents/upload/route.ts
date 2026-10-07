@@ -1,3 +1,5 @@
+import { forbidNetlifyPayload } from "@/lib/ordinary-transfer/provider";
+import { logSecurityEvent, safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -25,6 +27,7 @@ export async function POST(request: Request) {
     const token = getSessionTokenFromRequest(request);
     const ctx = await requireMemberWriteContext(token);
 
+    forbidNetlifyPayload();
     const form = await request.formData();
     const file = form.get("file");
     const requestId = typeof form.get("requestId") === "string" ? (form.get("requestId") as string) : "";
@@ -71,8 +74,8 @@ export async function POST(request: Request) {
     const storageKey = buildStorageKey(ctx.clientId, requestId, file.name);
     try {
       await putObject(storageKey, Buffer.from(await file.arrayBuffer()), file.type || undefined);
-    } catch (storageError) {
-      console.error("Client document storage upload failed:", storageError);
+    } catch {
+      logSecurityEvent("DOCUMENT_STORAGE_FAILURE");
       throw new ApiError(
         503,
         "File storage is unavailable. Your document was not saved. Please retry."
@@ -111,7 +114,7 @@ export async function POST(request: Request) {
         action: "DOCUMENT_UPLOADED",
         resource: "document",
         resourceId: document.id,
-        metadata: JSON.stringify({ requestId, fileName: file.name, size: file.size }),
+        metadata: safeAuditMetadata({ requestId, size: file.size }),
       },
     });
 
