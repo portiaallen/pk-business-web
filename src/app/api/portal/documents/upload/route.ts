@@ -40,11 +40,13 @@ export async function POST(request: Request) {
     // Verify the request belongs to THIS client's tenant
     const req = await prisma.verificationRequest.findUnique({
       where: { id: requestId },
-      select: { clientId: true },
+      select: { clientId: true, requestType: true },
     });
     if (!req || req.clientId !== ctx.clientId) {
       throw ApiError.notFound("Request not found");
     }
+
+    if (req.requestType === "READINESS_ASSESSMENT") throw ApiError.forbidden("Use the approved Readiness secure handoff");
 
     // Validations
     if (file.size <= 0) throw ApiError.badRequest("File is empty");

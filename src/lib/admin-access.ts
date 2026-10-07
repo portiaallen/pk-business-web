@@ -44,6 +44,12 @@ export async function requireAdminApiAccess(request: Request) {
       id,
     );
   } else if (area === "requests" && id) {
+    const readiness = await prisma.verificationRequest.findUnique({
+      where: { id },
+      select: { requestType: true },
+    });
+    if (readiness?.requestType === "READINESS_ASSESSMENT")
+      throw ApiError.conflict("Use the Readiness Command Center");
     await requireRequestAccess(user, id, capability);
     if (capability !== "confidential_access")
       await requireRequestAccess(user, id, "confidential_access");
@@ -57,10 +63,33 @@ export async function requireAdminApiAccess(request: Request) {
   } else if (area === "invoices" && id) {
     const invoice = await prisma.invoice.findUnique({
       where: { id },
-      select: { clientId: true },
+      select: {
+        clientId: true,
+        readinessPurchase: { select: { id: true } },
+        readinessCredits: { select: { id: true } },
+      },
     });
     if (!invoice) throw ApiError.notFound();
     await requireCapability(user, capability, invoice.clientId);
+    if (write && invoice.readinessPurchase)
+      throw ApiError.conflict(
+        "Readiness purchase records require the audited assessment workflow",
+      );
+    if (write && invoice.readinessCredits?.length) {
+      const action =
+        request.method === "POST" && path.includes("actions")
+          ? (
+              await request
+                .clone()
+                .json()
+                .catch(() => null)
+            )?.action
+          : null;
+      if (!["record-payment", "send", "resend", "mark-viewed"].includes(action))
+        throw ApiError.conflict(
+          "Applied credit and qualifying invoice history must be preserved",
+        );
+    }
     if (write) await requireCapability(user, "payments", invoice.clientId);
   } else if (
     capability === "confidential_access" &&

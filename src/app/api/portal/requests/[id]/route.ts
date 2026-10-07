@@ -68,6 +68,8 @@ export async function GET(
       throw ApiError.notFound("Request not found");
     }
 
+    if (req.requestType === "READINESS_ASSESSMENT") throw ApiError.conflict("Use the Readiness assessment workspace");
+
     return NextResponse.json({
       id: req.id,
       service: req.service.name,

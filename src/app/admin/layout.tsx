@@ -23,6 +23,8 @@ import { cn } from "@/lib/utils";
 import { AdminInstallButton } from "@/components/AdminInstallPrompt";
 
 const navItems = [
+  { href: "/admin/readiness", label: "Readiness Assessments", icon: ClipboardCheck },
+  { href: "/admin/readiness/recommendations", label: "Recommendation Library", icon: Briefcase },
   { href: "/security", label: "Security & client context", icon: Users },
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/clients", label: "Clients", icon: Users },

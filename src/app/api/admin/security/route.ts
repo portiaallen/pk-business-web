@@ -95,6 +95,8 @@ export async function POST(request: Request) {
         )
           throw ApiError.badRequest();
         const global = [
+          "readiness_library_read",
+          "readiness_library_write",
           "permissions",
           "security",
           "audit",

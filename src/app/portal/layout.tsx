@@ -21,6 +21,7 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import { cn } from "@/lib/utils";
 
 const navItems = [
+  { href: "/portal/readiness", label: "Readiness Assessments", icon: FileText },
   { href: "/security", label: "Security & client context", icon: User },
   { href: "/portal/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/portal/services", label: "Services", icon: Briefcase },

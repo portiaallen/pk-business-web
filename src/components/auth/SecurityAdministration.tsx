@@ -4,6 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 const capabilities = [
+  "readiness_read",
+  "readiness_review",
+  "readiness_qa",
+  "readiness_credit",
+  "readiness_library_read",
+  "readiness_library_write",
   "confidential_access",
   "bookkeeping",
   "tax_preparation",

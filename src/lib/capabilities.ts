@@ -28,9 +28,17 @@ export const CAPABILITIES = [
   "legal_hold",
   "disposal",
   "bulk_export",
+  "readiness_read",
+  "readiness_review",
+  "readiness_qa",
+  "readiness_credit",
+  "readiness_library_read",
+  "readiness_library_write",
 ] as const;
 export type Capability = (typeof CAPABILITIES)[number];
 const GLOBAL_ONLY: Capability[] = [
+  "readiness_library_read",
+  "readiness_library_write",
   "permissions",
   "security",
   "audit",

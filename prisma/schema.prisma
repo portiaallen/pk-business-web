@@ -108,6 +108,7 @@ enum PaymentMethod {
   CASH_APP
   ZELLE
   MANUAL
+  READINESS_CREDIT
 }
 
 enum NotificationChannel {
@@ -245,6 +246,7 @@ model User {
   qbCleanupReviews     QbCleanupReview[]     @relation("QbReviewer")
   inventoryMembers     InventoryMember[]
   inventoryTransactions InventoryTransaction[] @relation("InventoryTransactionPerformer")
+  readinessAssessments ReadinessAssessment[]
 }
 
 model Session {
@@ -297,6 +299,7 @@ model Client {
   inventoryLocations   InventoryLocation[]
   inventoryProducts    InventoryProduct[]
   inventoryTransactions InventoryTransaction[]
+  readinessAssessments ReadinessAssessment[]
   vaultDocuments VaultDocument[]
 }
 
@@ -373,6 +376,7 @@ model VerificationRequest {
   formSubmissions FormSubmission[]
   documentRequests DocumentRequest[]
   clientMessages  ClientMessage[]
+  readinessAssessment ReadinessAssessment?
   deliverables    Deliverable[]
   timeEntries     TimeEntry[]
   qbCleanupReview QbCleanupReview?
@@ -491,6 +495,8 @@ model DocumentRequest {
 
   @@index([requestId])
   @@index([status])
+  readinessEvidence ReadinessDocumentEvidence?
+
 }
 
 model ClientMessage {
@@ -563,6 +569,8 @@ model IntakeSubmission {
 
   @@index([email])
   @@index([createdAt])
+  readinessAssessment ReadinessAssessment?
+
 }
 
 // ─── Notifications ─────────────────────────────────────────────────────────────
@@ -582,6 +590,11 @@ model Notification {
 
   @@index([userId])
   @@index([status])
+  dedupeKey String? @unique
+  attemptCount Int @default(0)
+  nextAttemptAt DateTime?
+  leaseUntil DateTime?
+
 }
 
 // ─── Payments ───────────────────────────────────────────────────────────────────
@@ -619,6 +632,9 @@ model Invoice {
   @@index([clientId])
   @@index([status])
   @@index([createdAt])
+  readinessPurchase ReadinessAssessment?
+  readinessCredits ReadinessCredit[]
+
 }
 
 model InvoiceActivity {
@@ -661,6 +677,9 @@ model Payment {
   @@index([status])
   @@index([method])
   @@index([createdAt])
+  readinessPurchase ReadinessAssessment?
+  readinessCredit ReadinessCredit?
+
 }
 
 // ─── Audit logging ─────────────────────────────────────────────────────────────
@@ -1203,6 +1222,8 @@ model VaultDocument {
   request VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
   @@unique([createdBy, idempotencyKey])
   @@index([clientId, requestId, state])
+  readinessEvidence ReadinessDocumentEvidence[]
+
 }
 
 // Durable evidence is independent of parent lifecycle and included in recovery reconciliation.
@@ -1262,4 +1283,193 @@ model OrdinaryTransferIntent {
   updatedAt DateTime @updatedAt
   @@index([status, expiresAt])
   @@index([clientId, requestId])
+}
+
+// PK readiness: existing auth/client/payment/document/audit entities remain authoritative.
+model ReadinessAssessment {
+  id String @id @default(cuid())
+  clientId String
+  requestId String @unique
+  intakeSubmissionId String @unique
+  ownerUserId String?
+  invoiceId String @unique
+  paymentId String? @unique
+  priceCents Int @default(9900)
+  currency String @default("USD")
+  paymentStatus String @default("PENDING")
+  status String @default("PURCHASE_STARTED")
+  version Int @default(0)
+  purchaseTokenHash String @unique
+  purchaseExpiresAt DateTime
+  stripeSessionId String? @unique
+  onboardingCodeHash String?
+  onboardingCodeExpiresAt DateTime?
+  onboardingCodeAttempts Int @default(0)
+  onboardingCodeSentAt DateTime?
+  emailVerifiedAt DateTime?
+  intakeData String @default("{}")
+  policyVersion String?
+  acknowledgmentText String?
+  acknowledgmentAcceptedAt DateTime?
+  acknowledgmentById String?
+  submittedAt DateTime?
+  reviewReadyAt DateTime?
+  reviewStartedAt DateTime?
+  slaDueAt DateTime?
+  slaPausedAt DateTime?
+  reportDeliveredAt DateTime?
+  closedAt DateTime?
+  summary String @default("")
+  strengths String @default("")
+  priorityConcerns String @default("")
+  limitations String @default("")
+  qaReviewedById String?
+  qaReviewedAt DateTime?
+  qaDraftVersion Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  client Client @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  request VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  preliminary IntakeSubmission @relation(fields: [intakeSubmissionId], references: [id], onDelete: Restrict)
+  owner User? @relation(fields: [ownerUserId], references: [id], onDelete: Restrict)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  findings ReadinessFinding[]
+  recommendations AssessmentRecommendation[]
+  reports ReadinessReportVersion[]
+  credit ReadinessCredit?
+  documents ReadinessDocumentEvidence[]
+  @@index([clientId, status])
+  @@index([status, createdAt])
+  @@index([ownerUserId])
+}
+model ReadinessFinding {
+  id String @id @default(cuid())
+  assessmentId String
+  area String
+  status String
+  finding String
+  evidenceBasis String
+  whyItMatters String
+  recommendedAction String
+  priority String
+  disposition String
+  qualifyingServiceId String?
+  internalNotes String @default("")
+  ordering Int @default(0)
+  assessment ReadinessAssessment @relation(fields: [assessmentId], references: [id], onDelete: Restrict)
+  recommendations AssessmentRecommendation[]
+  @@index([assessmentId, area])
+  active Boolean @default(true)
+
+}
+model RecommendationLibraryEntry {
+  id String @id @default(cuid())
+  title String
+  category String
+  recommendationType String
+  providerOrResourceName String?
+  clientFacingDescription String
+  whyOrWhenToUse String
+  clientNextStep String
+  websiteUrl String?
+  phone String?
+  email String?
+  locationOrServiceArea String?
+  internalNotes String @default("")
+  relationshipClassification String @default("INFORMATIONAL")
+  disclosureText String @default("")
+  active Boolean @default(true)
+  archived Boolean @default(false)
+  version Int @default(1)
+  createdBy String
+  updatedBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  assignments AssessmentRecommendation[]
+  @@index([active, archived, category])
+}
+model AssessmentRecommendation {
+  id String @id @default(cuid())
+  assessmentId String
+  findingId String
+  libraryEntryId String?
+  sourceVersion Int?
+  snapshot String
+  ordering Int @default(0)
+  createdBy String
+  createdAt DateTime @default(now())
+  assessment ReadinessAssessment @relation(fields: [assessmentId], references: [id], onDelete: Restrict)
+  finding ReadinessFinding @relation(fields: [findingId], references: [id], onDelete: Restrict)
+  libraryEntry RecommendationLibraryEntry? @relation(fields: [libraryEntryId], references: [id], onDelete: Restrict)
+  @@index([assessmentId, ordering])
+  active Boolean @default(true)
+
+}
+model ReadinessReportVersion {
+  id String @id @default(cuid())
+  assessmentId String
+  version Int
+  state String @default("FINAL")
+  snapshot String
+  digest String
+  artifactReference String
+  finalizedBy String
+  finalizedAt DateTime @default(now())
+  deliveryState String @default("PENDING")
+  deliveredAt DateTime?
+  assessment ReadinessAssessment @relation(fields: [assessmentId], references: [id], onDelete: Restrict)
+  @@unique([assessmentId, version])
+  sourceDraftVersion Int
+
+}
+model ReadinessCredit {
+  id String @id @default(cuid())
+  assessmentId String @unique
+  status String @default("NOT_ELIGIBLE")
+  claimDeadline DateTime
+  redeemDeadline DateTime
+  claimedAt DateTime?
+  claimedBy String?
+  requestedServiceId String?
+  decidedAt DateTime?
+  decidedBy String?
+  decisionReason String?
+  qualifyingServiceId String?
+  invoiceId String?
+  paymentId String? @unique
+  amountAppliedCents Int @default(0)
+  appliedAt DateTime?
+  version Int @default(0)
+  assessment ReadinessAssessment @relation(fields: [assessmentId], references: [id], onDelete: Restrict)
+  invoice Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  @@index([status, redeemDeadline])
+}
+model ReadinessDocumentEvidence {
+  id String @id @default(cuid())
+  assessmentId String
+  documentRequestId String @unique
+  kind String
+  channel String @default("PENDING_SECURE_HANDOFF")
+  vaultDocumentId String?
+  externalReference String?
+  reviewedBy String?
+  reviewedAt DateTime?
+  assessment ReadinessAssessment @relation(fields: [assessmentId], references: [id], onDelete: Restrict)
+  request DocumentRequest @relation(fields: [documentRequestId], references: [id], onDelete: Restrict)
+  vaultDocument VaultDocument? @relation(fields: [vaultDocumentId], references: [id], onDelete: Restrict)
+  @@index([assessmentId])
+}
+model ReadinessAnalyticsEvent {
+  id String @id @default(cuid())
+  event String
+  dedupeKey String @unique
+  createdAt DateTime @default(now())
+  @@index([event, createdAt])
+}
+model ReadinessPublicRateLimit {
+  key String @id
+  count Int @default(0)
+  expiresAt DateTime
 }

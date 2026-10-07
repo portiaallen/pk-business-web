@@ -20,6 +20,7 @@ async function assertFresh(tx: Prisma.TransactionClient, row: OrdinaryTransferIn
     const engagement = await tx.verificationRequest.findUnique({ where: { id: row.requestId }, include: { client: true } });
     if (!session || !sessionValid(session) || session.userId !== row.userId || session.securityVersion !== row.securityVersion || !engagement || engagement.clientId !== row.clientId || engagement.client.status !== 'ACTIVE')
         throw ApiError.unauthorized();
+    if (engagement.requestType === 'READINESS_ASSESSMENT') throw ApiError.forbidden('Use the approved Readiness secure handoff');
     if (session.user.role === 'CLIENT') {
         const members = await tx.clientMember.findMany({ where: { userId: row.userId }, take: 2 });
         const selected = session.activeClientId || (members.length === 1 ? members[0].clientId : null);
@@ -69,6 +70,7 @@ async function authorize(user: SessionUser, row: Pick<OrdinaryTransferIntent, 'r
     const engagement = await prisma.verificationRequest.findUnique({ where: { id: row.requestId }, include: { client: true } });
     if (!engagement || engagement.clientId !== row.clientId || engagement.client.status !== 'ACTIVE')
         throw ApiError.notFound();
+    if (engagement.requestType === 'READINESS_ASSESSMENT') throw ApiError.forbidden('Use the approved Readiness secure handoff');
     if (user.role === 'CLIENT') {
         const members = await prisma.clientMember.findMany({ where: { userId: user.id }, take: 2 });
         const selected = user.activeClientId || (members.length === 1 ? members[0].clientId : null);

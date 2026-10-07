@@ -37,11 +37,12 @@ export async function POST(
 
     const invoice = await prisma.invoice.findUnique({
       where: { id },
-      include: { payments: { select: { status: true, amountCents: true } } },
+      include: { payments: { select: { status: true, amountCents: true } }, readinessPurchase: { select: { id: true } } },
     });
     if (!invoice || invoice.clientId !== context.clientId) {
       throw ApiError.notFound("Invoice not found.");
     }
+    if (invoice.readinessPurchase) throw ApiError.conflict("Use the Readiness purchase checkout");
     const paidCents = paidCentsOf(invoice.payments);
     const status = effectiveStatus(invoice.status, invoice.amountCents, paidCents, invoice.dueAt);
     if (!["SENT", "VIEWED", "OVERDUE", "PARTIALLY_PAID", "UNPAID"].includes(status)) {

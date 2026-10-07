@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     const ctx = await requireAuthContext(token);
 
     const requests = await prisma.verificationRequest.findMany({
-      where: { clientId: ctx.clientId },
+      where: { clientId: ctx.clientId, requestType: { not: "READINESS_ASSESSMENT" } },
       include: { service: { select: { name: true } } },
       orderBy: { updatedAt: "desc" },
     });
@@ -45,6 +45,7 @@ export async function POST(request: Request) {
     const serviceSlug = typeof body.serviceSlug === "string" ? body.serviceSlug : "";
     const description = typeof body.description === "string" ? body.description.trim() : "";
 
+    if (serviceSlug === "readiness-assessment") throw ApiError.badRequest("Start the assessment through /readiness");
     if (!serviceSlug) throw ApiError.badRequest("Service is required");
     if (!description) throw ApiError.badRequest("Description is required");
 

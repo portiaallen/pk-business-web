@@ -775,7 +775,7 @@ ul,ol{margin:0;padding:0;list-style:none}
   background:rgba(247,221,152,.04);color:var(--pk-light-soft)!important;
 }
 .pk-footer__proto code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--pk-gold-2)}
-.pk-footer__copy{color:#6E5C5A!important;padding-top:4px}
+.pk-footer__copy{color:#9C8986!important;padding-top:4px}
 
 
 .pk-stickybar{
@@ -1662,7 +1662,55 @@ ul,ol{margin:0;padding:0;list-style:none}
     
 
     
-    <div data-dialog-step="done" hidden>
+    <div data-dialog-step="intake" hidden><h2 class="pk-dialog__title" id="pk-intake-title">Let’s get you ready.</h2><p class="pk-dialog__intro">A few basics, then secure checkout. $99, one time.</p><form id="pk-start-form">
+        <div class="pk-field">
+          <label for="pk-name">First name <span class="pk-req" aria-hidden="true">*</span></label>
+          <input id="pk-name" name="name" type="text" autocomplete="given-name" required
+                 aria-describedby="pk-name-err" maxlength="60">
+          <p class="pk-err" id="pk-name-err" hidden>Please add your first name.</p>
+        </div>
+
+        <div class="pk-field">
+          <label for="pk-email">Email <span class="pk-req" aria-hidden="true">*</span></label>
+          <input id="pk-email" name="email" type="email" autocomplete="email" required
+                 aria-describedby="pk-email-err" maxlength="120">
+          <p class="pk-err" id="pk-email-err" hidden>Please add an email PK can send your report to.</p>
+        </div>
+
+        <div class="pk-field">
+          <label for="pk-type">What best describes you?</label>
+          <select id="pk-type" name="businessType" required><option value="">Choose one…</option><option value="FREELANCER">Freelancer</option><option value="GIG_WORKER">Gig worker</option><option value="CONTRACTOR">Independent contractor</option><option value="SMALL_BUSINESS">Small-business owner</option><option value="ONLINE_SELLER">Online seller</option><option value="CREATOR">Content creator</option><option value="ADULT_INDUSTRY">Adult industry business</option><option value="OTHER_SELF_EMPLOYED">Other self-employed</option></select>
+        </div>
+
+        <div class="pk-field">
+          <label for="pk-books">How are your books kept right now?</label>
+          <select id="pk-books" name="bookkeeping" required><option value="">Choose one…</option><option value="CURRENT">Up to date</option><option value="BEHIND">Behind</option><option value="NOT_STARTED">Honestly? Nothing yet</option><option value="UNSURE">Not sure</option></select>
+        </div>
+
+        <div class="pk-field">
+          <label for="pk-worry">What's worrying you most?</label>
+          <select id="pk-worry" name="concern" required><option value="UNSURE">Not sure</option><option value="BOOKS">Books</option><option value="RECONCILIATION">Reconciliation</option><option value="RECORDS">Business records</option><option value="TAX_SEASON">Tax season</option></select>
+        </div>
+
+        <p class="pk-dialog__security">
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5.5c0 4.3-2.9 8.2-7 9.5-4.1-1.3-7-5.2-7-9.5V6Z"/><path d="m9.2 12.2 2 2 3.6-3.8"/></svg>
+          Never include Social Security numbers, ITINs, bank logins, card numbers or tax
+          documents here. PK collects anything sensitive through a separate secure process.
+        </p>
+
+        <div class="pk-field pk-field--check">
+          <label class="pk-consent">
+            <input type="checkbox" id="pk-consent" name="consent" required aria-describedby="pk-consent-err">
+            <span>I understand this is a <strong>readiness assessment</strong> — not tax preparation, and not bookkeeping cleanup.</span>
+          </label>
+          <p class="pk-err" id="pk-consent-err" hidden>Please confirm you understand what the assessment is.</p>
+        </div>
+
+        <button class="pk-btn pk-btn--primary pk-btn--lg pk-btn--block" type="submit">
+          Continue to checkout — $99
+        </button>
+        <p id="pk-start-error" role="alert"></p>
+      </form></div><div data-dialog-step="done" hidden>
       <div class="pk-done">
         
         <h2 class="pk-dialog__title" id="pk-dialog-title">Assessment checkout is not available yet.</h2>
@@ -1718,36 +1766,17 @@ ul,ol{margin:0;padding:0;list-style:none}
   var $$ = function (sel, ctx) { return Array.prototype.slice.call((ctx || document).querySelectorAll(sel)); };
 
   
+  var tracked = {};
   var PK = (window.PKReadiness = {
-    track: function (event, detail) {
-      // INTEGRATION: forward to PK's analytics layer. Intentionally silent.
-      void event; void detail;
-    },
-    startAssessment: function (source) {
-      // INTEGRATION: primary CTA entry point. `source` is the section id.
-      void source;
-    },
-    submitPreliminaryIntake: function (payload) {
-      // INTEGRATION: persist the pre-payment lead. Returns a promise in prod.
-      void payload;
-    },
-    beginCheckout: function (payload) {
-      // INTEGRATION: redirect/mount secure $99 checkout. No processor here.
-      void payload;
-    },
-    onPaymentSuccess: function (session) {
-      // INTEGRATION: called on return from checkout; swap in the real state.
-      void session;
-    },
-    beginOnboarding: function (session) {
-      // INTEGRATION: post-payment onboarding + full assessment intake.
-      void session;
-    },
-    openSecureDocumentWorkflow: function (session) {
-      // INTEGRATION: secure document exchange. Never runs on the public page.
-      void session;
+    track: function (event) {
+      var aliases = { cta_click: 'readiness_cta_click', gut_check_answered: 'gut_check_interaction' };
+      event = aliases[event] || event;
+      if (['readiness_page_view', 'gut_check_interaction', 'readiness_cta_click', 'preliminary_intake_started'].indexOf(event) === -1 || tracked[event]) return;
+      tracked[event] = true;
+      fetch('/api/readiness/analytics', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event: event, dedupeKey: crypto.randomUUID() }) }).catch(function () {});
     }
   });
+  PK.track('readiness_page_view');
 
   
   (function headerState() {
@@ -1877,12 +1906,18 @@ ul,ol{margin:0;padding:0;list-style:none}
     if (!dialog) return;
 
     var stepDone = $('[data-dialog-step="done"]', dialog);
+    var stepIntake = $('[data-dialog-step="intake"]', dialog);
     var lastFocused = null;
 
     var open = function (trigger) {
       lastFocused = trigger || document.activeElement;
       // Show availability before collecting any information.
-      stepDone.hidden = false;
+      stepDone.hidden = false; stepIntake.hidden = true; dialog.setAttribute("aria-labelledby", "pk-dialog-title");
+      fetch('/api/readiness/status', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (data) {
+        if (!dialog.open || !data.checkoutAvailable) return;
+        stepDone.hidden = true; stepIntake.hidden = false; dialog.setAttribute("aria-labelledby", "pk-intake-title"); PK.track('preliminary_intake_started');
+        var field = $('#pk-name'); if (field) field.focus();
+      }).catch(function () {});
 
       if (typeof dialog.showModal === 'function') {
         dialog.showModal();
@@ -1907,7 +1942,7 @@ ul,ol{margin:0;padding:0;list-style:none}
         var section = btn.closest('section, header');
         var source = (section && section.id) || (section && section.className) || 'page';
         PK.track('cta_click', { source: source });   // ANALYTICS EVENT
-        PK.startAssessment(source);                  // INTEGRATION: CTA entry point
+
         open(btn);
       });
     });
@@ -1923,6 +1958,16 @@ ul,ol{margin:0;padding:0;list-style:none}
       document.body.style.overflow = '';
     });
 
+    $('#pk-start-form').addEventListener('submit', async function (event) {
+      event.preventDefault(); var form = event.currentTarget; if (!form.reportValidity()) return;
+      var button = $('button[type="submit"]', form); var error = $('#pk-start-error'); button.disabled = true; error.textContent = '';
+      try {
+        var fields = Object.fromEntries(new FormData(form).entries()); fields.consent = $('#pk-consent').checked;
+        var response = await fetch('/api/readiness/start', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fields) });
+        var data = await response.json(); if (!response.ok) throw new Error(data.error || 'Please check your information.');
+        window.location.assign('/readiness/start');
+      } catch (problem) { error.textContent = problem.message || 'Please try again.'; button.disabled = false; }
+    });
   })();
 
   

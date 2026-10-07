@@ -15,7 +15,10 @@
     "qualify:netlify:local": "node scripts/qualify-netlify-local.mjs && node scripts/test-netlify-artifact.mjs && node scripts/test-netlify-handler.mjs && node scripts/test-netlify-privacy.mjs",
     "test:netlify:artifact": "node scripts/test-netlify-artifact.mjs",
     "test:netlify:handler": "node scripts/test-netlify-handler.mjs",
-    "test:ordinary-transfer": "prisma generate && node --import tsx --test scripts/test-ordinary-transfer.mts"
+    "test:ordinary-transfer": "prisma generate && node --import tsx --test scripts/test-ordinary-transfer.mts",
+    "test:readiness": "prisma generate && node --test scripts/test-readiness-migration.mjs && node --import tsx --test scripts/test-readiness-domain.mts",
+    "test:browser:readiness": "prisma generate && node --import tsx scripts/verify-readiness-browser.mts",
+    "test:readiness:landing": "node scripts/test-readiness.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",

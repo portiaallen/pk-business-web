@@ -20,6 +20,7 @@ function harness({env={},prisma={},mocks={},inventory=false,fetchMock}={}) {
    if(Object.hasOwn(mocks,id))return mocks[id];
    if(id==='@/lib/prisma'||id==='@/server/db/client')return {prisma};
    if(id==='@/generated/prisma/client')return {AuditAction:new Proxy({},{get:(_,key)=>key})};
+   if(id.startsWith('.'))return load(path.resolve(path.dirname(filename), id + '.ts'));
    if(id.startsWith('@/'))return load(`${base}/${id.slice(2)}.ts`);
    return require(id);
   };
