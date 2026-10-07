@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: {
+    "/readiness": ["./src/content/readiness.html"],
+  },
   serverExternalPackages: ["@libsql/client"],
   turbopack: {
     rules: {
