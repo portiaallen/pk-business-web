@@ -1306,6 +1306,8 @@ model ReadinessAssessment {
   onboardingCodeExpiresAt DateTime?
   onboardingCodeAttempts Int @default(0)
   onboardingCodeSentAt DateTime?
+  recoveryCodeHash String?
+  recoveryCodeExpiresAt DateTime?
   emailVerifiedAt DateTime?
   intakeData String @default("{}")
   policyVersion String?

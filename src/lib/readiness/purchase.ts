@@ -29,8 +29,8 @@ export function purchaseToken(request: Request) {
   const token = values[0].slice(PURCHASE_COOKIE.length + 1);
   return /^[a-f0-9]{64}$/.test(token) ? token : null;
 }
-export function purchaseCookie(token: string) {
-  return `${PURCHASE_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400${process.env.NODE_ENV === "production" ? "; Secure" : ""}`;
+export function purchaseCookie(token: string, maxAge = 86400) {
+  return `${PURCHASE_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${process.env.NODE_ENV === "production" ? "; Secure" : ""}`;
 }
 export function readinessEnabled() {
   // Production launch is deliberately closed until the independently qualified secure workflow exists.
@@ -547,6 +547,8 @@ export async function onboard(request: Request, input: unknown) {
         ownerUserId: u.id,
         emailVerifiedAt: new Date(),
         onboardingCodeHash: null,
+        recoveryCodeHash: null,
+        recoveryCodeExpiresAt: null,
         status: "INTAKE_IN_PROGRESS",
         version: { increment: 1 },
       },

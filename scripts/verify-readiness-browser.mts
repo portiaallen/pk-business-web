@@ -200,6 +200,75 @@ try {
     ).status(),
     200,
   );
+  // New device / lost cookies after payment. No fixture creates another checkout.
+  await prisma.readinessAssessment.update({
+    where: { id: a.id },
+    data: { purchaseExpiresAt: new Date(0) },
+  });
+  await buyer.clearCookies();
+  await page.goto(origin + "/readiness/start");
+  await page
+    .getByRole("heading", { name: "Already paid but lost your setup session?" })
+    .waitFor();
+  await page
+    .getByLabel("Purchase email", { exact: true })
+    .fill("browserbuyer@example.test");
+  const recoverySent = page.waitForResponse(
+    (r) =>
+      r.url().endsWith("/api/readiness/recovery") &&
+      r.request().method() === "POST",
+  );
+  await page
+    .getByRole("button", { name: "Send recovery code", exact: true })
+    .click();
+  assert.equal((await recoverySent).status(), 200);
+  assert.ok(
+    (
+      await prisma.readinessAssessment.findUniqueOrThrow({
+        where: { id: a.id },
+      })
+    ).recoveryCodeHash,
+  );
+  // The browser server's synthetic mailbox is process-local. Inject only the test
+  // credential hash in this disposable DB; domain tests read the actual emailed code.
+  const recoveryCode = "b".repeat(32);
+  await prisma.readinessAssessment.update({
+    where: { id: a.id },
+    data: {
+      recoveryCodeHash: auth.hashToken(
+        `readiness-recovery:browserbuyer@example.test:${recoveryCode}`,
+      ),
+    },
+  });
+  await page.getByLabel("Recovery code", { exact: true }).fill(recoveryCode);
+  await page
+    .getByRole("button", { name: "Restore setup access", exact: true })
+    .click();
+  await page
+    .getByText("Setup access restored for 15 minutes.", { exact: false })
+    .waitFor();
+  assert.ok(
+    !(await buyer.cookies()).some((c) => c.name === "pk_business_session"),
+  );
+  const recoveredStatus = await (
+    await buyer.request.get(origin + "/api/readiness/status")
+  ).json();
+  assert.equal(recoveredStatus.assessmentId, a.id);
+  assert.equal(recoveredStatus.clientId, a.clientId);
+  assert.equal(await prisma.payment.count(), 1);
+  assert.equal(await prisma.readinessAssessment.count(), 1);
+  const replay = await buyer.request.post(origin + "/api/readiness/recovery", {
+    headers: { origin },
+    data: {
+      action: "VERIFY",
+      fields: { email: "browserbuyer@example.test", code: recoveryCode },
+    },
+  });
+  assert.equal(replay.status(), 400);
+  await page.screenshot({
+    path: "docs/readiness/evidence/setup-recovered-375.png",
+    fullPage: true,
+  });
   await buyer.addCookies([
     {
       name: "pk_business_session",

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { readinessFetch } from "@/components/readiness/client";
+import RecoverSetup from "@/components/readiness/RecoverSetup";
 export default function ReadinessStart() {
   const router = useRouter();
   const [status, setStatus] = useState<{
@@ -19,7 +20,9 @@ export default function ReadinessStart() {
   async function refresh() {
     try {
       setStatus(await readinessFetch("/api/readiness/status"));
+      setMessage("");
     } catch (error) {
+      setStatus({});
       setMessage((error as Error).message);
     }
   }
@@ -202,6 +205,7 @@ export default function ReadinessStart() {
           )}
         </div>
       )}
+      <RecoverSetup onRecovered={refresh} />
     </section>
   );
 }

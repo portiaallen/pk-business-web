@@ -69,10 +69,14 @@ sqlite
 sqlite.exec(
   readFileSync("prisma/readiness-migrations/readiness-v1.sql", "utf8"),
 );
+sqlite.exec(
+  readFileSync("prisma/readiness-migrations/readiness-recovery-v1.sql", "utf8"),
+);
 const { prisma } = await import("../src/lib/prisma");
 const auth = await import("../src/lib/auth");
 const policy = await import("../src/lib/readiness/policy");
 const purchase = await import("../src/lib/readiness/purchase");
+const recoveryRoute = await import("../src/app/api/readiness/recovery/route");
 const svc = await import("../src/lib/readiness/service");
 const library = await import("../src/lib/readiness/library");
 const reports = await import("../src/lib/readiness/reports");
@@ -168,6 +172,47 @@ function request(
 }
 async function current() {
   return prisma.readinessAssessment.findUniqueOrThrow({ where: { id: aId } });
+}
+function recoveryRequest(
+  action: string,
+  fields: unknown,
+  address = "recovery-test",
+) {
+  return new Request(origin + "/api/readiness/recovery", {
+    method: "POST",
+    headers: {
+      origin,
+      "content-type": "application/json",
+      "x-real-ip": address,
+    },
+    body: JSON.stringify({ action, fields }),
+  });
+}
+async function resetRecoveryLimits(email = preliminary.email) {
+  await prisma.readinessPublicRateLimit.deleteMany({
+    where: {
+      key: {
+        in: [
+          ...["send", "verify"].map((op) =>
+            auth.hashToken(`readiness-recovery-rate:${op}:${email}`),
+          ),
+          ...["send", "verify"].map((op) =>
+            auth.hashToken(`readiness-rate:recovery_${op}:recovery-test`),
+          ),
+        ],
+      },
+    },
+  });
+}
+async function recoveryCode(email = preliminary.email) {
+  assert.equal(
+    (await recoveryRoute.POST(recoveryRequest("REQUEST", { email }))).status,
+    200,
+  );
+  return notices
+    .syntheticMail()
+    .at(-1)!
+    .text.match(/\b[a-f0-9]{32}\b/)![0];
 }
 async function admin(data: Record<string, unknown>) {
   return svc.adminMutation(request("admin"), aId, {
@@ -313,6 +358,16 @@ test("production/hosting cannot enable synthetic purchasing", async () => {
   try {
     assert.equal(purchase.availability().checkoutAvailable, false);
     await assert.rejects(() => purchase.startPurchase(request(), preliminary));
+    for (const action of ["REQUEST", "VERIFY"]) {
+      const r = await recoveryRoute.POST(
+        recoveryRequest(action, {
+          email: preliminary.email,
+          ...(action === "VERIFY" ? { code: "0".repeat(32) } : {}),
+        }),
+      );
+      assert.equal(r.status, 503);
+      assert.equal(r.headers.get("set-cookie"), null);
+    }
   } finally {
     for (const [key, value] of Object.entries(saved)) {
       if (value === undefined) delete process.env[key];
@@ -409,6 +464,28 @@ test("redirect alone, cancelled/unpaid, unsigned and wrong amount never pay", as
   );
   assert.equal((await current()).paymentStatus, "PENDING");
 });
+test("recovery cannot restore an unpaid assessment and rejects CSRF", async () => {
+  await resetRecoveryLimits();
+  const code = await recoveryCode();
+  assert.equal((await current()).recoveryCodeHash, null);
+  const denied = await recoveryRoute.POST(
+    recoveryRequest("VERIFY", { email: preliminary.email, code }),
+  );
+  assert.equal(denied.status, 400);
+  assert.equal(denied.headers.get("set-cookie"), null);
+  const csrf = new Request(origin + "/api/readiness/recovery", {
+    method: "POST",
+    headers: {
+      origin: "https://evil.example.test",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      action: "REQUEST",
+      fields: { email: preliminary.email },
+    }),
+  });
+  assert.equal((await recoveryRoute.POST(csrf)).status, 403);
+});
 test("verified payment and repeated webhook create exactly one payment", async () => {
   const s = {
     ...sessions.get(aId)!,
@@ -424,7 +501,329 @@ test("verified payment and repeated webhook create exactly one payment", async (
   assert.equal((await current()).reportDeliveredAt, null);
   assert.equal(await prisma.readinessCredit.count(), 0);
 });
-test("paid email-code account setup stores hashes, limits attempts, binds owner", async () => {
+test("recovery is generic before email proof; no purchase or client enumeration", async () => {
+  await resetRecoveryLimits();
+  const known = await recoveryRoute.POST(
+    recoveryRequest("REQUEST", { email: preliminary.email.toUpperCase() }),
+  );
+  const knownMail = notices
+    .syntheticMail()
+    .at(-1)!
+    .text.replace(/\b[a-f0-9]{32}\b/, "CODE");
+  const unknown = await recoveryRoute.POST(
+    recoveryRequest("REQUEST", { email: "unknown@example.test" }),
+  );
+  assert.deepEqual(await known.json(), { accepted: true });
+  assert.deepEqual(await unknown.json(), { accepted: true });
+  assert.equal(known.headers.get("set-cookie"), null);
+  assert.equal(unknown.headers.get("set-cookie"), null);
+  assert.equal(
+    notices
+      .syntheticMail()
+      .at(-1)!
+      .text.replace(/\b[a-f0-9]{32}\b/, "CODE"),
+    knownMail,
+  );
+  assert.ok(!knownMail.includes(aId));
+  assert.ok(!knownMail.includes(clientId));
+  assert.equal(await prisma.readinessAssessment.count(), 1);
+});
+test("lost cookie and expired purchase recover the original verified payment once", async () => {
+  await resetRecoveryLimits();
+  const before = await current();
+  const checkoutCalls = stripeCalls;
+  const oldCookie = purchaseCookie;
+  const payment = await prisma.payment.findUniqueOrThrow({
+    where: { id: before.paymentId! },
+  });
+  await prisma.readinessAssessment.update({
+    where: { id: aId },
+    data: { purchaseExpiresAt: new Date(0) },
+  });
+  await assert.rejects(() => purchase.publicStatus(request()));
+  const code = await recoveryCode();
+  const pending = await current();
+  assert.notEqual(pending.recoveryCodeHash, code);
+  assert.ok(pending.recoveryCodeExpiresAt!.getTime() <= Date.now() + 600000);
+  assert.equal(
+    (
+      await recoveryRoute.POST(
+        recoveryRequest("VERIFY", { email: "intruder@example.test", code }),
+      )
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await recoveryRoute.POST(
+        recoveryRequest("VERIFY", {
+          email: preliminary.email,
+          code: "0".repeat(32),
+        }),
+      )
+    ).status,
+    400,
+  );
+  const success = await recoveryRoute.POST(
+    recoveryRequest("VERIFY", { email: preliminary.email, code }),
+  );
+  assert.equal(success.status, 200);
+  assert.deepEqual(await success.json(), { recovered: true });
+  const cookie = success.headers.get("set-cookie")!;
+  assert.match(cookie, /HttpOnly; SameSite=Lax; Max-Age=900/);
+  assert.ok(!cookie.includes("pk_business_session"));
+  assert.notEqual(cookie.split(";")[0], oldCookie);
+  const replay = await recoveryRoute.POST(
+    recoveryRequest("VERIFY", { email: preliminary.email, code }),
+  );
+  assert.equal(replay.status, 400);
+  assert.equal(replay.headers.get("set-cookie"), null);
+  await assert.rejects(
+    () => purchase.publicStatus(request()),
+    "Old setup cookie must be revoked",
+  );
+  purchaseCookie = cookie.split(";")[0];
+  const status = await purchase.publicStatus(request());
+  assert.equal(status.assessmentId, aId);
+  assert.equal(status.clientId, clientId);
+  assert.equal(status.paymentStatus, "PAID");
+  await assert.rejects(
+    () => svc.detail(request(), aId),
+    "Setup recovery is not a client session",
+  );
+  const a = await current();
+  assert.equal(a.recoveryCodeHash, null);
+  assert.equal(a.recoveryCodeExpiresAt, null);
+  assert.equal(a.ownerUserId, null);
+  assert.equal(a.invoiceId, before.invoiceId);
+  assert.equal(a.paymentId, before.paymentId);
+  assert.ok(a.purchaseExpiresAt.getTime() <= Date.now() + 900000);
+  assert.deepEqual(
+    await prisma.payment.findUniqueOrThrow({ where: { id: a.paymentId! } }),
+    payment,
+  );
+  assert.equal(await prisma.payment.count(), 1);
+  assert.equal(await prisma.readinessAssessment.count(), 1);
+  assert.equal(stripeCalls, checkoutCalls, "Recovery must never call checkout");
+  const events = await prisma.auditLog.findMany({ where: { resourceId: aId } });
+  assert.ok(events.some((e) => e.metadata.includes("SETUP_RECOVERY_VERIFIED")));
+  assert.ok(
+    events.every(
+      (e) =>
+        !e.metadata.includes(code) && !e.metadata.includes(preliminary.email),
+    ),
+  );
+});
+test("expired, superseded and concurrent recovery credentials cannot replay", async () => {
+  await resetRecoveryLimits();
+  const expired = await recoveryCode();
+  await prisma.readinessAssessment.update({
+    where: { id: aId },
+    data: { recoveryCodeExpiresAt: new Date(0) },
+  });
+  assert.equal(
+    (
+      await recoveryRoute.POST(
+        recoveryRequest("VERIFY", { email: preliminary.email, code: expired }),
+      )
+    ).status,
+    400,
+  );
+  const superseded = await recoveryCode();
+  const fresh = await recoveryCode();
+  assert.equal(
+    (
+      await recoveryRoute.POST(
+        recoveryRequest("VERIFY", {
+          email: preliminary.email,
+          code: superseded,
+        }),
+      )
+    ).status,
+    400,
+  );
+  const results = await Promise.all(
+    [0, 1].map(() =>
+      recoveryRoute.POST(
+        recoveryRequest("VERIFY", { email: preliminary.email, code: fresh }),
+      ),
+    ),
+  );
+  assert.deepEqual(results.map((r) => r.status).sort(), [200, 400]);
+  purchaseCookie = results
+    .find((r) => r.status === 200)!
+    .headers.get("set-cookie")!
+    .split(";")[0];
+  assert.equal(await prisma.payment.count(), 1);
+  assert.equal(await prisma.readinessAssessment.count(), 1);
+});
+test("recovery rejects refunded or cross-client payment evidence and expired setup credentials", async () => {
+  await resetRecoveryLimits();
+  await prisma.readinessAssessment.update({
+    where: { id: aId },
+    data: { purchaseExpiresAt: new Date(0) },
+  });
+  await assert.rejects(() => purchase.publicStatus(request()));
+  const code = await recoveryCode();
+  const a = await current();
+  await prisma.payment.update({
+    where: { id: a.paymentId! },
+    data: { clientId: "migration-preserved" },
+  });
+  assert.equal(
+    (
+      await recoveryRoute.POST(
+        recoveryRequest("VERIFY", { email: preliminary.email, code }),
+      )
+    ).status,
+    400,
+  );
+  await prisma.payment.update({
+    where: { id: a.paymentId! },
+    data: { clientId, status: "REFUNDED" },
+  });
+  assert.equal(
+    (
+      await recoveryRoute.POST(
+        recoveryRequest("VERIFY", { email: preliminary.email, code }),
+      )
+    ).status,
+    400,
+  );
+  await prisma.payment.update({
+    where: { id: a.paymentId! },
+    data: { status: "PAID" },
+  });
+  const recovered = await recoveryRoute.POST(
+    recoveryRequest("VERIFY", { email: preliminary.email, code }),
+  );
+  assert.equal(recovered.status, 200);
+  purchaseCookie = recovered.headers.get("set-cookie")!.split(";")[0];
+});
+test("recovery email delivery failure is generic and invalidates the unsent credential", async () => {
+  await resetRecoveryLimits();
+  const messages = notices.syntheticMail();
+  const push = messages.push;
+  messages.push = () => {
+    throw Error("Synthetic mail failure");
+  };
+  try {
+    for (const email of [preliminary.email, "mail-failed@example.test"]) {
+      const r = await recoveryRoute.POST(recoveryRequest("REQUEST", { email }));
+      assert.equal(r.status, 200);
+      assert.deepEqual(await r.json(), { accepted: true });
+    }
+    assert.equal((await current()).recoveryCodeHash, null);
+  } finally {
+    messages.push = push;
+  }
+});
+test("recovery issuance persistence failure cannot enumerate the purchaser", async () => {
+  await resetRecoveryLimits();
+  await prisma.readinessAssessment.update({
+    where: { id: aId },
+    data: { recoveryCodeHash: null, recoveryCodeExpiresAt: null },
+  });
+  sqlite.exec(`CREATE TRIGGER block_recovery_request BEFORE INSERT ON AuditLog
+    WHEN NEW.metadata LIKE '%SETUP_RECOVERY_REQUESTED%'
+    BEGIN SELECT RAISE(ABORT,'SYNTHETIC_AUDIT_FAILURE'); END;`);
+  try {
+    const code = await recoveryCode();
+    assert.equal((await current()).recoveryCodeHash, null);
+    const known = notices
+      .syntheticMail()
+      .at(-1)!
+      .text.replace(/\b[a-f0-9]{32}\b/, "CODE");
+    await recoveryCode("persistence-unknown@example.test");
+    assert.equal(
+      notices
+        .syntheticMail()
+        .at(-1)!
+        .text.replace(/\b[a-f0-9]{32}\b/, "CODE"),
+      known,
+    );
+    assert.equal(
+      (
+        await recoveryRoute.POST(
+          recoveryRequest("VERIFY", { email: preliminary.email, code }),
+        )
+      ).status,
+      400,
+    );
+  } finally {
+    sqlite.exec("DROP TRIGGER block_recovery_request");
+  }
+});
+test("recovery audit failure rolls back credential consumption and cookie rotation", async () => {
+  await resetRecoveryLimits();
+  const code = await recoveryCode();
+  const before = await current();
+  sqlite.exec(`CREATE TRIGGER block_recovery_audit BEFORE INSERT ON AuditLog
+    WHEN NEW.metadata LIKE '%SETUP_RECOVERY_VERIFIED%'
+    BEGIN SELECT RAISE(ABORT,'SYNTHETIC_AUDIT_FAILURE'); END;`);
+  try {
+    const rejected = await recoveryRoute.POST(
+      recoveryRequest("VERIFY", { email: preliminary.email, code }),
+    );
+    assert.equal(rejected.status, 500);
+    assert.equal(rejected.headers.get("set-cookie"), null);
+    assert.equal((await current()).recoveryCodeHash, before.recoveryCodeHash);
+    assert.equal((await current()).purchaseTokenHash, before.purchaseTokenHash);
+  } finally {
+    sqlite.exec("DROP TRIGGER block_recovery_audit");
+  }
+  const recovered = await recoveryRoute.POST(
+    recoveryRequest("VERIFY", { email: preliminary.email, code }),
+  );
+  assert.equal(recovered.status, 200);
+  purchaseCookie = recovered.headers.get("set-cookie")!.split(";")[0];
+  assert.equal(await prisma.payment.count(), 1);
+});
+test("recovery throttles email requests and failed verification persistently", async () => {
+  await resetRecoveryLimits();
+  const initialMail = notices.syntheticMail().length;
+  for (let i = 0; i < 4; i++) {
+    const r = await recoveryRoute.POST(
+      recoveryRequest("REQUEST", { email: preliminary.email }),
+    );
+    assert.equal(r.status, 200);
+    assert.deepEqual(await r.json(), { accepted: true });
+  }
+  assert.equal(notices.syntheticMail().length - initialMail, 3);
+  for (let i = 0; i < 10; i++)
+    assert.equal(
+      (
+        await recoveryRoute.POST(
+          recoveryRequest("VERIFY", {
+            email: preliminary.email,
+            code: "0".repeat(32),
+          }),
+        )
+      ).status,
+      400,
+    );
+  assert.equal(
+    (
+      await recoveryRoute.POST(
+        recoveryRequest("VERIFY", {
+          email: preliminary.email,
+          code: "0".repeat(32),
+        }),
+      )
+    ).status,
+    429,
+  );
+  const rate = await prisma.readinessPublicRateLimit.findUniqueOrThrow({
+    where: {
+      key: auth.hashToken(
+        `readiness-recovery-rate:verify:${preliminary.email}`,
+      ),
+    },
+  });
+  assert.equal(rate.count, 10);
+  await resetRecoveryLimits();
+});
+test("paid email-code account setup after recovery stores hashes, limits attempts, binds owner", async () => {
   await purchase.requestOnboardingCode(request());
   const code = notices
     .syntheticMail()
@@ -453,6 +852,21 @@ test("paid email-code account setup stores hashes, limits attempts, binds owner"
     data: { activeClientId: clientId },
   });
 });
+test("already-bound accounts cannot recover setup or replace their identity", async () => {
+  await resetRecoveryLimits();
+  const before = await current();
+  assert.equal(before.paymentStatus, "PAID");
+  assert.ok(before.ownerUserId);
+  const code = await recoveryCode();
+  const r = await recoveryRoute.POST(
+    recoveryRequest("VERIFY", { email: preliminary.email, code }),
+  );
+  assert.equal(r.status, 400);
+  assert.equal(r.headers.get("set-cookie"), null);
+  assert.equal((await current()).ownerUserId, before.ownerUserId);
+  assert.equal((await current()).purchaseTokenHash, before.purchaseTokenHash);
+});
+
 test("anonymous, viewer, unassigned ADMIN and stale context denied", async () => {
   await user("viewer", "CLIENT", clientId, "VIEWER");
   await user("admin", "ADMIN", clientId);
