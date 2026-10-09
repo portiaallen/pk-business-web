@@ -7,7 +7,7 @@ import RecoverSetup from "@/components/readiness/RecoverSetup";
 // CEO-approved manual fallback while the server checkout is closed in
 // production. Remove this constant and the fallback block once
 // /api/readiness/checkout is enabled (migration + Stripe config done).
-const FALLBACK_PAYMENT_LINK_URL = "PASTE_STRIPE_PAYMENT_LINK_URL";
+const FALLBACK_PAYMENT_LINK_URL = "https://buy.stripe.com/dRm5kE5uj20uebw66o9IQ00";
 
 export default function ReadinessStart() {
   const router = useRouter();
