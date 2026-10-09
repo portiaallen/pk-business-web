@@ -25,6 +25,18 @@ const nextConfig: NextConfig = {
       ] })),
     ];
   },
+  async redirects() {
+    return [
+      {
+        // Legacy public path for the assessment 301s to the approved
+        // /assessment route. Exact match only: /readiness/start and the
+        // /api/readiness endpoints are untouched.
+        source: "/readiness",
+        destination: "/assessment",
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     return {
       // /b2b/* maps onto the existing /portal/* routes so the client
@@ -40,6 +52,14 @@ const nextConfig: NextConfig = {
         {
           source: "/b2b/:path*",
           destination: "/portal/:path*",
+        },
+        {
+          // CEO-approved public route: /assessment serves the existing
+          // /readiness landing page without restructuring the app or its
+          // verified tests. The API and start flow stay on /api/readiness
+          // and /readiness/start.
+          source: "/assessment",
+          destination: "/readiness",
         },
       ],
       fallback: [],
