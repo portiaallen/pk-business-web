@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, type FormEvent } from "react";
+import { Suspense, useState, useEffect, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,20 @@ const MIN_PASSWORD_LENGTH = 12;
 
 function ForgotPasswordInner() {
   const searchParams = useSearchParams();
-  const token = searchParams.get("token") || "";
+  const [token, setToken] = useState("");
+  useEffect(() => {
+    const consume = () => {
+      const value = new URLSearchParams(window.location.hash.slice(1)).get("token") || searchParams.get("token") || "";
+      // Consume into memory before removing it from visible history/later requests.
+      if (value) {
+        queueMicrotask(() => setToken(value));
+        window.history.replaceState(null, "", "/forgot-password");
+      }
+    };
+    consume();
+    window.addEventListener("hashchange", consume);
+    return () => window.removeEventListener("hashchange", consume);
+  }, [searchParams]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

@@ -1,3 +1,4 @@
+import { assertResourceEnvironment, securityEnvironment } from "@/server/security-environment";
 import { PrismaClient, type Prisma } from "@/generated/prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
@@ -27,9 +28,13 @@ function resolveDatabaseUrl(): string {
 
 function createPrismaClient(): PrismaClient {
   const databaseUrl = resolveDatabaseUrl();
+  if (!databaseUrl.startsWith("file:") && !databaseUrl.startsWith("libsql:")) throw new Error("Unsupported database provider");
+  const environment = securityEnvironment();
+  if (!databaseUrl.startsWith("file:")) assertResourceEnvironment("DATABASE");
+  if (environment === "production" && databaseUrl.startsWith("file:")) throw new Error("Production database must be remote");
 
   const log: Prisma.LogLevel[] =
-    process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"];
+    [];
 
   if (databaseUrl.startsWith("libsql:")) {
     const authToken = cleanEnv(process.env.DATABASE_AUTH_TOKEN);
@@ -96,5 +101,5 @@ export function isDatabaseConfigured(): boolean {
   if (url.startsWith("libsql:")) {
     return Boolean(cleanEnv(process.env.DATABASE_AUTH_TOKEN));
   }
-  return url.startsWith("postgres");
+  return false;
 }

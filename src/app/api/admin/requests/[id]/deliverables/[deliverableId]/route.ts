@@ -1,3 +1,7 @@
+import { forbidNetlifyPayload } from "@/lib/ordinary-transfer/provider";
+import { requireAdminApiAccess } from "@/lib/admin-access";
+import { safeAuditMetadata } from "@/lib/security-log";
+import { requireDocumentRequestAccess } from "@/lib/document-access";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -15,6 +19,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string; deliverableId: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id, deliverableId } = await params;
     const token = getSessionTokenFromRequest(request);
     const user = await getSessionUser(token);
@@ -28,10 +33,12 @@ export async function GET(
     });
 
     // Mismatched request/deliverable pair and unknown IDs are indistinguishable
-    if (!deliverable || deliverable.requestId !== id) {
+    if (!deliverable || deliverable.requestId !== id || ("transferDeleteState" in deliverable && deliverable.transferDeleteState !== "NONE")) {
       throw ApiError.notFound("Deliverable not found");
     }
 
+    await requireDocumentRequestAccess(user, id);
+    forbidNetlifyPayload();
     const data = await getObject(deliverable.storageKey);
     if (!data) throw ApiError.notFound("File not found");
 
@@ -56,6 +63,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; deliverableId: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id, deliverableId } = await params;
     const admin = await requireAdminForDelete(request);
 
@@ -65,13 +73,18 @@ export async function DELETE(
         id: true,
         requestId: true,
         storageKey: true,
+        ordinaryLegalHold: true,
+        transferDeleteState: true,
         title: true,
         request: { select: { clientId: true } },
       },
     });
-    if (!deliverable || deliverable.requestId !== id) {
+    if (!deliverable || deliverable.requestId !== id || ("transferDeleteState" in deliverable && deliverable.transferDeleteState !== "NONE")) {
       throw ApiError.notFound("Deliverable not found");
     }
+
+    if (deliverable.ordinaryLegalHold) throw ApiError.conflict("Document is on hold");
+    if (await prisma.ordinaryTransferIntent.findFirst({where:{resourceId:deliverable.id,operation:'UPLOAD',status:'COMPLETE'}})) throw ApiError.conflict("Use the secure file transfer action");
 
     await prisma.deliverable.delete({ where: { id: deliverable.id } });
     await deleteStorageObjects([deliverable.storageKey]);
@@ -83,10 +96,9 @@ export async function DELETE(
         action: "ADMIN_ACTION",
         resource: "deliverable",
         resourceId: deliverable.id,
-        metadata: JSON.stringify({
+        metadata: safeAuditMetadata({
           action: "DELIVERABLE_DELETED",
           requestId: id,
-          title: deliverable.title,
         }),
       },
     });
@@ -107,11 +119,12 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; deliverableId: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id, deliverableId } = await params;
     const token = getSessionTokenFromRequest(request);
     const user = await getSessionUser(token);
     // Release is a material client-facing action — ADMIN only.
-    if (!user || !hasRole(user, "ADMIN")) throw ApiError.forbidden();
+    if (!user || !hasRole(user, "ADMIN", "STAFF")) throw ApiError.forbidden();
 
     const body = (await request.json().catch(() => null)) as { visibility?: string } | null;
     if (!body || (body.visibility !== "RELEASED" && body.visibility !== "DRAFT")) {
@@ -120,9 +133,9 @@ export async function PATCH(
 
     const deliverable = await prisma.deliverable.findUnique({
       where: { id: deliverableId },
-      select: { id: true, requestId: true, visibility: true, title: true },
+      select: { id: true, requestId: true, visibility: true, title: true, transferDeleteState: true },
     });
-    if (!deliverable || deliverable.requestId !== id) {
+    if (!deliverable || deliverable.requestId !== id || ("transferDeleteState" in deliverable && deliverable.transferDeleteState !== "NONE")) {
       throw ApiError.notFound("Deliverable not found");
     }
 
@@ -139,7 +152,7 @@ export async function PATCH(
           action: "ADMIN_ACTION",
           resource: "deliverable",
           resourceId: deliverable.id,
-          metadata: JSON.stringify({ action: "DELIVERABLE_RETRACTED", requestId: id }),
+          metadata: safeAuditMetadata({ action: "DELIVERABLE_RETRACTED", requestId: id }),
         },
       });
       return NextResponse.json({ id: deliverable.id, visibility: "DRAFT" });
@@ -166,7 +179,7 @@ export async function PATCH(
         action: "ADMIN_ACTION",
         resource: "deliverable",
         resourceId: deliverable.id,
-        metadata: JSON.stringify({ action: "DELIVERABLE_RELEASED", requestId: id, title: deliverable.title }),
+        metadata: safeAuditMetadata({ action: "DELIVERABLE_RELEASED", requestId: id }),
       },
     });
 

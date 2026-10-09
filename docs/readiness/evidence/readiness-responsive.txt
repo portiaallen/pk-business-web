@@ -1,0 +1,3 @@
+PASS 375px: assets, overflow, private gut check, tabs, FAQ, all CTAs, Escape, metadata, console
+PASS 768px: assets, overflow, private gut check, tabs, FAQ, all CTAs, Escape, metadata, console
+PASS 1440px: assets, overflow, private gut check, tabs, FAQ, all CTAs, Escape, metadata, console

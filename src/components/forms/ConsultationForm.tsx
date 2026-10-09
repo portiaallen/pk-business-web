@@ -170,6 +170,7 @@ export function ConsultationForm() {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-6">
+      <p className="text-sm text-muted-gray">Please keep this request general. Do not include tax identifiers, bank details, passwords, or confidential financial records.</p>
       {Object.keys(errors).length > 0 && (
         <div
           role="alert"

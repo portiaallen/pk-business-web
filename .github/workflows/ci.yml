@@ -1,11 +1,25 @@
-name: CI
+name: Security containment CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, feat/pk-would-work-here]
+  pull_request:
+
+permissions:
+  contents: read
 
 jobs:
-  test:
+  containment:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "CI paused while Inventory Tracker deploy is finished"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:security:phase1a
+      - run: npm run test:security:phase1b
+      - run: npm run build
+      - run: npx tsc --noEmit
+      - run: npx eslint src/lib/security-log.ts src/lib/security-environment.ts src/lib/document-access.ts scripts/test-phase1a.mjs scripts/test-card-checkout.mjs src/lib/auth.ts src/lib/capabilities.ts src/lib/admin-access.ts src/lib/webauthn.ts src/app/api/auth src/app/api/admin/security src/app/security/page.tsx src/components/auth/SecurityAdministration.tsx scripts/test-phase1b.mts scripts/verify-phase1b-browser.mts

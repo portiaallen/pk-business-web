@@ -1,8 +1,9 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
+import { recordRefund as recordReadinessRefund, recordPayment as recordReadinessPayment } from "@/lib/readiness/purchase";
 import { prisma } from "@/lib/prisma";
 import { ApiError, handleApiError } from "@/lib/api-error";
-import { paidCentsOf } from "@/lib/invoices";
+import { paidCentsOf, isStripeConfigured } from "@/lib/invoices";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
   try {
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
     const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
-    if (!webhookSecret || !secretKey) {
+    if (!isStripeConfigured() || !webhookSecret || !secretKey) {
       throw new ApiError(503, "Stripe webhook processing is not configured.");
     }
     const keyMode = configuredStripeMode(secretKey);
@@ -75,6 +76,13 @@ export async function POST(request: Request) {
       throw ApiError.badRequest("Stripe event mode does not match the configured key.");
     }
 
+    if (event.type === "charge.refunded") {
+      const data = isRecord(event.data) ? event.data : null;
+      const charge = data && isRecord(data.object) ? data.object : null;
+      if (!charge || charge.livemode !== event.livemode) throw ApiError.badRequest("Invalid refund event");
+      return NextResponse.json({ received: true, ...await prisma.$transaction((tx) => recordReadinessRefund(tx, charge)) });
+    }
+
     if (
       event.type !== "checkout.session.completed" &&
       event.type !== "checkout.session.async_payment_succeeded"
@@ -93,6 +101,12 @@ export async function POST(request: Request) {
         return NextResponse.json({ received: true, pending: true });
       }
       throw ApiError.badRequest("Checkout session is not paid.");
+    }
+
+    if (isRecord(session.metadata) && typeof session.metadata.readinessAssessmentId === "string") {
+      if (session.livemode !== event.livemode) throw ApiError.badRequest("Checkout mode mismatch");
+      const result = await prisma.$transaction((tx) => recordReadinessPayment(tx, session));
+      return NextResponse.json({ received: true, ...result });
     }
 
     const sessionId = session.id;

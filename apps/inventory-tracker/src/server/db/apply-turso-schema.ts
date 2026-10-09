@@ -1,8 +1,8 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { assertResourceEnvironment } from "@/server/security-environment";
 import { isDatabaseConfigured } from "@/server/db/client";
 
 function createLibsqlClient() {
+  assertResourceEnvironment("DATABASE");
   const url = process.env.DATABASE_URL?.trim();
   const authToken = process.env.DATABASE_AUTH_TOKEN?.trim();
 
@@ -44,10 +44,7 @@ export async function ensureTursoSchema(): Promise<TursoSchemaStatus> {
   const hasInventoryTable = await tableExists(client, "InventoryProduct");
 
   if (!hasInventoryTable) {
-    const sqlPath = join(process.cwd(), "prisma", "turso-migrate-inventory.sql");
-    const sql = readFileSync(sqlPath, "utf8");
-    await client.executeMultiple(sql);
-    return "migrated";
+    throw new Error("Inventory schema missing; approved offline provisioning required");
   }
 
   return "exists";

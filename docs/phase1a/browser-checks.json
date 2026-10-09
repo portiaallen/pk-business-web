@@ -1,0 +1,33 @@
+{
+  "checks": [
+    "390 /: 200/no overflow",
+    "390 /services: 200/no overflow",
+    "390 /about: 200/no overflow",
+    "390 /contact: 200/no overflow",
+    "390 /pay: 200/no overflow",
+    "390 /portal/login: 200/no overflow",
+    "768 /: 200/no overflow",
+    "768 /services: 200/no overflow",
+    "768 /about: 200/no overflow",
+    "768 /contact: 200/no overflow",
+    "768 /pay: 200/no overflow",
+    "768 /portal/login: 200/no overflow",
+    "1440 /: 200/no overflow",
+    "1440 /services: 200/no overflow",
+    "1440 /about: 200/no overflow",
+    "1440 /contact: 200/no overflow",
+    "1440 /pay: 200/no overflow",
+    "1440 /portal/login: 200/no overflow",
+    "/api/portal/documents: anonymous denied/no-store",
+    "/api/portal/invoices: anonymous denied/no-store",
+    "/api/auth/session: anonymous denied/no-store",
+    "/api/admin/documents: anonymous denied/no-store",
+    "/portal/documents: login guard",
+    "/admin/documents: login guard",
+    "/b2b/documents: login guard",
+    "Cross-origin consultation rejected before persistence",
+    "Production-build setup denied before persistence",
+    "Consultation UI synthetic intercepted success"
+  ],
+  "errors": []
+}

@@ -1,3 +1,4 @@
+import { assertResourceEnvironment, securityEnvironment } from "@/server/security-environment";
 import { randomBytes, createHash, createHmac } from "crypto";
 import bcrypt from "bcryptjs";
 import type { User, UserRole } from "@/generated/prisma/client";
@@ -14,11 +15,14 @@ export type SessionUser = Pick<
 >;
 
 function hashToken(token: string): string {
+  const environment = securityEnvironment();
   const secret = process.env.AUTH_SECRET?.trim();
   if (secret) {
-    return createHmac("sha256", secret).update(token).digest("hex");
+    assertResourceEnvironment("AUTH");
+    return createHmac("sha256", secret).update(`pk-inventory:${token}`).digest("hex");
   }
-  return createHash("sha256").update(token).digest("hex");
+  if (environment === "production" || environment === "preview") throw new Error("AUTH_SECRET required");
+  return createHash("sha256").update(`pk-inventory:${token}`).digest("hex");
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -64,7 +68,7 @@ export async function getSessionUser(
     include: { user: true },
   });
 
-  if (!session || session.expiresAt < new Date()) {
+  if (!session || session.expiresAt <= new Date()) {
     if (session) {
       await prisma.session.delete({ where: { id: session.id } });
     }
@@ -105,25 +109,25 @@ export function getSessionTokenFromRequest(request: Request): string | undefined
   const cookieHeader = request.headers.get("cookie");
   if (!cookieHeader) return undefined;
 
-  const match = cookieHeader
+  const matches = cookieHeader
     .split(";")
     .map((part) => part.trim())
-    .find((part) => part.startsWith(`${SESSION_COOKIE}=`));
+    .filter((part) => part.startsWith(`${SESSION_COOKIE}=`));
 
-  if (!match) return undefined;
-  return decodeURIComponent(match.slice(SESSION_COOKIE.length + 1));
+  if (matches.length !== 1) return undefined;
+  const match = matches[0];
+  try {
+    const token = decodeURIComponent(match.slice(SESSION_COOKIE.length + 1));
+    return /^[a-f0-9]{64}$/.test(token) ? token : undefined;
+  } catch { return undefined; }
 }
 
 export function buildSessionCookie(token: string): string {
   const maxAge = SESSION_TTL_DAYS * 24 * 60 * 60;
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  const domain = process.env.COOKIE_DOMAIN?.trim();
-  const domainAttr = domain ? `; Domain=${domain}` : "";
-  return `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}${domainAttr}`;
+  return `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`;
 }
 
 export function clearSessionCookie(): string {
-  const domain = process.env.COOKIE_DOMAIN?.trim();
-  const domainAttr = domain ? `; Domain=${domain}` : "";
-  return `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${domainAttr}`;
+  return `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${process.env.NODE_ENV === "production" ? "; Secure" : ""}`;
 }

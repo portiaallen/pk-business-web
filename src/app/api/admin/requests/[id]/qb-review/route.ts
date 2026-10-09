@@ -1,3 +1,5 @@
+import { requireAdminApiAccess } from "@/lib/admin-access";
+import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, getSessionTokenFromRequest, hasRole } from "@/lib/auth";
@@ -43,6 +45,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id } = await params;
     const user = await requireStaff(request);
 
@@ -192,6 +195,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id } = await params;
     const user = await requireStaff(request);
 
@@ -221,7 +225,7 @@ export async function PATCH(
           action: "ADMIN_ACTION",
           resource: "qb_review",
           resourceId: review.id,
-          metadata: JSON.stringify({ action: "review_status_changed", newStatus: body.reviewStatus }),
+          metadata: safeAuditMetadata({ action: "review_status_changed", newStatus: body.reviewStatus }),
         },
       });
 
@@ -363,6 +367,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id } = await params;
     const user = await requireStaff(request);
 
@@ -418,6 +423,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id } = await params;
     await requireStaff(request);
 

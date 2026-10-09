@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import {
-  getSessionUser,
+  requireAuthContext,
   getSessionTokenFromRequest,
 } from "@/lib/auth";
-import { handleApiError, ApiError } from "@/lib/api-error";
+import { handleApiError } from "@/lib/api-error";
 import { isStripeConfigured } from "@/lib/invoices";
 
 /**
@@ -15,15 +14,7 @@ import { isStripeConfigured } from "@/lib/invoices";
 export async function GET(request: Request) {
   try {
     const token = getSessionTokenFromRequest(request);
-    const user = await getSessionUser(token);
-    if (!user) throw ApiError.unauthorized();
-
-    // Verify the user is actually a member of a client (tenant isolation).
-    const membership = await prisma.clientMember.findFirst({
-      where: { userId: user.id },
-      select: { id: true },
-    });
-    if (!membership) throw ApiError.forbidden();
+    await requireAuthContext(token);
 
     return NextResponse.json({
       zelleEmail: process.env.PAYMENT_ZELLE_EMAIL || "portiaallen40@gmail.com",

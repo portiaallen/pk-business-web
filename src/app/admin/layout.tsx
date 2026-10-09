@@ -23,6 +23,9 @@ import { cn } from "@/lib/utils";
 import { AdminInstallButton } from "@/components/AdminInstallPrompt";
 
 const navItems = [
+  { href: "/admin/readiness", label: "Readiness Assessments", icon: ClipboardCheck },
+  { href: "/admin/readiness/recommendations", label: "Recommendation Library", icon: Briefcase },
+  { href: "/security", label: "Security & client context", icon: Users },
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/clients", label: "Clients", icon: Users },
   { href: "/admin/requests", label: "Requests", icon: FileText },
@@ -43,6 +46,7 @@ export default function AdminLayout({
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState<{ name: string; role: string } | null>(null);
+  const [activeClientLabel, setActiveClientLabel] = useState("");
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
@@ -51,8 +55,13 @@ export default function AdminLayout({
         const res = await fetch("/api/auth/session");
         if (res.ok) {
           const data = await res.json();
-          if (data.user?.role === "ADMIN") {
+          if (["ADMIN", "STAFF"].includes(data.user?.role)) {
             setUser(data.user);
+            const response = await fetch("/api/auth/client-context", { cache: "no-store" });
+            if (response.ok) {
+              const context = await response.json();
+              setActiveClientLabel(context.clients.find((client: { id: string; name: string }) => client.id === context.activeClientId)?.name || "");
+            }
           } else {
             window.location.href = "/portal/login?admin=1";
           }
@@ -118,6 +127,8 @@ export default function AdminLayout({
           </button>
         </div>
       </header>
+
+      <div className="flex min-h-12 items-center gap-3 border-b px-4 text-sm sm:px-6"><span className="shrink-0">Client context:</span><Link href="/security" className="min-w-0 truncate py-3 underline">{activeClientLabel || "Choose an authorized client"}</Link></div>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop sidebar */}

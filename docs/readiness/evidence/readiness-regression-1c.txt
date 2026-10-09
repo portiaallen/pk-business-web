@@ -1,0 +1,79 @@
+
+> pk-business-services@0.1.0 test:security:phase1c
+> prisma generate && node --import tsx --test scripts/test-phase1c.mts
+
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+
+✔ Generated Prisma Client (7.10.0) to ./src/generated/prisma in 587ms
+
+✔ isolated resources and encrypted bytes; opaque identifiers (213.132106ms)
+✔ anonymous access denied before confidential bytes (5.75935ms)
+✔ ADMIN without scoped Vault authority denied (4.686909ms)
+✔ support and data-entry do not inherit access (7.953091ms)
+✔ cross-client IDOR denied (2.962729ms)
+✔ wrong engagement scope denied (3.764024ms)
+✔ unassigned/no-grant staff denied (4.197251ms)
+✔ explicit context required; ambiguous context cannot auto-select (5.840715ms)
+✔ inactive client denied (6.78742ms)
+✔ classification requires independent specialized authority (55.492542ms)
+✔ taxonomy cannot under-classify tax/identity documents (1.334478ms)
+✔ client membership is not an unapproved Vault grant (4.924045ms)
+✔ quarantined object cannot download (12.072841ms)
+✔ scan outage fails closed; release denied (33.148094ms)
+✔ malicious synthetic marker is rejected (50.143ms)
+✔ unknown scanning result requires review, not release (31.67382ms)
+✔ spoofed MIME and malformed file rejected (26.041347ms)
+✔ extension mismatch rejected without retaining filename (10.569704ms)
+✔ oversized intent rejected before storage (0.959782ms)
+✔ stream bound rejects excessive/incomplete bytes (25.054165ms)
+✔ idempotent intent returns same object; changed intent denied (10.430288ms)
+✔ duplicate/replayed upload cannot overwrite released bytes (4.396977ms)
+✔ concurrent upload claim has one winner (36.631412ms)
+✔ download audited before delivery and uses private no-store (13.673916ms)
+✔ audit outage blocks byte delivery (44.302839ms)
+✔ unsafe PDF inline preview denied (6.0994ms)
+✔ permanent/signed public URL not present anywhere in object metadata (51.722497ms)
+✔ unset retention is not immediate deletion permission (20.540033ms)
+✔ legal hold blocks disposal and version protects concurrent hold changes (48.488344ms)
+✔ step-up required for hold/disposal (4.90498ms)
+✔ storage deletion failure is pending; access revoked, retry verifiable (93.142152ms)
+✔ a lying delete result cannot complete disposal (78.37324ms)
+✔ synthetic backup restore reconciles metadata + encrypted objects + integrity (128.713298ms)
+✔ restore from old snapshot never resurrects disposed records, even after database tombstone loss (123.304064ms)
+✔ tampered ciphertext fails integrity; no bytes delivered (55.915425ms)
+✔ interrupted upload reconciles into inaccessible cancellation (14.849576ms)
+✔ stale permissions/security version fail closed (6.865427ms)
+✔ session revocation/replay rejected (5.032198ms)
+✔ inventory cookie cannot confer PK authority (1.265989ms)
+✔ no canary/file content in audit records (1.846938ms)
+✔ prohibited destinations rejected; no AI/email/Drive/Dropbox transports (0.593347ms)
+✔ PWA never caches Vault API/file bytes (0.255218ms)
+✔ IDOR/not-found has identical public response and no canary in errors/logs (33.782638ms)
+✔ production/preview cannot opt into mock scanner, storage or ephemeral key authority (0.660438ms)
+✔ resource aliasing rejected, prefix alone not separation (0.272159ms)
+✔ intent audit failure rolls back metadata creation (10.931396ms)
+✔ concurrent disposal is serialized, never falsely completes twice (43.051367ms)
+✔ storage read outage yields no confidential response (4.922191ms)
+✔ revoked capability affects current session immediately (12.251082ms)
+✔ expired upload intent cannot be reused (35.20604ms)
+✔ scan-time permission revocation prevents release (59.706042ms)
+✔ audit outage after storage deletion remains pending and recoverable (98.496422ms)
+✔ disposal ledger failure blocks deletion and remains pending (38.521287ms)
+✔ fake successful storage copy cannot release a missing object (21.134613ms)
+✔ recovery integrity failure does not approve restored metadata (23.869469ms)
+✔ bounded JSON cannot allocate an unbounded payload (0.46066ms)
+✔ unknown/unapproved retention policy cannot authorize disposal (26.802587ms)
+✔ approved policy with unset period remains ineligible for disposal (32.003835ms)
+✔ disposal fence prevents stale processor from resurrecting bytes (37.784163ms)
+✔ anonymous object enumeration returns identical authentication denial (3.399849ms)
+✔ unmarked files cannot enter disposable synthetic storage (10.459173ms)
+ℹ tests 61
+ℹ suites 0
+ℹ pass 61
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4531.324102

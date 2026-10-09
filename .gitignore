@@ -55,3 +55,6 @@ prisma/dev.db-journal
 .claude/skills/
 .windsurf/skills/
 skills-lock.json
+
+# Local Netlify adapter artifacts (never confidential storage)
+/.netlify/

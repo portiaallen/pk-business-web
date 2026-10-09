@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: {
+    "/readiness": ["./src/content/readiness.html"],
+  },
   serverExternalPackages: ["@libsql/client"],
   turbopack: {
     rules: {
@@ -8,6 +11,19 @@ const nextConfig: NextConfig = {
         type: "raw",
       },
     },
+  },
+  async headers() {
+    const confidential = ["/api/:path*", "/portal/:path*", "/admin/:path*", "/b2b/:path*", "/forgot-password", "/security", "/vault"];
+    return [
+      { source: "/:path*", headers: [
+        { key: "X-Content-Type-Options", value: "nosniff" },
+        { key: "Referrer-Policy", value: "no-referrer" },
+        { key: "X-Frame-Options", value: "DENY" },
+      ] },
+      ...confidential.map((source) => ({ source, headers: [
+        { key: "Cache-Control", value: "private, no-store, max-age=0" },
+      ] })),
+    ];
   },
   async rewrites() {
     return {

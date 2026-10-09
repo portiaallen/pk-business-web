@@ -68,20 +68,22 @@ for (const [env, expected] of [
   [{ STRIPE_SECRET_KEY: " ", STRIPE_WEBHOOK_SECRET: testWebhook }, false],
   [{ STRIPE_SECRET_KEY: testKey, STRIPE_WEBHOOK_SECRET: " " }, false],
   [{ STRIPE_SECRET_KEY: testKey, STRIPE_WEBHOOK_SECRET: testWebhook }, true],
-  [{ STRIPE_SECRET_KEY: "sk_live_fixture_not_a_credential", STRIPE_WEBHOOK_SECRET: testWebhook }, true],
-]) { runtime.env = env; assert.equal(isStripeConfigured(), expected); passed++; }
+  [{ PK_ENVIRONMENT: "production", PK_STRIPE_ENVIRONMENT: "production", STRIPE_SECRET_KEY: "sk_live_fixture_not_a_credential", STRIPE_WEBHOOK_SECRET: testWebhook }, true],
+]) { runtime.env = { PK_ENVIRONMENT: "test", PK_STRIPE_ENVIRONMENT: "test", ...env }; assert.equal(isStripeConfigured(), expected); passed++; }
 
 async function checkout() {
   return POST(new Request("https://pk.example.test/api/portal/invoices/fixture-invoice/checkout", { method: "POST" }), { params: Promise.resolve({ id: "fixture-invoice" }) });
 }
 function reset() {
-  runtime.env = { STRIPE_SECRET_KEY: testKey, STRIPE_WEBHOOK_SECRET: testWebhook };
+  runtime.env = { PK_ENVIRONMENT: "test", PK_STRIPE_ENVIRONMENT: "test", STRIPE_SECRET_KEY: testKey, STRIPE_WEBHOOK_SECRET: testWebhook };
   authenticated = true; requests = []; sessionOverride = {};
   invoice = { id: "fixture-invoice", clientId: "fixture-client", invoiceNumber: "FIXTURE-ONLY", status: "SENT", currency: "USD", amountCents: 10000, dueAt: null, payments: [{ status: "PAID", amountCents: 2000 }] };
 }
 async function rejected(status) {
   assert.equal((await checkout()).status, status); assert.equal(requests.length, 0); passed++;
 }
+reset(); runtime.env.NEXT_PUBLIC_APP_URL="https://SYNTHETIC:CANARY@pk.example.test"; await rejected(503);
+reset(); runtime.env.NEXT_PUBLIC_APP_URL="https://pk.example.test/?token=SYNTHETIC_CANARY"; await rejected(503);
 reset(); authenticated = false; await rejected(401);
 reset(); delete runtime.env.STRIPE_WEBHOOK_SECRET; await rejected(503);
 reset(); runtime.env.STRIPE_SECRET_KEY = "invalid-fixture"; await rejected(503);
@@ -98,7 +100,7 @@ assert.equal(requests[0].get("payment_method_types[0]"), "card");
 assert.equal(requests[0].get("metadata[clientId]"), "fixture-client");
 assert.equal(requests[0].get("success_url"), "https://pk.example.test/portal/invoices?invoice=fixture-invoice&checkout=success");
 passed++;
-for (const override of [{ amount_total: 1 }, { url: "https://example.test/unsafe" }, { livemode: true }, { metadata: { invoiceId: "other" } }]) {
+for (const override of [{url: "https://SYNTHETIC:CANARY@checkout.stripe.com/c/pay/cs_test_fixture"}, {url: "https://checkout.stripe.com:444/c/pay/cs_test_fixture"}, { amount_total: 1 }, { url: "https://example.test/unsafe" }, { livemode: true }, { metadata: { invoiceId: "other" } }]) {
   reset(); sessionOverride = override; assert.equal((await checkout()).status, 502); passed++;
 }
 console.log(`${passed} configuration/checkout checks passed; Stripe, auth, and database boundaries mocked; zero real charges.`);

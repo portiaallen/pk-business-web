@@ -1,3 +1,6 @@
+import { confidentialRequestFilter } from "@/lib/capabilities";
+import { requireAdminApiAccess } from "@/lib/admin-access";
+import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -11,16 +14,18 @@ import { deleteStorageObjects, readDeleteId, requireAdminForDelete } from "@/lib
 /** GET — list documents across clients */
 export async function GET(request: Request) {
   try {
+    await requireAdminApiAccess(request);
     const token = getSessionTokenFromRequest(request);
     const user = await getSessionUser(token);
-    if (!user || !hasRole(user, "ADMIN")) throw ApiError.forbidden();
+    if (!user || !hasRole(user, "ADMIN", "STAFF")) throw ApiError.forbidden();
 
     const url = new URL(request.url);
-    const clientId = url.searchParams.get("clientId");
+    const clientId = user.activeClientId;
+    if (url.searchParams.get("clientId") && url.searchParams.get("clientId") !== clientId) throw ApiError.forbidden();
 
     const where = {
       retentionStatus: "ACTIVE" as const,
-      ...(clientId ? { request: { clientId } } : {}),
+      request: await confidentialRequestFilter(user),
     };
 
     const documents = await prisma.document.findMany({
@@ -66,6 +71,7 @@ export async function GET(request: Request) {
           fileName: d.fileName,
           category: d.category,
           uploadStatus: d.uploadStatus,
+          transferDeleteState: d.transferDeleteState,
           reviewStatus: d.reviewStatus,
           fileSizeBytes: d.fileSizeBytes,
           clientId: d.request.clientId,
@@ -89,15 +95,18 @@ export async function GET(request: Request) {
  */
 export async function DELETE(request: Request) {
   try {
+    await requireAdminApiAccess(request);
     const admin = await requireAdminForDelete(request);
     const id = await readDeleteId(request);
 
     const doc = await prisma.document.findUnique({
       where: { id },
-      select: { id: true, fileName: true, storageKey: true, request: { select: { clientId: true } } },
+      select: { id: true, fileName: true, storageKey: true, ordinaryLegalHold: true, request: { select: { clientId: true } } },
     });
     if (!doc) throw ApiError.notFound("Document not found");
 
+    if (doc.ordinaryLegalHold) throw ApiError.conflict("Document is on hold");
+    if (await prisma.ordinaryTransferIntent.findFirst({where:{resourceId:doc.id,operation:'UPLOAD',status:'COMPLETE'}})) throw ApiError.conflict("Use the secure file transfer action");
     await prisma.document.delete({ where: { id } });
     await deleteStorageObjects([doc.storageKey]);
 
@@ -108,7 +117,7 @@ export async function DELETE(request: Request) {
         action: "DOCUMENT_DELETED",
         resource: "document",
         resourceId: id,
-        metadata: JSON.stringify({ action: "DOCUMENT_HARD_DELETED", fileName: doc.fileName }),
+        metadata: safeAuditMetadata({ action: "DOCUMENT_HARD_DELETED" }),
       },
     });
 

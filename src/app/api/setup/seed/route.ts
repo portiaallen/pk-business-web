@@ -1,3 +1,4 @@
+import { localSyntheticSetupAllowed } from "@/lib/security-environment";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
@@ -5,6 +6,7 @@ import { hashPassword } from "@/lib/auth";
 const SETUP_SECRET = process.env.SETUP_SECRET?.trim();
 
 export async function POST(request: Request) {
+  if (!localSyntheticSetupAllowed()) return NextResponse.json({ error: "Setup disabled" }, { status: 403 });
   // Protect with setup secret
   const secret = request.headers.get("x-setup-secret");
   if (!SETUP_SECRET || secret !== SETUP_SECRET) {
@@ -15,7 +17,7 @@ export async function POST(request: Request) {
   const passwordHash = await hashPassword(password);
 
   // ─── Create admin user ──────────────────────────────────────────────────
-  const admin = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: "demo.admin@pk-demo.test" },
     update: {},
     create: {
@@ -28,7 +30,7 @@ export async function POST(request: Request) {
   });
 
   // ─── Create staff user ──────────────────────────────────────────────────
-  const staff = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: "demo.staff@pk-demo.test" },
     update: {},
     create: {

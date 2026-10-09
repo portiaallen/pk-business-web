@@ -1,25 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
-  getSessionUser,
+  requireAuthContext,
   getSessionTokenFromRequest,
 } from "@/lib/auth";
-import { ApiError, handleApiError } from "@/lib/api-error";
+import { handleApiError } from "@/lib/api-error";
 
 export async function GET(request: Request) {
   try {
     const token = getSessionTokenFromRequest(request);
-    const user = await getSessionUser(token);
-    if (!user) throw ApiError.unauthorized();
-
-    const membership = await prisma.clientMember.findFirst({
-      where: { userId: user.id },
-    });
-    if (!membership) throw ApiError.forbidden();
+    const ctx = await requireAuthContext(token);
 
     const documents = await prisma.document.findMany({
       where: {
-        request: { clientId: membership.clientId },
+        request: { clientId: ctx.clientId },
         retentionStatus: "ACTIVE",
       },
       include: {

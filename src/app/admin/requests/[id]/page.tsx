@@ -1,4 +1,6 @@
 "use client";
+import { OrdinaryDownload } from "@/components/documents/OrdinaryDownload";
+import { uploadOrdinaryFile, deleteOrdinaryFile } from "@/lib/ordinary-transfer/client";
 
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
@@ -43,7 +45,7 @@ type Detail = {
   documentRequests: { id: string; title: string; status: string; required: boolean }[];
   messages: { id: string; body: string; isFromStaff: boolean; authorName: string; createdAt: string }[];
   internalNotes: { id: string; content: string; authorName: string; createdAt: string }[];
-  deliverables: { id: string; title: string; fileName: string; createdAt: string; visibility: string }[];
+  deliverables: { id: string; title: string; fileName: string; createdAt: string; visibility: string; transferDeleteState?:string }[];
   timeEntries: Array<{
     id: string;
     userName: string;
@@ -65,7 +67,7 @@ type Detail = {
   timeCategories: string[];
 };
 
-type Staff = { id: string; name: string; email: string; role: string };
+type Staff = { id: string; name: string; email: string; role: string; securityVersion: number };
 
 const STATUSES = [
   "DRAFT", "SUBMITTED", "DOCUMENTS_REQUIRED", "UNDER_REVIEW",
@@ -248,10 +250,7 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
     setError("");
     setSaving(true);
     try {
-      const res = await fetch(`/api/admin/requests/${id}/deliverables`, {
-        method: "POST",
-        body: data,
-      });
+      const res = await uploadOrdinaryFile(`/api/admin/requests/${id}/deliverables`, data);
       if (res.ok) {
         form.reset();
         await load();
@@ -295,16 +294,23 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
     setSaving(true);
     setError("");
     try {
-      const res = await fetch(`/api/admin/requests/${id}`, {
-        method: "PATCH",
+      const assignment = "assignedStaffId" in data;
+      const targetId = assignment ? (data.assignedStaffId || detail?.assignedStaff?.id) : null;
+      const target = staff.find(s => s.id === targetId);
+      if (assignment && !target) { setError("Choose an active staff member. Manage offboarding in security administration."); return; }
+      const payload = assignment ? { action: "assign", targetId, requestId: id, expectedVersion: target!.securityVersion, clearAssignment: !data.assignedStaffId, reason: "CLIENT_ASSIGNMENT_CHANGE" } : data;
+      const res = await fetch(assignment ? "/api/admin/security" : `/api/admin/requests/${id}`, {
+        method: assignment ? "POST" : "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
         setError(j.error || "Update failed");
       } else {
         await load();
+        const staffResponse = await fetch("/api/admin/staff");
+        if (staffResponse.ok) setStaff(await staffResponse.json());
       }
     } finally {
       setSaving(false);
@@ -365,7 +371,7 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
     setSaving(true);
     setError("");
     try {
-      const res = await fetch(`/api/admin/requests/${id}/deliverables/${deliverableId}`, { method: "DELETE" });
+      const res = await deleteOrdinaryFile(`/api/admin/requests/${id}/deliverables/${deliverableId}`);
       if (res.ok) await load();
       else {
         const j = await res.json().catch(() => ({}));
@@ -544,15 +550,14 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
               <li key={d.id} className="flex items-center justify-between gap-3 rounded-md bg-muted/50 px-3 py-2">
                 <div className="min-w-0">
                   {d.uploadStatus === "UPLOADED" ? (
-                    <a
-                      href={`/api/admin/documents/${d.id}`}
+                    <OrdinaryDownload href={`/api/admin/documents/${d.id}`}
                       target="_blank"
                       rel="noopener"
                       className="inline-flex max-w-full items-center gap-1 truncate hover:text-gold"
                     >
                       <Download className="size-3.5 shrink-0" />
                       <span className="truncate">{d.fileName}</span>
-                    </a>
+                    </OrdinaryDownload>
                   ) : (
                     <span className="truncate">{d.fileName}</span>
                   )}
@@ -632,7 +637,7 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
                   <p className="text-sm font-medium text-charcoal truncate">{d.title}</p>
                   <p className="text-xs text-muted-gray">{d.fileName}</p>
                   <p className="mt-0.5 text-xs font-medium">
-                    {d.visibility === "RELEASED" ? (
+                    {d.transferDeleteState === "PENDING" ? <span>Deletion pending — access revoked</span> : d.transferDeleteState === "COMPLETE" ? <span>Deletion verified</span> : d.visibility === "RELEASED" ? (
                       <span className="text-green-700">● Released to client</span>
                     ) : (
                       <span className="text-muted-gray">● Draft — hidden from client</span>
@@ -643,7 +648,7 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
                   <button
                     type="button"
                     onClick={() => deleteDeliverable(d.id, d.title)}
-                    disabled={saving}
+                    disabled={saving || (Boolean(d.transferDeleteState) && d.transferDeleteState !== "NONE")}
                     aria-label={`Delete deliverable ${d.title}`}
                     className="flex min-h-[44px] items-center rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-800 transition-colors hover:bg-red-50 disabled:opacity-50"
                   >
@@ -655,7 +660,7 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
                     <button
                       type="button"
                       onClick={() => setDeliverableVisibility(d.id, "DRAFT")}
-                      disabled={saving}
+                      disabled={saving || (Boolean(d.transferDeleteState) && d.transferDeleteState !== "NONE")}
                       className="min-h-[44px] rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-charcoal transition-colors hover:bg-muted disabled:opacity-50"
                     >
                       Retract
@@ -664,14 +669,13 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
                     <button
                       type="button"
                       onClick={() => setDeliverableVisibility(d.id, "RELEASED")}
-                      disabled={saving}
+                      disabled={saving || (Boolean(d.transferDeleteState) && d.transferDeleteState !== "NONE")}
                       className="min-h-[44px] rounded-md bg-charcoal px-3 py-2 text-sm font-medium text-background transition-colors hover:opacity-90 disabled:opacity-50"
                     >
                       Release to client
                     </button>
                   )}
-                  <a
-                    href={`/api/admin/requests/${id}/deliverables/${d.id}`}
+                  <OrdinaryDownload href={`/api/admin/requests/${id}/deliverables/${d.id}`}
                     target="_blank"
                     rel="noopener"
                     className="flex min-h-[44px] items-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-charcoal transition-colors hover:bg-muted"
@@ -679,7 +683,7 @@ export default function AdminRequestDetail({ params }: { params: Promise<{ id: s
                     <Download className="size-4" aria-hidden="true" />
                     <span className="sr-only">Download {d.title}</span>
                     <span aria-hidden="true">Download</span>
-                  </a>
+                  </OrdinaryDownload>
                 </div>
               </li>
             ))}

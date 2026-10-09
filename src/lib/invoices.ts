@@ -1,7 +1,8 @@
+import { safeOrigin } from "@/lib/url-privacy";
+import { assertResourceEnvironment, securityEnvironment } from "@/lib/security-environment";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import {
-  formatCalendarDate,
   todayBusinessCalendarDate,
 } from "@/lib/calendar-date";
 
@@ -102,10 +103,14 @@ export function paidCentsOf(
 }
 
 export function isStripeConfigured(): boolean {
-  return Boolean(
-    process.env.STRIPE_SECRET_KEY?.trim() &&
-    process.env.STRIPE_WEBHOOK_SECRET?.trim()
-  );
+  const key = process.env.STRIPE_SECRET_KEY?.trim();
+  if (!key || !process.env.STRIPE_WEBHOOK_SECRET?.trim()) return false;
+  try {
+    assertResourceEnvironment("STRIPE");
+    const environment = securityEnvironment();
+    const mode = key.match(/^(?:sk|rk)_(test|live)_/)?.[1];
+    return mode === (environment === "production" ? "live" : "test");
+  } catch { return false; }
 }
 
 export async function logActivity(
@@ -136,10 +141,15 @@ export async function nextInvoiceNumber(): Promise<string> {
   return `${prefix}${String(lastSeq + 1).padStart(3, "0")}`;
 }
 
-export const PUBLIC_PAY_URL =
-  process.env.NEXT_PUBLIC_APP_URL
-    ? `${process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "")}/pay`
-    : "https://www.pkservices.business/pay";
+export const PUBLIC_PAY_URL = (() => {
+  const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (!configured) {
+    try { return securityEnvironment() === "production" ? "https://www.pkservices.business/pay" : "/pay"; }
+    catch { return "/pay"; }
+  }
+  try { return `${safeOrigin(configured)}/pay`; }
+  catch { return "/pay"; } // Never return configuration credentials/query data to a browser.
+})();
 
 export function buildInvoiceEmailHtml(opts: {
   invoiceNumber: string;
@@ -150,35 +160,9 @@ export function buildInvoiceEmailHtml(opts: {
   portalUrl: string;
   isResend: boolean;
 }): string {
-  const { invoiceNumber, clientName, totalCents, dueAt, paymentTerms, portalUrl, isResend } = opts;
-  const amount = `$${(totalCents / 100).toFixed(2)}`;
-  const due = dueAt ? formatCalendarDate(dueAt.toISOString()) : "upon receipt";
-  return `<!DOCTYPE html>
-<html><body style="margin:0;padding:0;background:#faf9f7;font-family:Georgia,serif;color:#1c1917;">
-  <div style="max-width:560px;margin:0 auto;padding:24px;">
-    <h1 style="font-size:20px;margin:0 0 4px;">PK Business Services</h1>
-    <p style="font-size:13px;color:#6b7280;margin:0 0 24px;">Invoice ${invoiceNumber}</p>
-    <p style="font-size:15px;">Hi ${clientName},</p>
-    <p style="font-size:15px;">
-      ${isResend ? "Resending for your reference — here is" : "Please find"} your invoice
-      <strong>${invoiceNumber}</strong> for <strong>${amount}</strong>, due ${due}.
-    </p>
-    ${paymentTerms ? `<p style="font-size:14px;color:#4b5563;">Payment terms: ${paymentTerms}</p>` : ""}
-    <p style="margin:28px 0;">
-      <a href="${portalUrl}" style="display:inline-block;background:#1c1917;color:#faf9f7;padding:12px 24px;border-radius:8px;text-decoration:none;font-size:15px;">
-        View Invoice & Payment Options
-      </a>
-    </p>
-    <p style="font-size:13px;color:#6b7280;">
-      Payment options: card (Stripe), Zelle, or Cash App — available at
-      <a href="${PUBLIC_PAY_URL}" style="color:#1c1917;">${PUBLIC_PAY_URL.replace("https://", "")}</a>
-      or inside your client portal. No card-payment service fee is charged.
-    </p>
-    <p style="font-size:13px;color:#6b7280;margin-top:32px;">
-      — PK Business Services
-    </p>
-  </div>
-</body></html>`;
+  // All invoice details remain in the authenticated portal, never ordinary email.
+  void opts;
+  return '<p>An invoice is available in your PK Business Services portal.</p><p>Sign in to view your invoice and payment options.</p>';
 }
 
 /**
@@ -198,7 +182,7 @@ export async function deliverInvoiceNotification(opts: {
   portalUrl: string;
   isResend: boolean;
 }): Promise<{ delivered: boolean; detail: string }> {
-  const subject = `${opts.isResend ? "Reminder: " : ""}Invoice ${opts.invoiceNumber} from PK Business Services — $${(opts.totalCents / 100).toFixed(2)}`;
+  const subject = "Invoice available — PK Business Services";
   const html = buildInvoiceEmailHtml(opts);
 
   const notification = await prisma.notification.create({
@@ -210,8 +194,6 @@ export async function deliverInvoiceNotification(opts: {
       body: html,
       metadata: JSON.stringify({
         type: "INVOICE_SENT",
-        invoiceNumber: opts.invoiceNumber,
-        to: opts.toEmail,
       }),
     },
   });
@@ -232,6 +214,7 @@ export async function deliverInvoiceNotification(opts: {
   }
 
   try {
+    assertResourceEnvironment("EMAIL");
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -248,26 +231,26 @@ export async function deliverInvoiceNotification(opts: {
       }),
     });
     if (!res.ok) {
-      const errText = await res.text().catch(() => res.statusText);
+      // Provider response bodies can contain recipient/client content; never retain them.
       await prisma.notification.update({
         where: { id: notification.id },
         data: { status: "FAILED" },
       });
-      return { delivered: false, detail: `Email provider error (${res.status}): ${errText.slice(0, 200)}` };
+      return { delivered: false, detail: "Email provider rejected delivery" };
     }
     await prisma.notification.update({
       where: { id: notification.id },
       data: { status: "SENT", sentAt: new Date() },
     });
-    return { delivered: true, detail: `Email sent to ${opts.toEmail}` };
-  } catch (err) {
+    return { delivered: true, detail: "Email delivered" };
+  } catch {
     await prisma.notification.update({
       where: { id: notification.id },
       data: { status: "FAILED" },
     });
     return {
       delivered: false,
-      detail: `Email delivery failed: ${err instanceof Error ? err.message : String(err)}`,
+      detail: "Email delivery failed",
     };
   }
 }

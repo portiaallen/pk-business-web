@@ -1,3 +1,6 @@
+import { safeReturnTo } from "@/lib/url-privacy";
+import { startChallenge } from "@/lib/webauthn";
+import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -14,20 +17,6 @@ import {
   genericLoginError,
 } from "@/lib/rate-limit";
 import { AuditAction } from "@/generated/prisma/client";
-
-function safeReturnTo(value: unknown): string | null {
-  if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) {
-    return null;
-  }
-  try {
-    const base = new URL("https://pk-business.invalid");
-    const target = new URL(value, base);
-    if (target.origin !== base.origin) return null;
-    return `${target.pathname}${target.search}${target.hash}`;
-  } catch {
-    return null;
-  }
-}
 
 export async function POST(request: Request) {
   try {
@@ -53,7 +42,7 @@ export async function POST(request: Request) {
         data: {
           action: AuditAction.LOGIN_FAILED,
           resource: "auth",
-          metadata: JSON.stringify({ email, reason: "user_not_found" }),
+          metadata: safeAuditMetadata({ email, reason: "user_not_found" }),
         },
       });
       // Generic response — never reveals whether the account exists
@@ -74,7 +63,7 @@ export async function POST(request: Request) {
           actorId: user.id,
           action: AuditAction.LOGIN_FAILED,
           resource: "auth",
-          metadata: JSON.stringify({ reason: "invalid_password" }),
+          metadata: safeAuditMetadata({ reason: "invalid_password" }),
         },
       });
       throw genericLoginError();
@@ -83,21 +72,15 @@ export async function POST(request: Request) {
     // Successful authentication — clear failed-attempt state
     await clearFailedLogins(email);
 
-    if (adminMode && !hasRole(user, "ADMIN")) {
-      throw ApiError.forbidden("Administrator access is required.");
+    if (adminMode && !hasRole(user, "ADMIN", "STAFF")) {
+      throw ApiError.forbidden("PK staff access is required.");
     }
 
+    if (user.role !== "CLIENT") {
+      const count = await prisma.webAuthnCredential.count({ where: { userId: user.id } });
+      return NextResponse.json({ mfaRequired: true, ...await startChallenge(user.id, count ? "LOGIN" : "ENROLL") });
+    }
     const token = await createSession(user.id);
-
-    // Audit log
-    await prisma.auditLog.create({
-      data: {
-        actorId: user.id,
-        action: AuditAction.LOGIN,
-        resource: "auth",
-        metadata: JSON.stringify({ email: user.email }),
-      },
-    });
 
     // Determine redirect destination
     const isAdmin = hasRole(user, "ADMIN");

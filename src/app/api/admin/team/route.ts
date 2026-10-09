@@ -1,3 +1,5 @@
+import { requireAdminApiAccess } from "@/lib/admin-access";
+import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -10,6 +12,7 @@ import { readDeleteId, requireAdminForDelete } from "@/lib/admin-delete";
 
 export async function GET(request: Request) {
   try {
+    await requireAdminApiAccess(request);
     const token = getSessionTokenFromRequest(request);
     const user = await getSessionUser(token);
     if (!user || !hasRole(user, "ADMIN")) throw ApiError.forbidden();
@@ -72,6 +75,7 @@ export async function GET(request: Request) {
  */
 export async function DELETE(request: Request) {
   try {
+    await requireAdminApiAccess(request);
     const admin = await requireAdminForDelete(request);
     const id = await readDeleteId(request);
 
@@ -113,7 +117,7 @@ export async function DELETE(request: Request) {
         action: "ADMIN_ACTION",
         resource: "user",
         resourceId: id,
-        metadata: JSON.stringify({
+        metadata: safeAuditMetadata({
           action: "USER_HARD_DELETED",
           email: user.email,
           role: user.role,

@@ -1,3 +1,4 @@
+import { requireAdminApiAccess } from "@/lib/admin-access";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -19,7 +20,7 @@ import { parseCalendarDate } from "@/lib/calendar-date";
 async function requireAdmin(request: Request) {
   const token = getSessionTokenFromRequest(request);
   const user = await getSessionUser(token);
-  if (!user || !hasRole(user, "ADMIN")) throw ApiError.forbidden();
+  if (!user || !hasRole(user, "ADMIN", "STAFF")) throw ApiError.forbidden();
   return user;
 }
 
@@ -81,12 +82,13 @@ function serialize(invoice: {
 
 export async function GET(request: Request) {
   try {
+    const access = await requireAdminApiAccess(request);
     await requireAdmin(request);
     const { searchParams } = new URL(request.url);
     const statusFilter = searchParams.get("status");
 
     const invoices = await prisma.invoice.findMany({
-      where: statusFilter ? { status: statusFilter as never } : undefined,
+      where: { clientId: access.activeClientId!, ...(statusFilter ? { status: statusFilter as never } : {}) },
       include: {
         client: { select: { id: true, name: true } },
         request: { select: { id: true, requestType: true } },
@@ -102,6 +104,7 @@ export async function GET(request: Request) {
 
     // Summary across ALL invoices (not filtered)
     const all = await prisma.invoice.findMany({
+      where: { clientId: access.activeClientId! },
       include: { payments: { select: { status: true, amountCents: true } } },
     });
     let totalOutstandingCents = 0;
@@ -128,6 +131,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    await requireAdminApiAccess(request);
     const admin = await requireAdmin(request);
     const body = await request.json();
 

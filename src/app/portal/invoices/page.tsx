@@ -95,7 +95,7 @@ export default function PortalInvoicesPage() {
         return;
       }
       const checkoutUrl = new URL(data.url);
-      if (checkoutUrl.protocol !== "https:" || checkoutUrl.hostname !== "checkout.stripe.com") {
+      if (checkoutUrl.protocol !== "https:" || checkoutUrl.hostname !== "checkout.stripe.com" || checkoutUrl.username !== "" || checkoutUrl.password !== "" || checkoutUrl.port !== "") {
         setCheckoutError("Stripe returned an invalid checkout link.");
         return;
       }

@@ -1,3 +1,5 @@
+import { requireAdminApiAccess } from "@/lib/admin-access";
+import { safeAuditMetadata } from "@/lib/security-log";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -14,6 +16,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id } = await params;
     const token = getSessionTokenFromRequest(request);
     const user = await getSessionUser(token);
@@ -50,6 +53,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminApiAccess(request);
     const { id } = await params;
     const admin = await requireAdminForDelete(request);
     const messageId = await readDeleteId(request);
@@ -69,7 +73,7 @@ export async function DELETE(
         action: "ADMIN_ACTION",
         resource: "client_message",
         resourceId: message.id,
-        metadata: JSON.stringify({
+        metadata: safeAuditMetadata({
           action: "CLIENT_MESSAGE_DELETED",
           requestId: id,
         }),
