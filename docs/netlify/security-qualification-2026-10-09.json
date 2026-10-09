@@ -1,0 +1,91 @@
+{
+  "date": "2026-10-09",
+  "gate": "RED",
+  "codeBaseline": "4dcf583a49933c0ebdbd6b157d94110ba666d74b",
+  "branch": "security/qualification-2026-10-09",
+  "draftPR": 5,
+  "prBase": "qualification/netlify-security",
+  "local": {
+    "diagnostics": {
+      "pass": 10,
+      "fail": 0
+    },
+    "phase1a": {
+      "pass": 79,
+      "fail": 0
+    },
+    "phase1b": {
+      "pass": 44,
+      "fail": 0
+    },
+    "vault": {
+      "pass": 61,
+      "fail": 0
+    },
+    "transferPrivacy": {
+      "pass": 61,
+      "fail": 0
+    },
+    "checkoutMock": {
+      "pass": 22,
+      "fail": 0
+    },
+    "browser": {
+      "pass": 62,
+      "unexpectedConsoleErrors": 0,
+      "preExistingBaseUIWarnings": 15,
+      "expectedDenialOfflineErrors": 5
+    },
+    "artifacts": {
+      "pass": 15
+    },
+    "handlers": {
+      "pass": 4
+    },
+    "privacy": {
+      "pass": 8
+    },
+    "build": "PASS",
+    "packaging": "PASS",
+    "typescript": "PASS",
+    "changedLint": "PASS",
+    "fullLint": {
+      "errors": 21,
+      "warnings": 40,
+      "matchesRecordedDebt": true
+    }
+  },
+  "hosted": {
+    "provenance": {
+      "deploy": {
+        "id": "6ac56c0d1e924000082fdfa7",
+        "sha": "1c4db33e0ab53656663c13a374fa945a90d8cc81",
+        "context": "branch-deploy",
+        "branch": "qualification/netlify-security",
+        "state": "ready"
+      },
+      "accessProtection": "PRIVATE_GATE_OBSERVED_IN_BROWSER",
+      "providerProtectionConfiguration": "UNKNOWN: current site API omits protection fields",
+      "browserRun": "2bd06943-6ba4-4510-8bc8-392244956f49"
+    },
+    "authentication": "BLOCKED by private-site login",
+    "mfa": "BLOCKED",
+    "sessions": "BLOCKED",
+    "capabilities": "BLOCKED",
+    "clientIsolation": "BLOCKED",
+    "documentAuthorization": "BLOCKED",
+    "persistedAudit": "BLOCKED",
+    "diagnosticDeployment": "NOT DEPLOYED",
+    "netlifyConnector": "BLOCKED: reauthentication required",
+    "environmentMetadata": "BLOCKED: HTTP401"
+  },
+  "historicalFailure": "Both login probes returned generic 500 on 2026-10-07; not re-executed behind current private gate",
+  "productionChanged": false,
+  "productionDatabaseAccessed": false,
+  "vaultUploadsOpened": false,
+  "foCoordination": {
+    "PR": 3,
+    "commentId": 6073931875,
+    "acknowledged": false
+  }
+}
