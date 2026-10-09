@@ -4,6 +4,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { readinessFetch } from "@/components/readiness/client";
 import RecoverSetup from "@/components/readiness/RecoverSetup";
+// CEO-approved manual fallback while the server checkout is closed in
+// production. Remove this constant and the fallback block once
+// /api/readiness/checkout is enabled (migration + Stripe config done).
+const FALLBACK_PAYMENT_LINK_URL = "https://buy.stripe.com/dRm5kE5uj20uebw66o9IQ00";
+
 export default function ReadinessStart() {
   const router = useRouter();
   const [status, setStatus] = useState<{
@@ -79,6 +84,21 @@ export default function ReadinessStart() {
           >
             Check payment status
           </button>
+          {!status.checkoutAvailable && (
+            <div className="space-y-2">
+              <a
+                className="inline-block rounded bg-pink-700 px-4 py-3 text-white"
+                href={FALLBACK_PAYMENT_LINK_URL}
+                rel="noopener noreferrer"
+              >
+                Pay the $99 assessment fee securely
+              </a>
+              <p className="text-sm">
+                PK verifies your payment and contacts you to finish account
+                setup and intake.
+              </p>
+            </div>
+          )}
           {status.assessmentId && status.checkoutAvailable && (
             <button
               className="rounded bg-pink-700 px-4 py-3 text-white"
