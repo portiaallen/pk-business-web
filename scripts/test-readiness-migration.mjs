@@ -34,12 +34,16 @@ const env = {
   NODE_ENV: "test",
 };
 for (const k of ["NETLIFY", "VERCEL", "CONTEXT", "VERCEL_ENV"]) delete env[k];
-const run = (path) =>
-  execFileSync(process.execPath, ["scripts/apply-readiness-local.mjs", path], {
-    env,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
+const run = (path, ...args) =>
+  execFileSync(
+    process.execPath,
+    ["scripts/apply-readiness-local.mjs", path, ...args],
+    {
+      env,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
 test("forward migration preserves ordinary notification rows; backup and replay verified", () => {
   const path = join(root, "good.db");
   let db = new Database(path);
@@ -104,5 +108,79 @@ test("migration error rolls back all feature tables; rejects hosted/automatic ac
       { env: { ...env, NETLIFY: "true" }, stdio: "ignore" },
     ),
   );
+});
+test("recovery addition preserves the base migration, triggers and data; replay is safe", () => {
+  const path = join(root, "recovery.db");
+  let db = new Database(path);
+  db.exec(baseline);
+  db.prepare("INSERT INTO Notification(id,subject,body) VALUES(?,?,?)").run(
+    "preserved",
+    "Synthetic",
+    "Preserved",
+  );
+  db.close();
+  run(path);
+  db = new Database(path);
+  db.exec(`
+    INSERT INTO Client(id,name,updatedAt) VALUES('client','Synthetic',CURRENT_TIMESTAMP);
+    INSERT INTO Service(id,slug,name,shortName,description,shortDescription,priceDisplay,updatedAt)
+      VALUES('service','readiness-assessment','Synthetic','Synthetic','Synthetic','Synthetic','$99',CURRENT_TIMESTAMP);
+    INSERT INTO VerificationRequest(id,clientId,serviceId,requestType,updatedAt)
+      VALUES('request','client','service','READINESS_ASSESSMENT',CURRENT_TIMESTAMP);
+    INSERT INTO IntakeSubmission(id,fullName,email,serviceSlug,description)
+      VALUES('intake','Synthetic','synthetic@example.test','readiness-assessment','Synthetic');
+    INSERT INTO Invoice(id,invoiceNumber,clientId,requestId,amountCents,status,updatedAt)
+      VALUES('invoice','SYNTHETIC-1','client','request',9900,'PAID',CURRENT_TIMESTAMP);
+    INSERT INTO Payment(id,clientId,invoiceId,requestId,amountCents,status,method,updatedAt)
+      VALUES('payment','client','invoice','request',9900,'PAID','STRIPE',CURRENT_TIMESTAMP);
+    INSERT INTO ReadinessAssessment(id,clientId,requestId,intakeSubmissionId,invoiceId,paymentId,paymentStatus,status,purchaseTokenHash,purchaseExpiresAt,updatedAt)
+      VALUES('assessment','client','request','intake','invoice','payment','PAID','PAID','synthetic-hash',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
+    INSERT INTO AuditLog(id,clientId,action,resource,resourceId,metadata)
+      VALUES('audit','client','ADMIN_ACTION','readiness','assessment','{"action":"PAYMENT_VERIFIED"}');
+  `);
+  const assessmentBefore = db
+    .prepare("SELECT * FROM ReadinessAssessment")
+    .get();
+  const paymentBefore = db.prepare("SELECT * FROM Payment").get();
+  const auditBefore = db.prepare("SELECT * FROM AuditLog").get();
+  db.close();
+  run(path, "--recovery");
+  run(path, "--recovery");
+  db = new Database(path);
+  assert.equal(
+    db.prepare("SELECT count(*) n FROM PKFeatureMigration").get().n,
+    2,
+  );
+  assert.equal(
+    db.prepare("SELECT body FROM Notification WHERE id='preserved'").get().body,
+    "Preserved",
+  );
+  const columns = db
+    .prepare('PRAGMA table_info("ReadinessAssessment")')
+    .all()
+    .map((c) => c.name);
+  assert.ok(columns.includes("recoveryCodeHash"));
+  assert.ok(columns.includes("recoveryCodeExpiresAt"));
+  const after = db.prepare("SELECT * FROM ReadinessAssessment").get();
+  assert.deepEqual(
+    Object.fromEntries(
+      Object.keys(assessmentBefore).map((key) => [key, after[key]]),
+    ),
+    assessmentBefore,
+  );
+  assert.equal(after.recoveryCodeHash, null);
+  assert.equal(after.recoveryCodeExpiresAt, null);
+  assert.deepEqual(db.prepare("SELECT * FROM Payment").get(), paymentBefore);
+  assert.deepEqual(db.prepare("SELECT * FROM AuditLog").get(), auditBefore);
+  assert.equal(
+    db
+      .prepare(
+        "SELECT count(*) n FROM sqlite_master WHERE type='trigger' AND name LIKE 'readiness_%'",
+      )
+      .get().n,
+    6,
+  );
+  assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
+  db.close();
 });
 test.after(() => rmSync(root, { recursive: true, force: true }));

@@ -16,8 +16,10 @@ if (
 const path = resolve(target);
 if (!existsSync(path)) throw Error("EXISTING_LOCAL_DATABASE_REQUIRED");
 const db = new Database(path);
+const migration =
+  process.argv[3] === "--recovery" ? "readiness-recovery-v1" : "readiness-v1";
 const sql = readFileSync(
-  new URL("../prisma/readiness-migrations/readiness-v1.sql", import.meta.url),
+  new URL(`../prisma/readiness-migrations/${migration}.sql`, import.meta.url),
   "utf8",
 );
 const digest = createHash("sha256").update(sql).digest("hex");
@@ -27,7 +29,7 @@ try {
   );
   const previous = db
     .prepare("SELECT digest FROM PKFeatureMigration WHERE name=?")
-    .get("readiness-v1");
+    .get(migration);
   if (previous) {
     if (previous.digest !== digest) throw Error("MIGRATION_DIGEST_CHANGED");
     console.log("Readiness migration already applied; digest verified.");
@@ -40,7 +42,7 @@ try {
       if (db.prepare("PRAGMA integrity_check").get().integrity_check !== "ok")
         throw Error("INTEGRITY_CHECK_FAILED");
       db.prepare("INSERT INTO PKFeatureMigration VALUES(?,?,?)").run(
-        "readiness-v1",
+        migration,
         digest,
         new Date().toISOString(),
       );
