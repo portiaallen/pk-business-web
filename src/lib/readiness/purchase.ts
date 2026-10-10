@@ -33,10 +33,15 @@ export function purchaseCookie(token: string, maxAge = 86400) {
   return `${PURCHASE_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${process.env.NODE_ENV === "production" ? "; Secure" : ""}`;
 }
 export function readinessEnabled() {
-  // Production launch is deliberately closed until the independently qualified secure workflow exists.
-  return (
-    process.env.PK_READINESS_ENABLED === "true" && localSyntheticSetupAllowed()
-  );
+  // The flag is the master kill switch. Hosted production opens only when the declared
+  // security environment is production; local synthetic setups keep their own gate.
+  if (process.env.PK_READINESS_ENABLED !== "true") return false;
+  try {
+    if (securityEnvironment() === "production") return true;
+  } catch {
+    return false;
+  }
+  return localSyntheticSetupAllowed();
 }
 export function availability() {
   return {
