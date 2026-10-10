@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Hero } from "@/components/sections/Hero";
 import { Introduction } from "@/components/sections/Introduction";
+import { ReadinessAssessmentSection } from "@/components/sections/ReadinessAssessmentSection";
 import { ServiceCards } from "@/components/sections/ServiceCards";
 import { WhyPKSection } from "@/components/sections/WhyPKSection";
 import { HowItWorks } from "@/components/sections/HowItWorks";
@@ -19,6 +20,7 @@ export default function HomePage() {
     <>
       <Hero />
       <Introduction />
+      <ReadinessAssessmentSection />
       <ServiceCards />
       <WhyPKSection />
       <HowItWorks />
