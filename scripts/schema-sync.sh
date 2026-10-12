@@ -25,6 +25,27 @@ OUT="public/diag-schema-sync-1012.txt"
   echo "--- sync against hosted db ---"
   TARGET_DDL_DB=/tmp/schema-target.db node scripts/schema-sync.mjs 2>&1
   echo "sync exit: $?"
+  echo "--- security environment check ---"
+  echo "VERCEL: ${VERCEL:-unset} | VERCEL_ENV: ${VERCEL_ENV:-unset}"
+  echo "PK_ENVIRONMENT: ${PK_ENVIRONMENT:-UNSET}"
+  echo "PK_WEBAUTHN_ORIGIN: ${PK_WEBAUTHN_ORIGIN:-UNSET}"
+  echo "AUTH_SECRET present: $([ -n "$AUTH_SECRET" ] && echo yes || echo no)"
+  echo "SETUP_SECRET present: $([ -n "$SETUP_SECRET" ] && echo yes || echo no)"
+  echo "APP_URL: ${APP_URL:-UNSET}"
+  node -e '
+    const env = (k) => process.env[k];
+    const vercel = Boolean(env("VERCEL") || env("VERCEL_ENV"));
+    const declared = (env("PK_ENVIRONMENT") || "").trim();
+    const origin = (env("PK_WEBAUTHN_ORIGIN") || "").trim();
+    if (vercel && !declared) console.log("relyingParty would THROW: Explicit security environment is required");
+    else if (["production","preview"].includes(declared) && !origin) console.log("relyingParty would THROW: WebAuthn origin must be configured");
+    else {
+      try { const u = new URL(origin || "http://localhost:4321");
+        const ok = u.origin === (origin || "http://localhost:4321") && (u.protocol === "https:" || (u.hostname === "localhost" && ["development","test"].includes(declared)));
+        console.log(ok ? "relyingParty OK: rpID=" + u.hostname + " origin=" + u.origin : "relyingParty would THROW: Invalid WebAuthn origin");
+      } catch (e) { console.log("relyingParty would THROW: Invalid WebAuthn origin (" + e.message + ")"); }
+    }
+  ' 2>&1
   echo "--- grant admin enrollment window ---"
   node scripts/grant-admin-enrollment.mjs 2>&1
   echo "grant exit: $?"
