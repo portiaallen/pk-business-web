@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 4321",
-    "build": "prisma generate && if [ -n \"$DATABASE_URL\" ]; then prisma db push; fi && next build",
+    "build": "prisma generate && bash scripts/schema-sync.sh && next build",
     "start": "next start",
     "lint": "eslint",
     "test:security:phase1a": "node --test scripts/test-phase1a.mjs && node scripts/test-card-checkout.mjs",
