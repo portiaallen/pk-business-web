@@ -6,6 +6,10 @@ import {
   type ContactFormPayload,
 } from "@/lib/contact-email";
 import { serviceOptions } from "@/content/services";
+import {
+  screenContactSubmission,
+  SENSITIVE_DATA_GUIDANCE,
+} from "@/lib/sensitive-data";
 
 const validServices = new Set(serviceOptions.map((option) => option.value));
 const validContactMethods = new Set(["email", "phone", "either"]);
@@ -68,6 +72,21 @@ export async function POST(request: Request) {
     if (!payload) {
       return NextResponse.json(
         { error: "Please complete all required fields with valid information." },
+        { status: 400 }
+      );
+    }
+
+    // Server-side screen: public forms must never persist sensitive taxpayer
+    // information, even when the UI warning is ignored or bypassed.
+    const sensitiveFindings = screenContactSubmission({
+      fullName: payload.fullName,
+      businessName: payload.businessName,
+      description: payload.description,
+    });
+    if (sensitiveFindings.length > 0) {
+      logSecurityEvent("CONTACT_SENSITIVE_DATA_REJECTED");
+      return NextResponse.json(
+        { error: SENSITIVE_DATA_GUIDANCE },
         { status: 400 }
       );
     }

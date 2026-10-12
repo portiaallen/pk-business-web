@@ -233,3 +233,70 @@ for (const context of ['production','deploy-preview','branch-deploy','dev']) tes
  assert.equal(h.load('src/lib/vault/providers.ts').syntheticAllowed(),false);
  assert.equal(h.load('src/lib/prisma.ts').isDatabaseConfigured(),false);
 });
+
+// Contact-form server-side sensitive-data screen (Oct 2026 closeout, control 9).
+test('contact screen rejects SSN, ITIN, EIN, routing, IP PIN and tax-document references in free text',()=>{
+ const m=harness().load('src/lib/sensitive-data.ts');
+ for(const [text,category] of [
+  ['my ssn is 123-45-6789 please file','SSN_OR_ITIN'],
+  ['ITIN 912-74-4321','SSN_OR_ITIN'],
+  ['account 123456789 for the refund','SSN_OR_ITIN'],
+  ['EIN 12-3456789','EIN'],
+  ['routing number 123456789','ROUTING_OR_ACCOUNT_NUMBER'],
+  ['account number: 123456789012','ROUTING_OR_ACCOUNT_NUMBER'],
+  ['my IP PIN is 456321','IP_PIN'],
+  ['EFIN 45-9876543','EFIN'],
+  ['I attached my W-2 and 1099','TAX_DOCUMENT_KEYWORD'],
+ ]){
+  const found=m.detectSensitiveData(text);
+  assert.ok(found.some(f=>f.category===category),`expected ${category} for: ${text}`);
+ }
+});
+test('contact screen passes legitimate contact prose without flagging',()=>{
+ const m=harness().load('src/lib/sensitive-data.ts');
+ for(const text of [
+  'I need help with my books and tax readiness for the upcoming season',
+  'Call me at 7135551234 or email me, we have 3 years of filings to sort out',
+  'Small bakery, need a consultation about quarterly estimates',
+  'Portia Allen',
+ ]){
+  assert.ok(Array.isArray(m.detectSensitiveData(text)));assert.equal(m.detectSensitiveData(text).length,0,`should be clean: ${text}`);
+ }
+});
+test('contact screen finds nothing for empty and null inputs',()=>{
+ const m=harness().load('src/lib/sensitive-data.ts');
+ assert.equal(m.detectSensitiveData(null).length,0);
+ assert.equal(m.detectSensitiveData(undefined).length,0);
+ assert.equal(m.detectSensitiveData('').length,0);
+});
+test('screenContactSubmission skips phone and email and dedupes categories',()=>{
+ const m=harness().load('src/lib/sensitive-data.ts');
+ const clean=m.screenContactSubmission({fullName:'Portia Allen',businessName:'PK Bakery',description:'Need help with books',});
+ assert.equal(clean.length,0);
+ const flagged=m.screenContactSubmission({fullName:'Test Client',businessName:'W2 Café',description:'my ssn is 123-45-6789'});
+ const cats=flagged.map(f=>f.category);
+ assert.ok(cats.includes('SSN_OR_ITIN'));
+ assert.equal(cats.length,new Set(cats).size,'categories deduped');
+});
+test('contact route rejects a sensitive submission before persistence',async()=>{
+ let created=0;const securityLogs=[];
+ const h=harness({env:{...prod,DATABASE_URL:'file:synthetic.db'},prisma:{intakeSubmission:{create:async()=>{created++;return {id:'synthetic'};}}}});
+ const {redirects,...mods}=h;
+ const route=h.load('src/app/api/contact/route.ts');
+ const req=new Request('http://synthetic.test/api/contact',{method:'POST',body:JSON.stringify({fullName:'Test Client',email:'client@example.test',service:'quickbooks-cleanup',description:'my ssn is 123-45-6789, please file for me',contactMethod:'email'}),headers:{'content-type':'application/json'}});
+ const res=await route.POST(req);
+ assert.equal(res.status,400);
+ assert.equal(created,0,'nothing persisted');
+ const body=await res.json();
+ assert.ok(body.error.length>0);
+ assert.ok(!JSON.stringify(body).includes('123-45-6789'),'response never echoes the sensitive content');
+});
+test('contact route still accepts a clean submission end to end',async()=>{
+ let created=0;
+ const h=harness({env:{...prod,DATABASE_URL:'file:synthetic.db'},prisma:{intakeSubmission:{create:async()=>{created++;return {id:'synthetic-1'};}}}});
+ const route=h.load('src/app/api/contact/route.ts');
+ const req=new Request('http://synthetic.test/api/contact',{method:'POST',body:JSON.stringify({fullName:'Test Client',email:'client@example.test',service:'quickbooks-cleanup',description:'We need help with two years of books',contactMethod:'email'}),headers:{'content-type':'application/json'}});
+ const res=await route.POST(req);
+ assert.equal(res.status,200);
+ assert.equal(created,1);
+});
