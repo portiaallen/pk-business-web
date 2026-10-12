@@ -25,6 +25,9 @@ OUT="public/diag-schema-sync-1012.txt"
   echo "--- sync against hosted db ---"
   TARGET_DDL_DB=/tmp/schema-target.db node scripts/schema-sync.mjs 2>&1
   echo "sync exit: $?"
+  echo "--- grant admin enrollment window ---"
+  node scripts/grant-admin-enrollment.mjs 2>&1
+  echo "grant exit: $?"
 } 2>&1 | sed -E 's/authToken=[^&"]+/authToken=REDACTED/g' > "$OUT"
 cat "$OUT"
 exit 0
