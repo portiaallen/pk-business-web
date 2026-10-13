@@ -31,7 +31,11 @@ export async function requireAdminApiAccess(request: Request) {
   if (write && area === "intake-submissions")
     await requireCapability(user, "consultations");
   if (request.method === "DELETE") {
-    capability = "disposal";
+    // Intake submissions carry no client data: the route's own ADMIN-only
+    // hard-delete guard (requireAdminForDelete) protects them. "disposal" is a
+    // client-scoped capability, so it can never match on this GLOBAL area and
+    // made submission deletion impossible for every admin.
+    if (area !== "intake-submissions") capability = "disposal";
     requireRecentAuthentication(user);
   }
   if (write && ["services", "team", "staff"].includes(area))
