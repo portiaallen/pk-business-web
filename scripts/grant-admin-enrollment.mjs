@@ -15,6 +15,14 @@ const before = await live.execute({ sql: "SELECT id, email, role, status, mfaEnr
 if (!before.rows.length) { console.error("account not found, nothing changed"); process.exit(2); }
 console.log("before:", JSON.stringify(before.rows[0]));
 
+// Once the admin has enrolled a passkey, stop reopening the window: the
+// console owns enrollment from here on, and every deploy must not re-arm it.
+const creds = await live.execute({ sql: "SELECT id FROM WebAuthnCredential WHERE userId = ?", args: [before.rows[0].id] });
+if (creds.rows.length) {
+  console.log("admin already has " + creds.rows.length + " passkey credential(s), leaving enrollment gate to the console");
+  process.exit(0);
+}
+
 const row = before.rows[0];
 if (row.role === "CLIENT") {
   console.log("role is CLIENT, promoting to ADMIN");
