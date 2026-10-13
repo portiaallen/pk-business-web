@@ -60,6 +60,18 @@ export async function DELETE(request: Request) {
     });
     if (!existing) throw ApiError.notFound("Submission not found");
 
+    // A submission promoted to a purchased Readiness Assessment is anchored to
+    // it by a Restrict FK (financial record): deleting it can never succeed, so
+    // say so instead of surfacing a raw 500.
+    const assessment = await prisma.readinessAssessment.findUnique({
+      where: { intakeSubmissionId: id },
+      select: { id: true },
+    });
+    if (assessment)
+      throw ApiError.conflict(
+        "This submission is tied to a purchased readiness assessment and cannot be deleted."
+      );
+
     await prisma.intakeSubmission.delete({ where: { id } });
 
     await prisma.auditLog.create({
