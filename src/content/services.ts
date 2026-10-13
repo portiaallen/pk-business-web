@@ -119,6 +119,10 @@ export const services: Service[] = [
 
 export const serviceOptions = [
   ...services.map((s) => ({ value: s.id, label: s.shortName })),
+  { value: "tax-individual", label: "Tax Preparation — Individual" },
+  { value: "tax-self-employed", label: "Tax Preparation — Self-Employed / 1099" },
+  { value: "tax-small-business", label: "Tax Preparation — Small Business" },
+  { value: "tax-catch-up", label: "Prior-Year / Catch-Up Taxes" },
   { value: "not-sure", label: "Not Sure / Help Me Choose" },
 ];
 
