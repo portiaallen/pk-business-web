@@ -70,6 +70,10 @@ for (const { name, srcCount } of plan) {
   }
 }
 
+console.log("--- live-side reference check (production itself, read-only) ---");
+const liveFk = (await live.execute("PRAGMA foreign_key_check")).rows;
+for (const v of liveFk) console.log("  ~ LIVE fk violation in", String(v.table), "->", String(v.parent), "rowid", String(v.rowid));
+console.log("live fk violations:", liveFk.length);
 const integrity = String((await restored.execute("PRAGMA integrity_check")).rows[0].integrity_check ?? "unknown");
 const fkRows = (await restored.execute("PRAGMA foreign_key_check")).rows;
 const fkViolations = fkRows.length;
