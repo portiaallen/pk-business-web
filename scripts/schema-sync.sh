@@ -48,6 +48,7 @@ OUT="public/diag-schema-sync-1012.txt"
   ' 2>&1
   echo "--- grant admin capabilities ---"
   node scripts/grant-admin-capabilities.mjs 2>&1
+  node scripts/purge-unpaid-assessment-submissions.mjs 2>&1
   echo "grants exit: $?"
   echo "--- grant admin enrollment window ---"
   node scripts/grant-admin-enrollment.mjs 2>&1
