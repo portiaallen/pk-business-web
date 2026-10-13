@@ -33,9 +33,6 @@ npx prisma db push --url="file:/tmp/schema-target.db" >/dev/null 2>&1 || fail "c
 
 TARGET_DDL_DB=/tmp/schema-target.db node scripts/schema-sync.mjs || fail "schema sync failed or unsafe drift was left unapplied"
 
-mkdir -p public
-node scripts/restore-drill.mjs > public/restore-drill-evidence-1012.txt 2>&1 || echo "restore drill reported failure (see evidence file)"
-
 node scripts/grant-admin-capabilities.mjs || fail "admin capability bootstrap failed"
 node scripts/grant-admin-enrollment.mjs || fail "admin enrollment bootstrap failed"
 
