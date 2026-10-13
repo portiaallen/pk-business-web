@@ -71,7 +71,9 @@ for (const { name, srcCount } of plan) {
 }
 
 const integrity = String((await restored.execute("PRAGMA integrity_check")).rows[0].integrity_check ?? "unknown");
-const fkViolations = (await restored.execute("PRAGMA foreign_key_check")).rows.length;
+const fkRows = (await restored.execute("PRAGMA foreign_key_check")).rows;
+const fkViolations = fkRows.length;
+for (const v of fkRows) console.log("  ~ fk violation in", String(v.table), "->", String(v.parent), "rowid", String(v.rowid));
 const idxLive = Number((await live.execute("SELECT COUNT(*) AS n FROM sqlite_schema WHERE type='index'")).rows[0].n);
 const idxRestored = Number((await restored.execute("SELECT COUNT(*) AS n FROM sqlite_schema WHERE type='index'")).rows[0].n);
 
