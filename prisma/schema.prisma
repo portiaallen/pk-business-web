@@ -149,6 +149,8 @@ enum AuditAction {
   PAYMENT_CREATED
   PAYMENT_STATUS_CHANGED
   LOGIN_FAILED
+  AGREEMENT_ACCEPTED
+  ACKNOWLEDGMENT_EVENT
 }
 
 enum FormSubmissionStatus {
@@ -1341,6 +1343,7 @@ model ReadinessAssessment {
   reports ReadinessReportVersion[]
   credit ReadinessCredit?
   documents ReadinessDocumentEvidence[]
+  agreementAcceptances AgreementAcceptance[]
   @@index([clientId, status])
   @@index([status, createdAt])
   @@index([ownerUserId])
@@ -1474,4 +1477,70 @@ model ReadinessPublicRateLimit {
   key String @id
   count Int @default(0)
   expiresAt DateTime
+}
+
+// ─── Agreements, policies & acknowledgments (company-wide framework) ──────────
+
+enum AgreementDocStatus {
+  DRAFT
+  APPROVED
+}
+
+model AgreementDocument {
+  id          String             @id @default(cuid())
+  kind        String             // SERVICE_AGREEMENT | REFUND_POLICY
+  docKey      String             // stable key, e.g. ASSESSMENT_REFUND_POLICY
+  version     String             // e.g. v1.0
+  serviceKey  String?            // scope: null = company-wide / multi-service
+  title       String
+  body        String @default("")
+  status      AgreementDocStatus @default(DRAFT)
+  published   Boolean            @default(false) // published = enforceable client-facing terms
+  publishedAt DateTime?
+  effectiveAt DateTime?
+  sourceUrl   String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+
+  @@unique([kind, docKey, version])
+  @@index([kind, docKey, published])
+  @@index([serviceKey, published])
+}
+
+model AgreementAcceptance {
+  id                 String   @id @default(cuid())
+  subjectType        String   // READINESS_ASSESSMENT | TAX_ENGAGEMENT | SERVICE_ENGAGEMENT
+  subjectId          String
+  clientName         String
+  clientEmail        String
+  signatureName      String   // typed electronic signature
+  agreementDocKey    String?
+  agreementDocVersion String?
+  policyDocKey       String
+  policyDocVersion   String
+  acknowledgmentText String
+  clientCopySentAt   DateTime?
+  ipAddress          String?
+  userAgent          String?
+  createdAt          DateTime @default(now())
+
+  readinessAssessment ReadinessAssessment? @relation(fields: [readinessAssessmentId], references: [id], onDelete: Restrict)
+  readinessAssessmentId String?
+
+  @@index([subjectType, subjectId])
+  @@index([clientEmail])
+  @@index([createdAt])
+}
+
+model AcknowledgmentEvent {
+  id          String   @id @default(cuid())
+  subjectType String
+  subjectId   String
+  eventType   String   // AGREEMENT_ACCEPTED | DOCUMENT_COMPLETION_ACK | UPLOAD_FINISHED | SCOPE_CHANGE_ACK | ...
+  payload     String   @default("{}")
+  createdAt   DateTime @default(now())
+
+  @@index([subjectType, subjectId])
+  @@index([eventType, createdAt])
 }
