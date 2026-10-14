@@ -18,7 +18,9 @@
     "test:ordinary-transfer": "prisma generate && node --import tsx --test scripts/test-ordinary-transfer.mts",
     "test:readiness": "prisma generate && node --test scripts/test-readiness-migration.mjs && node --import tsx --test scripts/test-readiness-domain.mts",
     "test:browser:readiness": "prisma generate && node --import tsx scripts/verify-readiness-browser.mts",
-    "test:readiness:landing": "node scripts/test-readiness.mjs"
+    "test:readiness:landing": "node scripts/test-readiness.mjs",
+    "seed:agreements": "npx tsx scripts/seed-agreements.ts",
+    "test:agreements": "npx tsx --test scripts/test-agreements.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",

@@ -30,6 +30,13 @@ import { libraryAudit } from "./library";
 import { notify } from "./notifications";
 import { track } from "./analytics";
 import {
+  ACKNOWLEDGMENT_EVENTS,
+  DOC_KEYS,
+  ASSESSMENT_ACKNOWLEDGMENT_TEXT,
+  recordAcceptance,
+  recordEvent,
+} from "@/lib/agreements";
+import {
   finalize,
   deliver,
   reportSnapshot,
@@ -205,6 +212,7 @@ const portalInput = z.discriminatedUnion("action", [
       acknowledgment: z.literal(ACKNOWLEDGMENT),
       accepted: z.literal(true),
       policyVersion: z.literal(POLICY_VERSION),
+      signature: z.string().trim().min(1).max(200),
     })
     .strict(),
   z
@@ -450,7 +458,36 @@ export async function portalMutation(
         where: { id: a.requestId },
         data: { status: "SUBMITTED", submittedAt: now },
       });
+      // Company-wide agreements framework: persist the executed acceptance
+      // (typed electronic signature, policy version, timestamp, audit entry).
+      // Signature must match the client's intake identity.
+      const client = await tx.client.findUniqueOrThrow({
+        where: { id: a.clientId },
+      });
+      const signature = input.signature.trim();
+      await recordAcceptance(
+        tx,
+        {
+          subjectType: "READINESS_ASSESSMENT",
+          subjectId: a.id,
+          clientName: client.name ?? "",
+          clientEmail: user.email,
+          signatureName: signature,
+          policyDocKey: DOC_KEYS.ASSESSMENT_REFUND_POLICY,
+          policyDocVersion: "v1.0",
+          acknowledgmentText: ACKNOWLEDGMENT,
+          readinessAssessmentId: a.id,
+        },
+        { actorId: user.id },
+      );
+      await recordEvent(tx, {
+        subjectType: "READINESS_ASSESSMENT",
+        subjectId: a.id,
+        eventType: ACKNOWLEDGMENT_EVENTS.DOCUMENT_COMPLETION_ACK,
+        payload: { acknowledgment: ASSESSMENT_ACKNOWLEDGMENT_TEXT },
+      });
       await audit(tx, user.id, a, "NON_REFUND_ACKNOWLEDGED");
+      await audit(tx, user.id, a, "AGREEMENT_ACCEPTED");
       await audit(tx, user.id, a, "ASSESSMENT_SUBMITTED");
       await notify(tx, a.id, a.ownerUserId, "SUBMISSION", `${a.id}:submitted`);
       await track(tx, "assessment_submitted", a.id);

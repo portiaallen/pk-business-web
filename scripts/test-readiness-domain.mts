@@ -36,13 +36,11 @@ Object.assign(process.env, {
 });
 const sqlite = new Database(join(root, "test.db"));
 const baseline = join(root, "baseline.prisma");
-writeFileSync(
-  baseline,
-  execFileSync("git", [
-    "show",
-    "cdbca2e5c1b41ab36c2c827962f7c4b274d19281:prisma/schema.prisma",
-  ]),
-);
+const baselineText = execFileSync("git", [
+  "show",
+  "cdbca2e5c1b41ab36c2c827962f7c4b274d19281:prisma/schema.prisma",
+], { encoding: "utf8" });
+writeFileSync(baseline, baselineText);
 sqlite.exec(
   execFileSync(
     "npx",
@@ -58,11 +56,65 @@ sqlite.exec(
     { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
   ),
 );
+// Agreements framework tables are additive; synthesize them self-contained (no
+// cross-model relations) so the agreements acceptance writes inside SUBMIT find
+// their tables even on the pinned baseline.
+const headSchema = readFileSync("prisma/schema.prisma", "utf8");
+const agreementsStart = headSchema.indexOf(
+  "// \u2500\u2500\u2500 Agreements, policies & acknowledgments",
+);
+if (agreementsStart < 0) throw new Error("agreements schema section not found");
+const agreementsOnly = headSchema
+  .slice(agreementsStart)
+  .replace(
+    /^\s*readinessAssessment\s+ReadinessAssessment\?.*\n/m,
+    "",
+  );
+const agreementsSchema = join(root, "agreements-only.prisma");
+writeFileSync(agreementsSchema, agreementsOnly + '\ndatasource db {\n  provider = "sqlite"\n}\n');
+sqlite.exec(
+  execFileSync(
+    "npx",
+    [
+      "prisma",
+      "migrate",
+      "diff",
+      "--from-empty",
+      "--to-schema",
+      agreementsSchema,
+      "--script",
+    ],
+    { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+  ),
+);
 sqlite
   .prepare("INSERT INTO Client(id,name,createdAt,updatedAt) VALUES(?,?,?,?)")
   .run(
     "migration-preserved",
     "Synthetic ordinary client",
+    Date.now(),
+    Date.now(),
+  );
+// The approved Assessment refund policy is the one published, enforceable term.
+// Seed it so agreement acceptance in SUBMIT finds an effective published policy.
+sqlite
+  .prepare(
+    `INSERT INTO AgreementDocument(id,kind,docKey,version,serviceKey,title,body,status,published,publishedAt,effectiveAt,sourceUrl,createdAt,updatedAt)
+     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+  )
+  .run(
+    "assessment-policy-seed",
+    "REFUND_POLICY",
+    "ASSESSMENT_REFUND_POLICY",
+    "v1.0",
+    null,
+    "PK Readiness Assessment Product & Credit Policy",
+    "synthetic published policy body",
+    "APPROVED",
+    1,
+    Date.parse("2026-10-06T00:00:00Z"),
+    Date.parse("2026-10-06T00:00:00Z"),
+    "https://docs.google.com/document/d/1TwIpVpTnsr0aEb2lePFRtJAYugyR0Kv1Yk23DdaqDeg/edit",
     Date.now(),
     Date.now(),
   );
@@ -951,6 +1003,7 @@ test("structured intake, exact acknowledgment and duplicate submission", async (
       accepted: true,
       acknowledgment: "I agree",
       policyVersion: policy.POLICY_VERSION,
+      signature: "Test Buyer",
     }),
   );
   assert.equal((await current()).submittedAt, null);
@@ -965,6 +1018,7 @@ test("structured intake, exact acknowledgment and duplicate submission", async (
       accepted: true,
       acknowledgment: policy.ACKNOWLEDGMENT,
       policyVersion: policy.POLICY_VERSION,
+      signature: "Test Buyer",
     }),
   );
   const doc = await prisma.readinessDocumentEvidence.findFirstOrThrow({
@@ -984,6 +1038,7 @@ test("structured intake, exact acknowledgment and duplicate submission", async (
     accepted: true,
     acknowledgment: policy.ACKNOWLEDGMENT,
     policyVersion: policy.POLICY_VERSION,
+    signature: "Test Buyer",
   };
   await svc.portalMutation(request("buyer"), aId, input);
   assert.equal(

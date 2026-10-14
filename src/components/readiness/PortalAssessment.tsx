@@ -40,6 +40,7 @@ export function PortalAssessment({ id }: { id: string }) {
   const [busy, setBusy] = useState(false);
   const [report, setReport] = useState("");
   const [accepted, setAccepted] = useState(false);
+  const [signature, setSignature] = useState("");
   const load = useCallback(async () => {
     try {
       const client = await currentClient();
@@ -231,15 +232,35 @@ export function PortalAssessment({ id }: { id: string }) {
             />
             <span>{a.acknowledgment}</span>
           </label>
+          <label className="block space-y-2">
+            <span className="font-medium">
+              Electronic signature: type your full legal name to sign
+            </span>
+            <input
+              className="w-full rounded border border-slate-300 p-3"
+              type="text"
+              autoComplete="name"
+              value={signature}
+              onChange={(event) => setSignature(event.target.value)}
+              placeholder="Your full legal name"
+            />
+            <span className="block text-sm text-slate-600">
+              Typing your name above acts as your electronic signature on the
+              agreement and the incorporated refund &amp; credit policy (version
+              {a.policyVersion ? ` ${a.policyVersion}` : ""}). A copy is kept in
+              your assessment record.
+            </span>
+          </label>
           <button
-            className="rounded bg-pink-700 px-4 py-3 text-white"
-            disabled={busy || !accepted}
+            className="rounded bg-pink-700 px-4 py-3 text-white disabled:opacity-50"
+            disabled={busy || !accepted || !signature.trim()}
             onClick={() =>
               void mutate({
                 action: "SUBMIT",
                 acknowledgment: a.acknowledgment,
                 accepted: true,
                 policyVersion: a.policyVersion,
+                signature: signature.trim(),
               })
             }
           >
