@@ -2,68 +2,113 @@ export interface TaxService {
   id: string;
   number: string;
   name: string;
+  priceLabel: string;
   price: string;
   situation: string;
   description: string;
   scope: string[];
 }
 
+// Approved pricing: PK Tax Pricing V1 (approved 2026-10-01, owner-confirmed 2026-10-13).
 export const taxServices: TaxService[] = [
   {
     id: "tax-individual",
     number: "01",
     name: "Individual Tax Preparation",
-    price: "Starting at $175",
+    priceLabel: "Tiers from",
+    price: "$199",
     situation: "You have a W-2 — and a life around it.",
     description:
-      "A personal return prepared with care, including the side income most people forget to mention.",
+      "A personal return prepared with care. Essential covers the standard filing; Family covers returns with dependents and credit questions.",
     scope: [
-      "Personal return preparation",
-      "Side-income & 1099 forms included properly",
-      "Prior-year return review for context",
+      "Essential tier — $199",
+      "Family tier — $249 (dependents & credits)",
+      "Additional state returns +$75 per state",
     ],
   },
   {
     id: "tax-self-employed",
     number: "02",
     name: "Self-Employed & 1099 Taxes",
-    price: "Starting at $295",
+    priceLabel: "Starting at",
+    price: "$399",
     situation:
       "Freelancers, gig workers, creators, online sellers, independent contractors: income from everywhere, paperwork from nowhere.",
     description:
       "PK organizes the 1099s, the expenses, and the Schedule C, so the return reflects the real business.",
     scope: [
-      "1099-NEC / 1099-K income organization",
       "Schedule C expense organization",
-      "Estimated-payment guidance for next year",
+      "1099-NEC / 1099-K income organized properly",
+      "Additional Schedule C +$150 each",
     ],
   },
   {
-    id: "tax-small-business",
+    id: "tax-business",
     number: "03",
-    name: "Small Business Tax Preparation",
-    price: "Starting at $450",
+    name: "Business Tax Preparation",
+    priceLabel: "Starting at",
+    price: "$749",
     situation: "Your business needs its books and taxes to agree.",
     description:
-      "For LLCs, S-corps, and sole proprietors. PK makes sure the books behind the return are clean enough to file on — so your return stands on solid ground.",
+      "Partnership and corporation returns prepared from books that hold up. The 1065 and 1120-S starting prices include up to two K-1s.",
     scope: [
-      "Business return preparation",
-      "Books-to-return consistency check",
-      "Owner pay & draws untangled first",
+      "Partnership (Form 1065) — from $749",
+      "S Corporation (Form 1120-S) — from $799",
+      "C Corporation (Form 1120) — from $799",
     ],
   },
   {
     id: "tax-catch-up",
     number: "04",
     name: "Prior-Year & Catch-Up Support",
-    price: "Consultation-based pricing",
+    priceLabel: "Priced at",
+    price: "the same tier as a current-year return",
     situation: "You're behind. Let's fix that, one year at a time.",
     description:
       "Missing a year — or a few? Bring the notices (unopened counts). PK helps identify what's actually missing, organize what exists, and work through filings in the right order.",
     scope: [
       "Missing-year inventory",
       "Record reconstruction from what exists",
-      "One filing at a time, in the right order",
+      "E-file availability verified per year before filing",
     ],
   },
+];
+
+export interface TaxAddOnGroup {
+  group: string;
+  items: { label: string; price: string }[];
+}
+
+export const taxAddOns: TaxAddOnGroup[] = [
+  {
+    group: "Individual returns",
+    items: [
+      { label: "Additional Schedule C", price: "+$150" },
+      { label: "Schedule E / rental property", price: "+$125 per property" },
+      { label: "Schedule D / investments", price: "Starting at $75" },
+      { label: "Additional state return", price: "+$75 per state" },
+      { label: "Amended return", price: "Starting at $175" },
+      { label: "Prior-year return", price: "Same applicable tier" },
+      { label: "Cryptocurrency", price: "Custom quote" },
+    ],
+  },
+  {
+    group: "Business returns",
+    items: [
+      { label: "Additional K-1", price: "+$75" },
+      { label: "Standalone K-1", price: "Starting at $125" },
+      { label: "Additional business state", price: "+$150 per state" },
+      { label: "Business amendment", price: "$350" },
+      { label: "First 1099", price: "$35" },
+      { label: "Additional 1099s", price: "$15 each" },
+      { label: "10 or more 1099s", price: "Custom quote" },
+    ],
+  },
+];
+
+export const taxPricingPolicy = [
+  "No PK e-file fees.",
+  "No hidden markup fees.",
+  "Upfront payment by default, with an optional refund transfer.",
+  "Bookkeeping is billed separately from tax work.",
 ];

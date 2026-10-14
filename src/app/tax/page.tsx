@@ -5,7 +5,11 @@ import { Section } from "@/components/layout/Section";
 import { ConsultationForm } from "@/components/forms/ConsultationForm";
 import { services } from "@/content/services";
 import { siteConfig as config } from "@/content/site";
-import { taxServices } from "@/content/tax-services";
+import {
+  taxServices,
+  taxAddOns,
+  taxPricingPolicy,
+} from "@/content/tax-services";
 import { TaxGutCheck } from "./TaxGutCheck";
 import { TaxChecklist } from "./TaxChecklist";
 
@@ -257,9 +261,7 @@ export default function TaxDivisionPage() {
                 </span>
                 <div className="text-right">
                   <p className="text-xs uppercase tracking-wide text-muted-gray">
-                    {service.price.startsWith("Consultation")
-                      ? "Pricing"
-                      : "Starting price"}
+                    {service.priceLabel}
                   </p>
                   <p className="text-sm font-semibold text-charcoal">
                     {service.price}
@@ -328,6 +330,65 @@ export default function TaxDivisionPage() {
           <p className="mt-4 text-xs text-muted-gray">
             {config.pricingNote}
           </p>
+        </div>
+      </Section>
+
+      {/* Approved pricing details — PK Tax Pricing V1 */}
+      <Section variant="cream" id="pricing">
+        <div className="max-w-3xl">
+          <p className="pk-eyebrow">Straight answers</p>
+          <h2 className="pk-heading mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
+            Prices, up <em className="text-pink">front.</em>
+          </h2>
+          <p className="mt-4 leading-relaxed text-muted-gray">
+            These are PK&apos;s approved tax prices, published as they are.
+            Scope work (extra years, reconstruction, special filings) is
+            agreed with you before it begins — never buried in a fee.
+          </p>
+        </div>
+        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          {taxAddOns.map((group) => (
+            <div
+              key={group.group}
+              className="rounded-2xl border border-border bg-ivory p-6"
+            >
+              <h3 className="pk-heading text-lg font-semibold">
+                {group.group}
+              </h3>
+              <ul className="mt-4 divide-y divide-border">
+                {group.items.map((item) => (
+                  <li
+                    key={item.label}
+                    className="flex items-baseline justify-between gap-4 py-2 text-sm"
+                  >
+                    <span className="text-muted-gray">{item.label}</span>
+                    <span className="whitespace-nowrap font-semibold text-charcoal">
+                      {item.price}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {group.group === "Business returns" && (
+                <p className="mt-3 text-xs text-muted-gray">
+                  Form 1065 and 1120-S starting prices include up to two
+                  K-1s.
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 rounded-2xl border border-gold-light/60 bg-cream px-6 py-5">
+          {taxPricingPolicy.map((line) => (
+            <p
+              key={line}
+              className="flex items-center gap-2 text-sm font-medium text-charcoal"
+            >
+              <span aria-hidden="true" className="text-gold">
+                ✓
+              </span>
+              {line}
+            </p>
+          ))}
         </div>
       </Section>
 
