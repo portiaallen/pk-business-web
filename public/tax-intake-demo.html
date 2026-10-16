@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PK Tax Division - Conditional Intake (SYNTHETIC DEMO)</title>
+<style>
+:root{--ink:#1c2733;--line:#d9e0e7;--mut:#5b6b7a;--pk:#1f5f8b;--irs:#8a1c1c;--cond:#5a5a5a;--bg:#f6f8fa}
+*{box-sizing:border-box}
+body{font-family:Georgia,'Times New Roman',serif;margin:0;background:var(--bg);color:var(--ink)}
+.wrap{max-width:880px;margin:0 auto;padding:16px}
+header{background:#14283c;color:#fff;padding:18px 16px}
+header h1{margin:0;font-size:20px;font-weight:normal}
+header .sub{color:#b9c9d8;font-size:13px;margin-top:4px}
+.banner{background:#fdf3d7;border:1px solid #e6d089;padding:8px 12px;font-size:13px;margin:12px 0;border-radius:4px}
+section{background:#fff;border:1px solid var(--line);border-radius:6px;padding:16px;margin:12px 0}
+h2{font-size:16px;margin:0 0 10px;color:#14283c}
+h3{font-size:14px;margin:14px 0 6px}
+label{display:block;font-size:13px;margin:8px 0 2px;color:var(--mut)}
+input,select,textarea{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:4px;font:inherit;font-size:14px;background:#fff}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>div{flex:1;min-width:150px}
+.btn{display:inline-block;padding:8px 14px;border:1px solid var(--pk);background:#eef4f9;color:var(--pk);border-radius:4px;font:inherit;font-size:13px;cursor:pointer;margin:8px 6px 0 0}
+.btn.primary{background:var(--pk);color:#fff}
+.btn.warn{border-color:#8a1c1c;color:#8a1c1c;background:#faf0f0}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:3px;margin-left:6px;vertical-align:middle}
+.tag.irs{background:#f7e3e3;color:var(--irs)}
+.tag.pk{background:#e3edf7;color:var(--pk)}
+.tag.cond{background:#ececec;color:var(--cond)}
+.flag{border-left:3px solid #b58a00;background:#fdf8ea;padding:8px 10px;margin:6px 0;font-size:13px}
+.trigger{border-left:3px solid var(--pk);background:#eef4f9;padding:8px 10px;margin:6px 0;font-size:13px}
+.hidden{display:none}
+.dep{border:1px solid var(--line);border-radius:6px;padding:12px;margin:10px 0;background:#fbfcfd}
+.muted{color:var(--mut);font-size:12px}
+.audit{font-family:monospace;font-size:11px;max-height:220px;overflow:auto;background:#f2f4f6;padding:8px;border-radius:4px}
+.gate{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:14px}
+.gate .st{font-size:12px;padding:2px 8px;border-radius:3px}
+.st.open{background:#f7e3e3;color:var(--irs)}
+.st.done{background:#e2f2e5;color:#1d6b2f}
+.check{display:flex;align-items:flex-start;gap:8px;margin:8px 0;font-size:14px}
+ul.plain{margin:6px 0 0;padding-left:18px}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>PK Tax Division &mdash; Conditional Client Intake</h1>
+<div class="sub">Implementation demo, intake spec v1.0 &middot; tax year 2026 &middot; synthetic data only</div></div></header>
+<div class="wrap">
+<div class="banner"><b>SYNTHETIC-DATA DEMO.</b> This build processes no real taxpayer data. Nothing you enter leaves this browser. Sensitive identifiers (SSN, ITIN, IP PIN, bank details, source documents) are never stored here: the engine records only that they must be collected through PK's approved secure document workflow on this website and the Founder-controlled vault. No production publication, no e-file activation, no live intake.</div>
+
+<section id="s1">
+<h2>1 &middot; Taxpayer basics</h2>
+<label>Full legal name (synthetic in this demo)</label><input id="t_name" placeholder="e.g. Demo Taxpayer One">
+<div class="row"><div><label>Date of birth</label>
+<div class="row"><div><input id="t_doby" type="number" placeholder="Year" min="1900" max="2026"></div>
+<div><input id="t_dobm" type="number" placeholder="Month" min="1" max="12"></div>
+<div><input id="t_dobd" type="number" placeholder="Day" min="1" max="31"></div></div></div>
+<div><label>Marital status as of December 31</label>
+<select id="t_marital"><option value="">Select…</option><option>single</option><option>married</option><option>divorced</option><option>legally separated</option><option>widowed</option></select></div></div>
+<div class="row"><div><label>W-2 wages received</label><select id="t_w2"><option value="">Select…</option><option>Yes</option><option>No</option></select></div>
+<div><label>1099 / investment income</label><select id="t_1099"><option value="">Select…</option><option>Yes</option><option>No</option></select></div>
+<div><label>Self-employment income</label><select id="t_se"><option value="">Select…</option><option>Yes</option><option>No</option></select></div></div>
+<button class="btn primary" onclick="reveal('s2')">Continue to dependents</button>
+</section>
+
+<section id="s2" class="hidden">
+<h2>2 &middot; Dependents</h2>
+<label>Are you claiming any dependents?</label>
+<select id="d_status" onchange="render()"><option value="">Select…</option><option>Yes</option><option>No</option><option>Not Sure</option></select>
+<p class="muted">Answering No skips the dependent branch but never bypasses filing-status or credit due diligence. Not Sure routes your file to preparer review.</p>
+<div id="deps"></div>
+<button class="btn" onclick="addDep()">Add a dependent</button>
+</section>
+
+<section id="s3" class="hidden">
+<h2>3 &middot; Situations &amp; screenings</h2>
+<h3>Head of Household</h3>
+<label>Considering Head of Household filing status?</label>
+<select id="x_hoh" onchange="render()"><option value="">Select…</option><option>Yes</option><option>No</option></select>
+<h3>Blindness</h3>
+<div class="row"><div><label>Taxpayer legally blind</label><select id="x_blind_t" onchange="render()"><option value="">Select…</option><option>Yes</option><option>No</option><option>Not Sure</option></select></div>
+<div><label>Spouse legally blind (if applicable)</label><select id="x_blind_s" onchange="render()"><option value="">Select…</option><option>Yes</option><option>No</option><option>Not Sure</option><option>n/a</option></select></div></div>
+<h3>IRS IP PIN</h3>
+<label>Did the IRS issue you a current six-digit Identity Protection PIN?</label>
+<select id="x_ippin" onchange="render()"><option value="">Select…</option><option>Yes</option><option>No</option><option>Not Sure</option></select>
+<p class="muted" id="ippin_note"></p>
+<h3>Marketplace health coverage</h3>
+<label>Did anyone in the household have Marketplace (ACA) coverage this year?</label>
+<select id="x_mkt" onchange="render()"><option value="">Select…</option><option>Yes</option><option>No</option></select>
+<div id="mkt_extra" class="hidden">
+<label>Do you have Form 1095-A for each covered member?</label>
+<select id="x_1095a" onchange="render()"><option value="">Select…</option><option>Yes</option><option>No</option></select>
+</div>
+<h3>Other</h3>
+<div class="row"><div><label>Paid childcare (Form 2441)</label><select id="x_care"><option value="">Select…</option><option>Yes</option><option>No</option></select></div>
+<div><label>Cash or 1099-K business receipts</label><select id="x_1099k"><option value="">Select…</option><option>Yes</option><option>No</option><option>n/a</option></select></div>
+<div><label>IRS notices, identity theft, or unfiled/rejected returns</label><select id="x_prior"><option value="">Select…</option><option>Yes</option><option>No</option></select></div></div>
+</section>
+
+<section id="s4">
+<h2>4 &middot; Your document checklist</h2>
+<p class="muted">Generated from your answers. Each item says why it is needed. Nothing is uploaded through this demo.</p>
+<div id="checklist"></div>
+</section>
+
+<section id="s5">
+<h2>5 &middot; Secure upload workflow (scaffold)</h2>
+<p class="muted">Design scaffold only. In production this runs inside the approved secure document workflow on the PK Business Services website, backed by the Founder-controlled dedicated vault. TaxSmart Pro is used only for return preparation and e-filing after PK's preparer workflow takes over; it is not the client-facing upload destination. PK never accepts tax documents through ordinary email, public forms, or this page. No file content is read or transmitted here.</p>
+<div class="gate"><button class="btn" id="u_verify" onclick="uploadAct('verify')">Verify client identity (demo)</button><span class="muted" id="u_verify_st">not verified</span></div>
+<div class="gate"><button class="btn" id="u_grant" onclick="uploadAct('grant')">Grant intake access</button><span class="muted" id="u_grant_st">no access</span></div>
+<div class="gate"><button class="btn" id="u_add" onclick="uploadAct('add')" disabled>Synthetic upload (records a stub only)</button><span class="muted" id="u_add_st"></span></div>
+<div class="gate"><button class="btn primary" id="u_attest" onclick="uploadAct('attest')" disabled>I've Finished Uploading (client attestation)</button><span class="muted" id="u_attest_st"></span></div>
+<div class="gate"><button class="btn warn" id="u_close" onclick="uploadAct('close')" disabled>Preparer: close &amp; revoke upload access (manual)</button><span class="muted" id="u_close_st"></span></div>
+<div id="u_log" class="audit hidden"></div>
+</section>
+
+<section id="s6">
+<h2>6 &middot; Signature &amp; e-file stages (separate by design)</h2>
+<div class="gate"><input type="checkbox" id="g1" onchange="render()"><label for="g1" style="margin:0">Engagement agreement signed (separate step)</label><span class="st open" id="g1st">OPEN</span></div>
+<div class="gate"><input type="checkbox" id="g2" onchange="render()"><label for="g2" style="margin:0">Form 8879 e-file authorization signed (separate step)</label><span class="st open" id="g2st">OPEN</span></div>
+<div class="gate"><input type="checkbox" id="g3" onchange="render()"><label for="g3" style="margin:0">Preparer review gate explicitly cleared</label><span class="st open" id="g3st">OPEN</span></div>
+<div class="gate"><input type="checkbox" id="g4" onchange="render()"><label for="g4" style="margin:0">Final return approval by preparer</label><span class="st open" id="g4st">OPEN</span></div>
+<button class="btn primary" id="efile" onclick="transmit()">Transmit return</button>
+<p class="muted" id="efile_note"></p>
+</section>
+
+<section id="s7" class="hidden">
+<h2>7 &middot; Preparer-only review</h2>
+<p class="muted">Not shown to clients. Form 8867 due-diligence triggers, exception flags, and the audit trail.</p>
+<h3>Form 8867 due-diligence triggers</h3><div id="ddbox"></div>
+<h3>Exception flags</h3><div id="flagbox"></div>
+<h3>Audit trail (this session)</h3><div id="audit" class="audit"></div>
+</section>
+
+<p class="muted">Toggle preparer view: <button class="btn" onclick="togglePrep()">Preparer review</button> &middot; <button class="btn" onclick="location.reload()">Reset demo</button></p>
+</div>
+<script>
+var TY=2026, NS="Not Sure", S={deps:[],uploads:[],audit:[],verified:false,granted:false,attested:false,closed:false};
+function log(e,d){S.audit.push({t:new Date().toISOString(),e:e,d:d});}
+function reveal(id){document.getElementById(id).classList.remove("hidden");}
+function togglePrep(){var s=document.getElementById("s7");s.classList.toggle("hidden");render();}
+function val(id){return document.getElementById(id).value;}
+function has(id){return val(id)!=="";}
+function age(by,bm,bd){var a=TY-by; if(bm==1&&bd==1)a+=1; return a;}
+function addDep(){S.deps.push({label:"",rel:"",by:"",bm:"",bd:"",student:false,enrolled:false,ft:false,1098t:false,custody:false,other:false,evid:"",edrec:false});render();}
+function depHtml(d,i){
+ var ageY = d.by?age(+d.by,+d.bm||0,+d.bd||0):null;
+ var isChild=["son","daughter","child","stepchild","foster child","grandchild","sibling","brother","sister"].indexOf((d.rel||"").toLowerCase())>=0;
+ var h='<div class="dep"><b>Dependent '+(i+1)+'</b>';
+ h+='<div class="row"><div><label>Name / label</label><input data-i="'+i+'" data-f="label" value="'+d.label+'"></div>';
+ h+='<div><label>Relationship</label><select data-i="'+i+'" data-f="rel"><option value="">Select…</option>'+["son","daughter","stepchild","foster child","grandchild","sibling","mother","father","other relative","non-relative"].map(function(r){return '<option'+(d.rel==r?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
+ h+='<div><label>DOB</label><div class="row"><div><input type="number" data-i="'+i+'" data-f="by" placeholder="Year" value="'+d.by+'"></div><div><input type="number" data-i="'+i+'" data-f="bm" placeholder="Mo" value="'+d.bm+'"></div><div><input type="number" data-i="'+i+'" data-f="bd" placeholder="Day" value="'+d.bd+'"></div></div></div></div>';
+ if(ageY!==null)h+='<p class="muted">Age at end of '+TY+': '+ageY+(d.bm==1&&d.bd==1?' (January 1 birth treated one year older, IRS convention)':'')+'</p>';
+ if(isChild&&ageY!==null&&ageY<=17)h+='<label>Residency evidence on file</label><select data-i="'+i+'" data-f="evid"><option value="">Select…</option><option>school records</option><option>medical/childcare records</option><option>qualifying official mail</option><option>mail only</option><option>none</option></select>';
+ if((ageY!==null&&ageY>=17&&ageY<=24)||d.student){
+  h+='<h3>Student branch</h3>';
+  h+='<div class="check"><input type="checkbox" data-i="'+i+'" data-f="enrolled" '+(d.enrolled?"checked":"")+'><label style="margin:0">Currently enrolled in school</label></div>';
+  if(d.enrolled){
+   h+='<div class="check"><input type="checkbox" data-i="'+i+'" data-f="ft" '+(d.ft?"checked":"")+'><label style="margin:0">Full-time student</label></div>';
+   h+='<div class="check"><input type="checkbox" data-i="'+i+'" data-f="1098t" '+(d["1098t"]?"checked":"")+'><label style="margin:0">Form 1098-T issued</label></div>';
+   h+='<div class="check"><input type="checkbox" data-i="'+i+'" data-f="edrec" '+(d.edrec?"checked":"")+'><label style="margin:0">Education expense records on file</label></div>';
+  }
+ }
+ if(!isChild&&ageY!==null)h+='<p class="muted">Non-child dependent: qualifying-relative tests (relationship, gross income, support share) apply and are collected by the preparer.</p>';
+ h+='<div class="check"><input type="checkbox" data-i="'+i+'" data-f="custody" '+(d.custody?"checked":"")+'><label style="margin:0">Custody split, another household, or another person may claim this person</label></div>';
+ h+='</div>';return h;
+}
+function rules(){
+ var a={marital:val("t_marital"),w2:val("t_w2"),i1099:val("t_1099"),se:val("t_se"),deps:val("d_status"),
+  hoh:val("x_hoh"),blindT:val("x_blind_t"),blindS:val("x_blind_s"),ippin:val("x_ippin"),mkt:val("x_mkt"),a1095:val("x_1095a"),
+  care:val("x_care"),k1099:val("x_1099k"),prior:val("x_prior")};
+ var dd=[],flags=[],ck=[];
+ ck.push({i:"W-2s (all employers)",t:"irs"});if(a.i1099==="Yes"||a.se==="Yes")ck.push({i:"Forms 1099 (all types, incl. 1099-K)",t:"irs"});
+ if(a.deps==="Yes"||a.deps===NS){ck.push({i:"Dependent identity verification (SSN/ITIN, DOB) - secure channel only",t:"irs"});ck.push({i:"Third-party residency evidence for children 17 and under (school, medical/childcare records or qualifying official mail)",t:"pk"});}
+ var any1098=false,any8332=false;
+ S.deps.forEach(function(d,i){
+  if(!d.by){flags.push({c:"Dependent records missing",m:"Dependent "+(i+1)+": date of birth missing; age rules cannot be applied."});return;}
+  var y=age(+d.by,+d.bm||0,+d.bd||0);var isChild=["son","daughter","child","stepchild","foster child","grandchild","sibling","brother","sister"].indexOf((d.rel||"").toLowerCase())>=0;
+  if(isChild){if(y<17)dd.push({c:"CTC/ACTC/ODC",s:"Dep "+(i+1),r:"qualifying child under 17 at year end"});
+   else if(y===17){dd.push({c:"ODC",s:"Dep "+(i+1),r:"child is 17: CTC age cutoff passed; other-dependent credit only"});flags.push({c:"CTC age cutoff",m:"Dependent "+(i+1)+" is 17 at year end: not eligible for the child tax credit; other-dependent credit path instead."});}
+   else dd.push({c:"ODC",s:"Dep "+(i+1),r:"child over 17: other-dependent credit path only"});
+   if(y<=17&&(!d.evid||d.evid==="none"||d.evid==="mail only"))flags.push({c:"PK residency evidence",m:"Dependent "+(i+1)+" age "+y+": PK policy requires third-party evidence of residential address. Mail alone does not establish time lived with the taxpayer."});
+  }
+  if((y>=17&&y<=24||d.student)&&d.enrolled){
+   if(d["1098t"]){any1098=true;flags.push({c:"1098-T name check",m:"Dependent "+(i+1)+": Form 1098-T is ordinarily issued in the student's name, not the parent's; verify whose 1098-T is on file."});}
+   if(!d.edrec)flags.push({c:"Education records missing",m:"Dependent "+(i+1)+": enrollment, full/half-time status, tuition, materials, scholarships/grants and support must be documented before any education credit is considered."});
+   dd.push({c:"AOTC",s:"Dep "+(i+1),r:"education credit possible; full due diligence; no automatic eligibility"});
+   if(d.ft&&isChild&&y<24){}else if(isChild&&y>=24)flags.push({c:"Student age limit",m:"Dependent "+(i+1)+" is "+y+" at year end: qualifying-child full-time-student rule generally ends under 24 at year end; may still qualify under other dependency rules. Preparer evaluation required."});
+  }
+  if(!isChild&&d.by)flags.push({c:"Qualifying-relative records",m:"Dependent "+(i+1)+": qualifying-relative determination needs income, support and relationship evidence; dependent logic is not restricted to children."});
+  if(d.custody){any8332=true;flags.push({c:"Custody conflict",m:"Dependent "+(i+1)+": another household or custody split reported; evaluate Form 8332, potential duplicate claim and tiebreaker rules. Preparer review required."});}
+ });
+ if(a.w2==="Yes"||a.se==="Yes"||a.i1099==="Yes")dd.push({c:"EITC",s:"taxpayer",r:"earned income present; eligibility, investment-income limits and qualifying children require full due diligence"});
+ if(a.hoh==="Yes"||["single","divorced","legally separated",NS].indexOf(a.marital)>=0)dd.push({c:"HOH",s:"taxpayer",r:"filing status may be Head of Household; qualifying person and cost-of-home due diligence required even when the dependents answer is No"});
+ if(a.care==="Yes")dd.push({c:"Form 2441",s:"taxpayer",r:"childcare payments reported; provider identification, tax ID, address and payments needed"});
+ if(a.deps===NS)flags.push({c:"Dependents not sure",m:"Dependent status uncertain: route to preparer review before any filing-status or credit determination."});
+ if(a.deps==="Yes"&&S.deps.length===0)flags.push({c:"Dependent detail missing",m:"Dependents reported Yes but no dependent records collected."});
+ if(a.mkt==="Yes"){ck.push({i:"Form 1095-A for each covered household member",t:"irs"});if(a.a1095==="No")flags.push({c:"Missing 1095-A",m:"Marketplace coverage reported but no Form 1095-A on file; obtain it before Form 8962 reconciliation."});}
+ if(a.ippin===NS)flags.push({c:"IP PIN not sure",m:"Client unsure whether IRS issued an IP PIN; run IP PIN retrieval assistance and verify before transmission."});
+ if(a.ippin==="Yes")flags.push({c:"IP PIN secure route",m:"IP PIN exists; collect only via restricted approved secure process and check prior to transmission."});
+ if(a.blindT==="Yes"||a.blindT===NS)ck.push({i:"Legal blindness evidence (physician or benefit statement)",t:"cond"});
+ if(a.care==="Yes")ck.push({i:"Childcare provider name, address and taxpayer ID (Form 2441)",t:"irs"});
+ if(a.se==="Yes")ck.push({i:"Business income and expense records, mileage log, inventory records",t:"irs"});
+ if(a.k1099==="Yes"&&a.se==="Yes")flags.push({c:"SE 1099-K",m:"Self-employment income includes cash or Form 1099-K receipts; record gross receipts reconciliation and estimated-tax status."});
+ if(a.prior==="Yes")flags.push({c:"Prior IRS issue",m:"IRS notices, identity theft, or rejected/unfiled returns reported: preparer review required."});
+ if(any1098)ck.push({i:"Form 1098-T (must be in the STUDENT's name)",t:"irs"});
+ if(any8332)ck.push({i:"Form 8332 (release of claim) if the noncustodial parent claims",t:"irs"});
+ ck.push({i:"Prior-year return (for carryforwards and continuity)",t:"pk"});
+ if(a.marital==="married"&&a.hoh==="Yes")flags.push({c:"Contradiction: filing status",m:"Married as of Dec 31 but Head of Household indicated: residency and cost-of-home facts must be resolved by the preparer."});
+ return {dd:dd,flags:flags,ck:ck};
+}
+function tagCls(t){return t==="irs"?"irs":(t==="pk"?"pk":"cond");}
+function tagName(t){return t==="irs"?"IRS-required-in-context":(t==="pk"?"PK internal policy":"conditional evidence");}
+function render(){
+ var m=document.getElementById("x_mkt").value;
+ document.getElementById("mkt_extra").classList.toggle("hidden",m!=="Yes");
+ var ip=document.getElementById("x_ippin").value;
+ document.getElementById("ippin_note").textContent = ip===NS?"Not Sure is fine: we will help you check or retrieve your IP PIN through the secure process. An IP PIN is not something every taxpayer has.":(ip==="Yes"?"We will collect it only through the secure channel, never by email or this page.":"");
+ var st=val("d_status");
+ var dbox=document.getElementById("deps");dbox.innerHTML="";
+ if(st==="Yes"){S.deps.forEach(function(d,i){dbox.insertAdjacentHTML("beforeend",depHtml(d,i));});}
+ var r=rules();
+ document.getElementById("checklist").innerHTML=r.ck.map(function(c){return '<div class="check">&#9633;&nbsp;<span>'+c.i+'</span><span class="tag '+tagCls(c.t)+'">'+tagName(c.t)+'</span></div>';}).join("");
+ ["g1","g2","g3","g4"].forEach(function(g,i){var st2=document.getElementById(g+"st");st2.textContent=document.getElementById(g).checked?"CLEARED":"OPEN";st2.className="st "+(document.getElementById(g).checked?"done":"open");});
+ var gates={"engagement agreement":document.getElementById("g1").checked,"Form 8879":document.getElementById("g2").checked,"preparer review":document.getElementById("g3").checked,"final approval":document.getElementById("g4").checked,"client attestation":S.attested,"access closure":S.closed};
+ var blocked=Object.keys(gates).filter(function(k){return !gates[k];});
+ if(r.flags.length)blocked.push("unresolved review flags");
+ var e=document.getElementById("efile");
+ e.disabled=true;
+ document.getElementById("efile_note").textContent = blocked.length?("Transmission held. Blocked by: "+blocked.join("; ")+". No auto-filing on intake completion."):"All gates clear in this demo. Transmission remains disabled by design pending founder approval and security validation.";
+ var prep=!document.getElementById("s7").classList.contains("hidden");
+ if(prep){document.getElementById("ddbox").innerHTML=r.dd.length?r.dd.map(function(t){return '<div class="trigger"><b>Form 8867 / '+t.c+'</b> &mdash; '+t.s+': '+t.r+'</div>';}).join(""):"<p class='muted'>No triggers yet.</p>";
+  document.getElementById("flagbox").innerHTML=r.flags.length?r.flags.map(function(f){return '<div class="flag"><b>'+f.c+'</b>: '+f.m+'</div>';}).join(""):"<p class='muted'>No open flags.</p>";
+  document.getElementById("audit").textContent=S.audit.map(function(x){return x.t+"  "+x.e+"  "+JSON.stringify(x.d);}).join("\n");}
+}
+function upSt(id,txt){document.getElementById(id+"").textContent=txt;}
+function uploadAct(act){
+ var L=document.getElementById("u_log");L.classList.remove("hidden");
+ if(act==="verify"){S.verified=true;document.getElementById("u_verify_st").textContent="verified (demo)";log("identity_verified","demo");}
+ if(act==="grant"){if(!S.verified){document.getElementById("u_grant_st").textContent="blocked: verify identity first";log("access_denied","unverified client");render();return;}S.granted=true;document.getElementById("u_grant_st").textContent="access granted (limited intake period)";log("access_granted","restricted intake folder, verified client only");}
+ if(act==="add"){if(!S.granted||S.closed){document.getElementById("u_add_st").textContent=S.closed?"blocked: access closed":"blocked: no access";log("upload_blocked","fail closed");render();return;}S.uploads.push("synthetic_document_"+(S.uploads.length+1));document.getElementById("u_add_st").textContent=S.uploads.length+" stub(s) recorded; no content transmitted";log("upload_stub","synthetic entry only");}
+ if(act==="attest"){if(S.uploads.length===0){document.getElementById("u_attest_st").textContent="nothing uploaded yet";return;}S.attested=true;document.getElementById("u_attest_st").textContent="attestation recorded; preparer notified";document.getElementById("u_close").disabled=false;log("client_attestation","I've Finished Uploading; preparer notified");}
+ if(act==="close"){S.closed=true;document.getElementById("u_close_st").textContent="upload access closed and revoked (manual)";log("access_closed","manual revocation; archive copies verified per storage policy");}
+ render();
+}
+document.addEventListener("input",function(ev){var t=ev.target;if(t.dataset&&t.dataset.i!==undefined&&S.deps[t.dataset.i]){S.deps[t.dataset.i][t.dataset.f]=t.type==="checkbox"?t.checked:t.value;}render();});
+document.addEventListener("change",function(ev){var t=ev.target;if(t.dataset&&t.dataset.i!==undefined&&S.deps[t.dataset.i]){S.deps[t.dataset.i][t.dataset.f]=t.type==="checkbox"?t.checked:t.value;}render();});
+log("session_start","synthetic demo, tax year 2026");
+render();
+</script>
+</body>
+</html>
