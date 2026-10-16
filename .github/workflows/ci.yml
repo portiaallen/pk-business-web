@@ -19,6 +19,7 @@ jobs:
       DATABASE_URL: "file:./ci-synthetic.db"
       DATABASE_AUTH_TOKEN: "ci-synthetic"
       SYNC_TARGET_URL: "file:./ci-synthetic.db"
+      PK_CI_SYNTHETIC: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

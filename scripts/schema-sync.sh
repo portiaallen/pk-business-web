@@ -33,7 +33,15 @@ npx prisma db push --url="file:/tmp/schema-target.db" >/dev/null 2>&1 || fail "c
 
 TARGET_DDL_DB=/tmp/schema-target.db node scripts/schema-sync.mjs || fail "schema sync failed or unsafe drift was left unapplied"
 
-node scripts/grant-admin-capabilities.mjs || fail "admin capability bootstrap failed"
-node scripts/grant-admin-enrollment.mjs || fail "admin enrollment bootstrap failed"
+# The admin bootstrap seeds the sole ADMIN account's capability grants. It
+# requires the hosted User table to contain that account, so a CI run against
+# a disposable synthetic database (PK_CI_SYNTHETIC=1) skips it explicitly;
+# every hosted build still runs it and still fails hard when it cannot.
+if [ "${PK_CI_SYNTHETIC:-0}" = "1" ]; then
+  echo "admin bootstrap skipped: CI synthetic database"
+else
+  node scripts/grant-admin-capabilities.mjs || fail "admin capability bootstrap failed"
+  node scripts/grant-admin-enrollment.mjs || fail "admin enrollment bootstrap failed"
+fi
 
 echo "schema-sync OK"
