@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createSession, putSyntheticSession } from "@/lib/tax/session-store";
+import { createSession } from "@/lib/tax/onboarding-core";
+import { putSyntheticSession } from "@/lib/tax/session-store";
 import { rejectIfSensitive } from "@/lib/tax/intake-screen";
 
 // POST /api/tax/onboarding - create a synthetic-mode intake session.
