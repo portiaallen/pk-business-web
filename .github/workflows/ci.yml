@@ -11,6 +11,15 @@ permissions:
 jobs:
   containment:
     runs-on: ubuntu-latest
+    env:
+      # CI runs against a disposable local SQLite database, not the hosted one:
+      # declare a development environment so the security environment check and
+      # the additive-only schema sync operate on synthetic CI data only.
+      PK_ENVIRONMENT: development
+      DATABASE_URL: "file:./ci-synthetic.db"
+      DATABASE_AUTH_TOKEN: "ci-synthetic"
+      SYNC_TARGET_URL: "file:./ci-synthetic.db"
+      PK_CI_SYNTHETIC: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,6 +27,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npx prisma db push --url=file:$GITHUB_WORKSPACE/ci-synthetic.db
       - run: npm run test:security:phase1a
       - run: npm run test:security:phase1b
       - run: npm run build
