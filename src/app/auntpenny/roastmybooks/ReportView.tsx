@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ShareCardDownload } from "./ShareCardCanvas";
 import { ASSESSMENT_URL } from "@/lib/auntpenny/roast-engine";
 import { DISCLAIMER } from "@/lib/auntpenny/report";
 import type { RoastReport } from "@/lib/auntpenny/roast-engine";
@@ -14,7 +15,7 @@ export function ReportView({
 }) {
   const isTier6 = report.tier === 6;
   return (
-    <div className="mt-10">
+    <div className="mt-10 ap-print">
       <div className="ap-card p-6">
         <p className="ap-eyebrow">The Verdict</p>
         <h2 className="mt-2 text-3xl font-bold sm:text-4xl">{report.tierName}</h2>
@@ -89,22 +90,29 @@ export function ReportView({
           <p className="text-lg">{report.funniestQuote}</p>
           {firstName && <p className="text-sm opacity-80">{firstName} &apos;s books, officially rated.</p>}
         </div>
+        <ShareCardDownload report={report} firstName={firstName} />
         <p className="mt-3 max-w-sm text-center text-xs opacity-70">
           The card shows the verdict and one quip. It never prints your figures, business
-          name, or dates. Screenshot it and let the funny line travel.
+          name, or dates. Post it and let the funny line travel.
         </p>
       </div>
 
       <div className="ap-card mt-10 p-6">
         <p className="ap-eyebrow">Your full PDF</p>
         <p className="mt-2 leading-relaxed">
-          {isTier6
-            ? "At this severity, the full write-up is worth the read even if you never buy a thing."
-            : "The full branded PDF lands with the paid version."}{" "}
-          <span className="font-bold">$9.99 planned price. Not on sale yet.</span> Delivery by
-          email with your share card, when the launch is approved. Nothing is charged in this
+          In this preview you can save the full branded report yourself, free: the button
+          below opens your browser&apos;s print dialog, where &ldquo;Save as PDF&rdquo; files it away.
+          At launch, the paid version ($9.99 planned price. Not on sale yet.) delivers the
+          polished PDF and share card by email automatically. Nothing is charged in this
           preview and no payment method is requested.
         </p>
+        <button
+          className="ap-cta ap-no-print mt-4"
+          type="button"
+          onClick={() => window.print()}
+        >
+          Print or save as PDF
+        </button>
       </div>
 
       <p className="mt-8 text-xs leading-relaxed opacity-70">{DISCLAIMER}</p>

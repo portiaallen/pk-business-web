@@ -52,3 +52,32 @@
 @media (prefers-reduced-motion: reduce) {
   .ap * { animation: none !important; transition: none !important; }
 }
+
+/* Print / save-as-PDF: the branded report template (MVP spec section 3).
+   Only the report prints; site chrome, buttons and interactive bits stay out. */
+@media print {
+  body * { visibility: hidden !important; }
+  .ap-print, .ap-print * { visibility: visible !important; }
+  .ap-print {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    color: #1a1a1a !important;
+  }
+  .ap-print .ap-card {
+    background: #ffffff !important;
+    border: 1px solid #c9a13b !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    color: #1a1a1a !important;
+  }
+  .ap-print .ap-card h2, .ap-print .ap-card h3, .ap-print .ap-card p, .ap-print .ap-card li, .ap-print .ap-card strong {
+    color: #1a1a1a !important;
+  }
+  .ap-print .ap-eyebrow { color: #8a6a1f !important; }
+  .ap-print .ap-leopard { background-image: none !important; }
+  .ap-no-print { display: none !important; }
+  .ap-sharecard { max-width: 3.6in !important; }
+}
