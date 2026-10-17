@@ -4,15 +4,17 @@ import { useRef, useState } from "react";
 import type { RoastReport } from "@/lib/auntpenny/roast-engine";
 
 /**
- * Privacy-safe share card (MVP spec section 7): a real 1080x1080 PNG drawn
- * entirely in the customer's browser. The card prints the verdict tier, ONE
- * quip and an optional first name only. Never figures, business name, or dates.
+ * Privacy-safe share card (MVP spec section 7), revised to the founder's light
+ * Aunt Penny brand: ivory certificate, gold double frame, the approved
+ * character cameo. A real 1080x1080 PNG drawn entirely in the customer's
+ * browser. The card prints the verdict tier, ONE quip and an optional first
+ * name only. Never figures, business name, or dates.
  */
 export function ShareCardDownload({ report, firstName }: { report: RoastReport; firstName: string }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [ready, setReady] = useState(false);
 
-  const draw = () => {
+  const draw = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -21,63 +23,88 @@ export function ShareCardDownload({ report, firstName }: { report: RoastReport; 
     canvas.width = S;
     canvas.height = S;
 
-    // Deep plum gradient with a hot-pink glow, Aunt Penny brand world.
-    const grad = ctx.createLinearGradient(0, S, S, 0);
-    grad.addColorStop(0, "#1d0c26");
-    grad.addColorStop(1, "#2a1236");
-    ctx.fillStyle = grad;
+    // Ivory paper with a soft blush glow.
+    ctx.fillStyle = "#fbf7f2";
     ctx.fillRect(0, 0, S, S);
-    const glow = ctx.createRadialGradient(S * 0.75, S * 0.2, 40, S * 0.75, S * 0.2, 520);
-    glow.addColorStop(0, "rgba(255, 79, 160, 0.28)");
-    glow.addColorStop(1, "rgba(255, 79, 160, 0)");
+    const glow = ctx.createRadialGradient(S * 0.72, S * 0.1, 40, S * 0.72, S * 0.1, 560);
+    glow.addColorStop(0, "rgba(247, 228, 231, 0.9)");
+    glow.addColorStop(1, "rgba(247, 228, 231, 0)");
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, S, S);
 
     // Double gold frame.
-    ctx.strokeStyle = "#d9a441";
+    ctx.strokeStyle = "#b8892e";
     ctx.lineWidth = 10;
     ctx.strokeRect(34, 34, S - 68, S - 68);
     ctx.lineWidth = 3;
     ctx.strokeRect(58, 58, S - 116, S - 116);
 
+    // The approved character cameo, centered near the top.
+    try {
+      const img = new Image();
+      img.src = "/auntpenny/penny-serious.jpg";
+      await img.decode();
+      const d = 300;
+      const cx = S / 2 - d / 2;
+      const cy = 120;
+      const r = d / 2;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx + r, cy + r, r, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+      // Cover-fit the source crop into the circle.
+      const scale = Math.max(d / img.width, d / img.height);
+      const iw = img.width * scale;
+      const ih = img.height * scale;
+      ctx.drawImage(img, cx + (d - iw) / 2, cy + (d - ih) / 2, iw, ih);
+      ctx.restore();
+      ctx.strokeStyle = "#e9d5a4";
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.arc(cx + r, cy + r, r + 4, 0, Math.PI * 2);
+      ctx.stroke();
+    } catch {
+      // Art missing: proceed without the cameo rather than fail the card.
+    }
+
     ctx.textAlign = "center";
 
     // Seal.
-    ctx.fillStyle = "#f0d9a8";
-    ctx.font = "600 30px system-ui, sans-serif";
-    ctx.fillText("C E R T I F I E D   B Y   R O A S T   M Y   B O O K S", S / 2, 168);
+    ctx.fillStyle = "#8a6a1f";
+    ctx.font = "600 28px system-ui, sans-serif";
+    ctx.fillText("C E R T I F I E D   B Y   R O A S T   M Y   B O O K S", S / 2, 510);
 
     // Tier name.
-    ctx.fillStyle = "#fdf6ec";
-    ctx.font = "bold 76px Georgia, serif";
-    const tierName = report.tierName;
-    const lines = wrap(ctx, tierName, S - 220);
-    let y = 470 - (lines.length - 1) * 44;
+    ctx.fillStyle = "#4a2140";
+    ctx.font = "bold 72px Georgia, serif";
+    const lines = wrap(ctx, report.tierName, S - 220);
+    let y = 585 - (lines.length - 1) * 44;
     for (const line of lines) {
       ctx.fillText(line, S / 2, y);
-      y += 92;
+      y += 88;
     }
 
     // The quip.
-    ctx.fillStyle = "rgba(253, 246, 236, 0.92)";
-    ctx.font = "44px Georgia, serif";
-    const quipLines = wrap(ctx, `“${report.funniestQuote}”`, S - 260);
-    y = Math.max(y + 30, 660);
+    ctx.fillStyle = "#3d1c36";
+    ctx.font = "italic 42px Georgia, serif";
+    const quipLines = wrap(ctx, `"${report.funniestQuote}"`, S - 260);
+    y = Math.max(y + 26, 700);
     for (const line of quipLines) {
       ctx.fillText(line, S / 2, y);
-      y += 60;
+      y += 58;
     }
 
     if (firstName) {
-      ctx.font = "italic 36px Georgia, serif";
-      ctx.fillStyle = "rgba(253, 246, 236, 0.75)";
-      ctx.fillText(`${firstName}'s books, officially rated.`, S / 2, S - 210);
+      ctx.font = "italic 34px Georgia, serif";
+      ctx.fillStyle = "rgba(61, 28, 54, 0.75)";
+      ctx.fillText(`${firstName}'s books, officially rated.`, S / 2, S - 200);
     }
 
     // Bottom mark.
-    ctx.fillStyle = "#d9a441";
-    ctx.font = "600 30px system-ui, sans-serif";
-    ctx.fillText("AUNT PENNY, ROAST MY BOOKS!", S / 2, S - 110);
+    ctx.fillStyle = "#b8892e";
+    ctx.font = "600 28px system-ui, sans-serif";
+    ctx.fillText("AUNT PENNY, ROAST MY BOOKS!", S / 2, S - 100);
 
     setReady(true);
   };

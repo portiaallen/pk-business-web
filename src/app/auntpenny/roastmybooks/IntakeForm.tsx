@@ -113,7 +113,7 @@ export function IntakeForm() {
           <label className="mt-3 block text-sm">
             Which one?
             <select
-              className="mt-1 block w-full rounded-md border border-[rgba(240,217,168,0.5)] bg-[rgba(29,12,38,0.8)] p-2 text-base"
+              className="mt-1 block w-full rounded-md border border-[#d8b9c8] bg-white text-[#3d1c36] p-2 text-base"
               value={form.softwareName}
               onChange={(e) => set("softwareName", e.target.value)}
             >
@@ -131,7 +131,7 @@ export function IntakeForm() {
           <label key={key} className="block text-sm">
             {label}
             <input
-              className="mt-1 block w-full rounded-md border border-[rgba(240,217,168,0.5)] bg-[rgba(29,12,38,0.8)] p-2 text-base"
+              className="mt-1 block w-full rounded-md border border-[#d8b9c8] bg-white text-[#3d1c36] p-2 text-base"
               inputMode="decimal"
               type="number"
               step="any"
@@ -146,7 +146,7 @@ export function IntakeForm() {
       <label className="mt-6 block text-sm">
         First name for the share card <span className="opacity-70">(optional, never required)</span>
         <input
-          className="mt-1 block w-full rounded-md border border-[rgba(240,217,168,0.5)] bg-[rgba(29,12,38,0.8)] p-2 text-base"
+          className="mt-1 block w-full rounded-md border border-[#d8b9c8] bg-white text-[#3d1c36] p-2 text-base"
           type="text"
           maxLength={20}
           value={form.firstName}
@@ -155,7 +155,7 @@ export function IntakeForm() {
       </label>
 
       {submitted && issues.length > 0 && (
-        <ul className="mt-4 space-y-1 text-sm" style={{ color: "var(--ap-pink-hot)" }}>
+        <ul className="mt-4 space-y-1 text-sm" style={{ color: "var(--ap-rose)" }}>
           {issues.map((i) => (
             <li key={i.field}>{i.message}</li>
           ))}
