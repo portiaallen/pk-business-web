@@ -1475,3 +1475,19 @@ model ReadinessPublicRateLimit {
   count Int @default(0)
   expiresAt DateTime
 }
+
+// PK Tax Division onboarding (v1.0): encrypted at-rest session persistence.
+// The adapter stores ONLY ciphertext: the session JSON is sealed with
+// AES-256-GCM under the owner-configured PK_SESSION_ENC_KEY before any row
+// is written. No sensitive identifier (SSN/ITIN/IP PIN/bank details) reaches
+// this layer: intake screening rejects those server-side before persistence.
+model TaxOnboardingSession {
+  id         String   @id @default(uuid())
+  sessionId  String   @unique
+  keyVersion Int
+  nonce      String
+  ciphertext String
+  authTag    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

@@ -19,7 +19,8 @@
     "test:readiness": "prisma generate && node --test scripts/test-readiness-migration.mjs && node --import tsx --test scripts/test-readiness-domain.mts",
     "test:browser:readiness": "prisma generate && node --import tsx scripts/verify-readiness-browser.mts",
     "test:readiness:landing": "node scripts/test-readiness.mjs",
-    "test:tax:onboarding": "node --import tsx --test scripts/test-tax-onboarding.mts"
+    "test:tax:onboarding": "node --import tsx --test scripts/test-tax-onboarding.mts",
+    "test:tax:adapter": "node --import tsx --test scripts/test-tax-session-adapter.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",

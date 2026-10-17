@@ -16,6 +16,10 @@ export function putSyntheticSession(s: Session): void {
   sessions.set(s.sessionId, s);
 }
 
+export function deleteSyntheticSession(id: string): boolean {
+  return sessions.delete(id);
+}
+
 export function resetSyntheticSessions(): void {
   sessions.clear();
 }
