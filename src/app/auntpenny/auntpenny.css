@@ -1,0 +1,54 @@
+/* Aunt Penny brand world: deep plum, hot pink, rich gold, controlled leopard accents.
+   Directive 2026-10-16. Scoped to /auntpenny routes; does not touch PK's global theme. */
+.ap {
+  --ap-plum: #2a1236;
+  --ap-plum-deep: #1d0c26;
+  --ap-pink: #e4458f;
+  --ap-pink-hot: #ff4fa0;
+  --ap-gold: #d9a441;
+  --ap-gold-soft: #f0d9a8;
+  --ap-ivory: #fdf6ec;
+  color: var(--ap-ivory);
+  background:
+    radial-gradient(1200px 500px at 80% -10%, rgba(228, 69, 143, 0.25), transparent 60%),
+    radial-gradient(900px 420px at 10% 110%, rgba(217, 164, 65, 0.18), transparent 60%),
+    linear-gradient(160deg, var(--ap-plum) 0%, var(--ap-plum-deep) 100%);
+}
+.ap a { color: var(--ap-gold-soft); text-decoration: underline; }
+.ap h1, .ap h2, .ap h3 { color: var(--ap-ivory); letter-spacing: 0.01em; }
+.ap-card {
+  background: rgba(29, 12, 38, 0.72);
+  border: 1px solid rgba(217, 164, 65, 0.45);
+  border-radius: 1rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+}
+.ap-eyebrow { color: var(--ap-gold); text-transform: uppercase; letter-spacing: 0.22em; font-size: 0.75rem; font-weight: 700; }
+.ap-cta {
+  display: inline-block; border-radius: 9999px; padding: 0.8rem 1.6rem; font-weight: 700;
+  background: linear-gradient(120deg, var(--ap-pink-hot), var(--ap-gold)); color: #1d0c26;
+}
+.ap-cta:hover { filter: brightness(1.08); }
+.ap-leopard {
+  background-image: repeating-linear-gradient(45deg, rgba(217, 164, 65, 0.16) 0 12px, transparent 12px 26px);
+}
+.ap-status {
+  border: 1px dashed rgba(253, 246, 236, 0.5); border-radius: 9999px; padding: 0.3rem 0.9rem;
+  font-size: 0.8rem; letter-spacing: 0.08em; color: var(--ap-gold-soft);
+}
+/* Share card: 1080x1080 certificate aesthetic, no figures ever printed. */
+.ap-sharecard {
+  aspect-ratio: 1 / 1; max-width: 420px; border-radius: 1.25rem;
+  border: 3px double var(--ap-gold);
+  background:
+    radial-gradient(400px 200px at 70% 15%, rgba(255, 79, 160, 0.22), transparent 60%),
+    linear-gradient(165deg, #2a1236, #1d0c26);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 2rem; gap: 1rem;
+}
+.ap-seal {
+  border: 2px solid var(--ap-gold); border-radius: 9999px; padding: 0.4rem 1rem;
+  color: var(--ap-gold-soft); font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ap * { animation: none !important; transition: none !important; }
+}
