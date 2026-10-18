@@ -79,7 +79,8 @@ export function ShareCardDownload({ report }: { report: RoastReport }) {
     ctx.fillStyle = "#4a2140";
     ctx.font = "bold 72px Georgia, serif";
     const lines = wrap(ctx, report.tierName, S - 220);
-    let y = 585 - (lines.length - 1) * 44;
+    // A long tier name must never climb into the seal above it.
+    let y = Math.max(585 - (lines.length - 1) * 44, 545);
     for (const line of lines) {
       ctx.fillText(line, S / 2, y);
       y += 88;
