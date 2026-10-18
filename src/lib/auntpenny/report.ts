@@ -12,12 +12,13 @@ import {
   scoreIntake,
   tierFor,
   type FigureCheck,
+  type Finding,
   type IntakeAnswers,
   type RoastReport,
   type RoastTier,
   type TriggeredTemplate,
 } from "./roast-engine";
-import { triggeredTemplates } from "./roast-templates";
+import { evidenceFor, triggeredTemplates } from "./roast-templates";
 
 export const DISCLAIMER =
   "Educational entertainment based on the figures you provided. This is not a review of your actual records, and it is not accounting, tax, or professional advice. Unusual numbers are not the same as errors; a professional looks at real books, not a form.";
@@ -57,6 +58,22 @@ export function buildReport(a: IntakeAnswers): RoastReport {
     };
   }
 
+  // Per-finding guidance: traceable to the submitted values, conditional next
+  // moves, explicit help thresholds (founder round-2 directive).
+  const findings: Finding[] = [];
+  for (const t of triggered) {
+    if (!t.guidance) continue;
+    findings.push({
+      id: t.id,
+      title: t.title,
+      evidence: evidenceFor(t.id, a),
+      matters: t.guidance.matters,
+      check: t.guidance.check,
+      next: t.guidance.next,
+      help: t.guidance.help,
+    });
+  }
+
   return {
     tier,
     tierName: TIER_NAMES[tier],
@@ -67,6 +84,7 @@ export function buildReport(a: IntakeAnswers): RoastReport {
     bridge,
     tierLine: TIER_LINES[tier],
     figureCheck: figureCheck(a),
+    findings,
   };
 }
 

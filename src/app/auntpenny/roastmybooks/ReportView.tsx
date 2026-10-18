@@ -94,6 +94,35 @@ export function ReportView({
         </ul>
       </div>
 
+      {report.findings.length > 0 && (
+        <div className="ap-card mt-6 p-6">
+          <p className="ap-eyebrow">Every finding, traceable</p>
+          <p className="mt-1 text-xs opacity-70">
+            Educational guidance built only from the figures you submitted. Not professional advice.
+          </p>
+          {report.findings.map((f) => (
+            <div key={f.id} className="mt-4 border-t border-[#e5d8e2] pt-4">
+              <h3 className="font-semibold">{f.title}</h3>
+              <p className="mt-1 text-sm opacity-90">
+                <span className="font-semibold">Evidence:</span> {f.evidence}
+              </p>
+              <p className="mt-1 text-sm opacity-90">
+                <span className="font-semibold">Why it matters:</span> {f.matters}
+              </p>
+              <p className="mt-1 text-sm opacity-90">
+                <span className="font-semibold">What to check first:</span> {f.check}
+              </p>
+              <p className="mt-1 text-sm opacity-90">
+                <span className="font-semibold">A realistic next move:</span> {f.next}
+              </p>
+              <p className="mt-1 text-sm opacity-90">
+                <span className="font-semibold">When to get help:</span> {f.help}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="ap-card mt-6 p-6">
         <p className="ap-eyebrow">Where to start: your first three moves</p>
         <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm opacity-90">

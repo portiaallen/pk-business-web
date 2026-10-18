@@ -109,6 +109,30 @@ export const TIER_NAMES: Record<RoastTier, string> = {
 
 export type RoastTier = 1 | 2 | 3 | 4 | 5 | 6;
 
+/**
+ * Structured per-finding guidance (founder round-2 directive, Oct 17):
+ * every finding must be traceable to a submitted value, must not recommend
+ * actions the count alone cannot support, and must distinguish educational
+ * guidance from professional advice.
+ */
+export interface FindingGuidance {
+  /** Why the finding matters. */
+  matters: string;
+  /** What to check before acting. */
+  check: string;
+  /** A realistic, conditional next move. */
+  next: string;
+  /** When to involve a professional. */
+  help: string;
+}
+
+export type Finding = {
+  id: string;
+  title: string;
+  /** The submitted value and threshold, verbatim traceability. */
+  evidence: string;
+} & FindingGuidance;
+
 export interface TriggeredTemplate {
   id: string;
   title: string;
@@ -116,6 +140,7 @@ export interface TriggeredTemplate {
   meaning: string;
   steps: string[];
   quip: string;
+  guidance?: FindingGuidance;
 }
 
 export interface RoastReport {
@@ -128,6 +153,7 @@ export interface RoastReport {
   funniestQuote: string;
   bridge: { show: boolean; line: string };
   figureCheck: FigureCheck;
+  findings: Finding[];
 }
 
 export function netMarginPercent(a: IntakeAnswers): number {
