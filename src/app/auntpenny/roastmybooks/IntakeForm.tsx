@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { buildReport, nextThreeSteps } from "@/lib/auntpenny/report";
-import { validateIntake, type IntakeAnswers } from "@/lib/auntpenny/roast-engine";
+import { figureCheck, validateIntake, type IntakeAnswers } from "@/lib/auntpenny/roast-engine";
 import { ReportView } from "./ReportView";
 
 const SOFTWARE_OPTIONS = [
@@ -17,7 +17,6 @@ const SOFTWARE_OPTIONS = [
 type FormState = Omit<IntakeAnswers, "recordsMethod" | "softwareName" | "firstName"> & {
   recordsMethod: "" | IntakeAnswers["recordsMethod"];
   softwareName: string;
-  firstName: string;
 };
 
 const EMPTY: FormState = {
@@ -37,12 +36,11 @@ const EMPTY: FormState = {
   cardBalanceCarried: NaN,
   monthsCarryingCard: NaN,
   monthsWithoutProfessional: NaN,
-  firstName: "",
 };
 
 const MONEY_LABELS: Array<{ key: keyof FormState; label: string; hint?: string }> = [
-  { key: "monthlyRevenue", label: "Average monthly revenue" },
-  { key: "monthlyExpenses", label: "Average monthly expenses" },
+  { key: "monthlyRevenue", label: "Average monthly revenue", hint: "A typical month, not your best one." },
+  { key: "monthlyExpenses", label: "Average monthly expenses", hint: "A typical month, not your worst one." },
   { key: "cashOnHand", label: "Cash on hand today" },
   { key: "monthsSinceReconciliation", label: "Months since your last full reconciliation", hint: "Be honest. Aunt Penny already knows." },
   { key: "uncategorizedPercent", label: "Percent of transactions sitting uncategorized (0-100)" },
@@ -51,7 +49,7 @@ const MONEY_LABELS: Array<{ key: keyof FormState; label: string; hint?: string }
   { key: "softwareSubscriptions", label: "Active software subscriptions you pay for" },
   { key: "headcount", label: "People working in the business, including you" },
   { key: "ownerDraws3mo", label: "Owner draws taken over the last 3 months" },
-  { key: "netIncome3mo", label: "Net income over the last 3 months" },
+  { key: "netIncome3mo", label: "Net income over the last 3 months", hint: "All 3 months together, not per month. Penny does the dividing." },
   { key: "cardBalanceCarried", label: "Business credit card balance you carry month to month" },
   { key: "monthsCarryingCard", label: "Months you have carried that card balance" },
   { key: "monthsWithoutProfessional", label: "Months these books have gone without a professional's eyes" },
@@ -69,12 +67,15 @@ export function IntakeForm() {
       ) as unknown as Pick<IntakeAnswers, keyof IntakeAnswers>,
       recordsMethod: form.recordsMethod,
       softwareName: form.softwareName,
-      firstName: form.firstName,
+      // No name is collected. The share card prints the verdict and one quip only
+      // (founder round-2 directive: no personal names in the exported template).
+      firstName: "",
     };
     return parsed;
   }, [form]);
 
   const issues = useMemo(() => (answers ? validateIntake(answers) : []), [answers]);
+  const figures = useMemo(() => (answers ? figureCheck(answers) : null), [answers]);
 
   const set = (key: keyof FormState, value: string | IntakeAnswers["recordsMethod"]) => {
     setSubmitted(false);
@@ -88,7 +89,7 @@ export function IntakeForm() {
 
   if (submitted && answers && issues.length === 0) {
     const report = buildReport(answers);
-    return <ReportView report={report} steps={nextThreeSteps(report.triggered)} firstName={answers.firstName.trim()} />;
+    return <ReportView report={report} steps={nextThreeSteps(report.triggered)} intake={answers} />;
   }
 
   return (
@@ -143,16 +144,12 @@ export function IntakeForm() {
         ))}
       </div>
 
-      <label className="mt-6 block text-sm">
-        First name for the share card <span className="opacity-70">(optional, never required)</span>
-        <input
-          className="mt-1 block w-full rounded-md border border-[#d8b9c8] bg-white text-[#3d1c36] p-2 text-base"
-          type="text"
-          maxLength={20}
-          value={form.firstName}
-          onChange={(e) => set("firstName", e.target.value)}
-        />
-      </label>
+      {figures?.note && (
+        <div className="mt-4 rounded-md border border-[#d8b9c8] bg-white/70 p-3 text-sm" role="note">
+          <p className="font-semibold">Penny checks the figures, never changes them:</p>
+          <p className="mt-1 opacity-90">{figures.note}</p>
+        </div>
+      )}
 
       {submitted && issues.length > 0 && (
         <ul className="mt-4 space-y-1 text-sm" style={{ color: "var(--ap-rose)" }}>

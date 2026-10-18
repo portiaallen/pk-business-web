@@ -6,10 +6,12 @@
  */
 import {
   ASSESSMENT_URL,
+  figureCheck,
   TIER_6_CLOSE,
   TIER_NAMES,
   scoreIntake,
   tierFor,
+  type FigureCheck,
   type IntakeAnswers,
   type RoastReport,
   type RoastTier,
@@ -64,6 +66,7 @@ export function buildReport(a: IntakeAnswers): RoastReport {
     funniestQuote,
     bridge,
     tierLine: TIER_LINES[tier],
+    figureCheck: figureCheck(a),
   };
 }
 

@@ -10,7 +10,7 @@ import type { RoastReport } from "@/lib/auntpenny/roast-engine";
  * browser. The card prints the verdict tier, ONE quip and an optional first
  * name only. Never figures, business name, or dates.
  */
-export function ShareCardDownload({ report, firstName }: { report: RoastReport; firstName: string }) {
+export function ShareCardDownload({ report }: { report: RoastReport }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -93,12 +93,6 @@ export function ShareCardDownload({ report, firstName }: { report: RoastReport; 
     for (const line of quipLines) {
       ctx.fillText(line, S / 2, y);
       y += 58;
-    }
-
-    if (firstName) {
-      ctx.font = "italic 34px Georgia, serif";
-      ctx.fillStyle = "rgba(61, 28, 54, 0.75)";
-      ctx.fillText(`${firstName}'s books, officially rated.`, S / 2, S - 200);
     }
 
     // Bottom mark.

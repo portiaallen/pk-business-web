@@ -1,6 +1,6 @@
 /** Builds the fictional sample report (founder review, 2026-10-17).
     Figures are synthetic: a small service business chosen to land tier 5. */
-import { scoreIntake, tierFor, TIER_NAMES, netMarginPercent } from "../src/lib/auntpenny/roast-engine";
+import { scoreIntake, tierFor, TIER_NAMES, netMarginPercent, figureCheck } from "../src/lib/auntpenny/roast-engine";
 import { triggeredTemplates } from "../src/lib/auntpenny/roast-templates";
 import { buildReport, nextThreeSteps, DISCLAIMER } from "../src/lib/auntpenny/report";
 import { writeFileSync } from "node:fs";
@@ -31,6 +31,7 @@ const report = buildReport(intake);
 const out = {
   intake,
   marginPercent: netMarginPercent(intake),
+  figureCheck: figureCheck(intake),
   points, hardFlags, tier,
   tierName: TIER_NAMES[tier],
   tierLine: report.tierLine,

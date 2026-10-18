@@ -3,16 +3,19 @@ import Image from "next/image";
 import { ShareCardDownload } from "./ShareCardCanvas";
 import { ASSESSMENT_URL } from "@/lib/auntpenny/roast-engine";
 import { DISCLAIMER } from "@/lib/auntpenny/report";
-import type { RoastReport } from "@/lib/auntpenny/roast-engine";
+import type { IntakeAnswers, RoastReport } from "@/lib/auntpenny/roast-engine";
+
+const fmt = (n: number) =>
+  `${n < 0 ? "-" : ""}$${Math.abs(Math.round(n)).toLocaleString("en-US")}`;
 
 export function ReportView({
   report,
   steps,
-  firstName,
+  intake,
 }: {
   report: RoastReport;
   steps: string[];
-  firstName: string;
+  intake: IntakeAnswers;
 }) {
   return (
     <div className="mt-10 ap-print">
@@ -35,6 +38,28 @@ export function ReportView({
             </p>
           </div>
         </div>
+      </div>
+
+      <div className="ap-card mt-6 p-6">
+        <p className="ap-eyebrow">The figures, labeled</p>
+        <ul className="mt-3 space-y-1 text-sm opacity-90">
+          <li>Submitted: average monthly revenue, {fmt(intake.monthlyRevenue)}</li>
+          <li>Submitted: average monthly expenses, {fmt(intake.monthlyExpenses)}</li>
+          <li>
+            Calculated: implied monthly net = revenue minus expenses ={" "}
+            {fmt(report.figureCheck.impliedMonthlyNet)}
+          </li>
+          <li>Submitted: net income over the last 3 months, {fmt(intake.netIncome3mo)}</li>
+          <li>
+            Calculated: that 3-month figure divided by 3 ={" "}
+            {fmt(report.figureCheck.fromThreeMonths)} per month
+          </li>
+        </ul>
+        {report.figureCheck.note && (
+          <p className="mt-3 rounded-md border border-[#d8b9c8] bg-white/70 p-3 text-sm" role="note">
+            {report.figureCheck.note}
+          </p>
+        )}
       </div>
 
       <div className="ap-card mt-6 p-6">
@@ -110,12 +135,11 @@ export function ReportView({
           <p className="ap-eyebrow">Certified by Roast My Books</p>
           <h3 className="text-2xl font-bold">{report.tierName}</h3>
           <p className="text-lg">{report.funniestQuote}</p>
-          {firstName && <p className="text-sm opacity-80">{firstName}&apos;s books, officially rated.</p>}
         </div>
-        <ShareCardDownload report={report} firstName={firstName} />
+        <ShareCardDownload report={report} />
         <p className="mt-3 max-w-sm text-center text-xs opacity-70">
-          The card shows the verdict and one quip. It never prints your figures, business
-          name, or dates. Post it and let the funny line travel.
+          The card shows the verdict and one quip. It never prints your name, your
+          figures, the business name, or dates. Post it and let the funny line travel.
         </p>
       </div>
 

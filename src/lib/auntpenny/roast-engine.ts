@@ -127,11 +127,62 @@ export interface RoastReport {
   triggered: TriggeredTemplate[];
   funniestQuote: string;
   bridge: { show: boolean; line: string };
+  figureCheck: FigureCheck;
 }
 
 export function netMarginPercent(a: IntakeAnswers): number {
   if (a.monthlyRevenue <= 0) return a.monthlyExpenses > 0 ? -100 : 0;
   return ((a.monthlyRevenue - a.monthlyExpenses) / a.monthlyRevenue) * 100;
+}
+
+/** Implied monthly net, from the two monthly figures the customer submitted. */
+export function impliedMonthlyNet(a: IntakeAnswers): number {
+  return a.monthlyRevenue - a.monthlyExpenses;
+}
+
+/** Monthly average of the 3-month net income figure the customer submitted. */
+export function monthlyNetFromThreeMonths(a: IntakeAnswers): number {
+  return a.netIncome3mo / 3;
+}
+
+export interface FigureCheck {
+  impliedMonthlyNet: number;
+  fromThreeMonths: number;
+  /** null when the two labeled figures sit close enough to read as one picture. */
+  note: string | null;
+}
+
+const money = (n: number) => `${n < 0 ? "-" : ""}$${Math.abs(Math.round(n)).toLocaleString("en-US")}`;
+
+/**
+ * Cross-checks two DIFFERENT labeled figures the customer submitted:
+ * "average monthly revenue minus average monthly expenses" (a monthly average)
+ * and "net income over the last 3 months" (a 3-month total, shown here divided
+ * by 3). They can legitimately differ: averages versus actual months, a strong
+ * or weak month inside the three, owner draws, timing, or a definition gap.
+ * Nothing is overwritten and scoring never uses this reconciliation; the note
+ * simply refuses to pretend two different numbers are one number.
+ * Tolerance: $150/month or 20% relative, whichever is larger.
+ */
+export function figureCheck(a: IntakeAnswers): FigureCheck {
+  const implied = impliedMonthlyNet(a);
+  const from3 = monthlyNetFromThreeMonths(a);
+  if (![a.monthlyRevenue, a.monthlyExpenses, a.netIncome3mo].every(Number.isFinite) || a.monthlyRevenue <= 0) {
+    return { impliedMonthlyNet: implied, fromThreeMonths: from3, note: null };
+  }
+  const tolerance = Math.max(150, 0.2 * Math.max(Math.abs(implied), Math.abs(from3)));
+  if (Math.abs(implied - from3) <= tolerance) {
+    return { impliedMonthlyNet: implied, fromThreeMonths: from3, note: null };
+  }
+  const note =
+    `Two different figures, said out loud. The monthly figures you submitted imply about ` +
+    `${money(implied)} a month of net (${money(a.monthlyRevenue)} revenue minus ${money(a.monthlyExpenses)} expenses), ` +
+    `while the net income you submitted for the last 3 months averages ${money(from3)} a month. ` +
+    `Those are two different questions, so they can land in two different places: a monthly average ` +
+    `versus three actual months, a strong or weak month inside the three, owner draws, or timing. ` +
+    `Neither number was changed and the roast treats them separately. If one of them surprised you, ` +
+    `that field is the one to re-check before anything else.`;
+  return { impliedMonthlyNet: implied, fromThreeMonths: from3, note };
 }
 
 export function scoreIntake(a: IntakeAnswers): { points: number; hardFlags: string[] } {
