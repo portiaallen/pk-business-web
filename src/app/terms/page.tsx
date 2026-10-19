@@ -36,11 +36,6 @@ export default function TermsPage() {
       />
       <Section>
         <div className="mx-auto max-w-3xl">
-          <p className="mb-8 rounded-lg border border-gold/30 bg-cream px-4 py-3 text-sm leading-relaxed text-muted-gray">
-            Draft prepared for founder and counsel review on October 19, 2026.
-            This page is not published yet. Remove this note before launch.
-          </p>
-
           <H2>1. Who we are</H2>
           <P>
             PK Business Services (&quot;PK&quot;, &quot;we&quot;) is a sole
