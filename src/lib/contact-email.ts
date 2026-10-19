@@ -11,6 +11,7 @@ export interface ContactFormPayload {
   service: string;
   description: string;
   contactMethod: string;
+  marketingOptIn: boolean;
 }
 
 export function buildContactEmailContent() {

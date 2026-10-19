@@ -80,8 +80,15 @@ export function Footer() {
             {siteConfig.disclaimer}
           </p>
           <p className="text-xs text-ivory/50">
-            &copy; {new Date().getFullYear()} {siteConfig.name}. All rights
-            reserved.
+            <Link href="/terms" className="underline-offset-2 hover:underline">
+              Terms of Use
+            </Link>
+            {" · "}
+            <Link href="/privacy" className="underline-offset-2 hover:underline">
+              Privacy Policy
+            </Link>
+            {" · © "}
+            {new Date().getFullYear()} {siteConfig.name}. All rights reserved.
           </p>
         </div>
       </div>

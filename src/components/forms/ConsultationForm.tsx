@@ -53,6 +53,7 @@ export function ConsultationForm() {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitted, setSubmitted] = useState(false);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [submitError, setSubmitError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -112,7 +113,7 @@ export function ConsultationForm() {
       const response = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, marketingOptIn }),
       });
 
       if (!response.ok) {
@@ -122,6 +123,7 @@ export function ConsultationForm() {
 
       setSubmitted(true);
       setFormData(initialFormData);
+      setMarketingOptIn(false);
     } catch {
       setSubmitError(true);
     } finally {
@@ -347,6 +349,22 @@ export function ConsultationForm() {
         account credentials, or other highly sensitive financial information
         through this initial form.
       </div>
+
+      <label className="flex items-start gap-3 text-sm leading-relaxed text-muted-gray">
+        <input
+          type="checkbox"
+          className="mt-1 h-4 w-4 shrink-0 accent-charcoal"
+          checked={marketingOptIn}
+          onChange={(e) => setMarketingOptIn(e.target.checked)}
+        />
+        <span>
+          I&apos;d like occasional promotions, special offers, and updates from
+          PK Business Services, Glitter Hits, and Glitter Universe, all
+          operated by Portia Allen. Any brand added later would be covered only
+          after this notice is updated. Unsubscribe anytime with the link in
+          any email.
+        </span>
+      </label>
 
       <Button
         type="submit"
