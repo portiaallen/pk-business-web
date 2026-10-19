@@ -22,9 +22,16 @@ interface AnswerResponse {
   pending?: string[];
 }
 
+interface IdentityStateShape {
+  status: "none" | "requested" | "verified" | "rejected";
+  documentsSubmitted: boolean;
+  docCount: number;
+}
+
 interface GatesResponse {
   ok?: boolean;
   gates?: Record<string, unknown>;
+  identity?: IdentityStateShape;
   mode?: Mode;
 }
 
@@ -182,6 +189,7 @@ export function TaxOnboardingFlow() {
   const [rejection, setRejection] = useState<string | null>(null);
   const [status, setStatus] = useState<AnswerResponse | null>(null);
   const [gates, setGates] = useState<Record<string, unknown> | null>(null);
+  const [identity, setIdentity] = useState<IdentityStateShape | null>(null);
   const [docName, setDocName] = useState("");
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -271,6 +279,7 @@ export function TaxOnboardingFlow() {
       }
       const data = (await res.json()) as GatesResponse;
       if (data.gates) setGates(data.gates);
+      if (data.identity) setIdentity(data.identity);
       if (data.mode) setMode(data.mode);
     } catch {
       setRejection("That step didn't go through. Please try again.");
@@ -401,31 +410,49 @@ export function TaxOnboardingFlow() {
       <div className="rounded-xl border border-charcoal/15 bg-white p-6 shadow-sm">
         <h2 className="pk-serif text-xl font-semibold">2. Identity and documents</h2>
         <p className="mt-1 text-sm text-charcoal/70">
-          Confirm who you are, then PK opens the secure document process. Names
-          and descriptions only here — never card numbers, ID numbers, or file
-          contents.
+          A PK preparer personally reviews who you are before anything else
+          opens. Names and descriptions only here — never card numbers, ID
+          numbers, or file contents.
         </p>
         <div className="mt-4 space-y-3 text-sm">
           <div className="flex items-center justify-between gap-4 rounded-lg bg-charcoal/5 p-3">
-            <span>Verify identity</span>
+            <span>Ask PK to verify your identity</span>
             <Button
               variant="outline"
               size="sm"
-              disabled={gateState("identityVerified")}
-              onClick={() => void documentAction("verify", { verified: true })}
+              disabled={identity !== null && identity.status !== "none"}
+              onClick={() => void documentAction("verify")}
             >
-              {gateState("identityVerified") ? "Verified" : "Confirm"}
+              {identity?.status === "verified"
+                ? "Verified by PK"
+                : identity?.status === "requested"
+                  ? "With your PK preparer"
+                  : identity?.status === "rejected"
+                    ? "Not verified — contact PK"
+                    : "Request review"}
             </Button>
           </div>
           <div className="flex items-center justify-between gap-4 rounded-lg bg-charcoal/5 p-3">
-            <span>Request secure document access</span>
+            <span>Secure document access</span>
+            <span className="text-charcoal/70">
+              {gateState("accessGranted")
+                ? "Open"
+                : "PK opens this after reviewing your intake"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-4 rounded-lg bg-charcoal/5 p-3">
+            <span>Submit ID documents through the secure process</span>
             <Button
               variant="outline"
               size="sm"
-              disabled={!gateState("identityVerified") || gateState("accessGranted")}
-              onClick={() => void documentAction("grant")}
+              disabled={!gateState("accessGranted") || gateState("identityVerified") || (identity?.documentsSubmitted ?? false)}
+              onClick={() => void documentAction("identity_docs")}
             >
-              {gateState("accessGranted") ? "Access open" : "Request"}
+              {gateState("identityVerified")
+                ? "Reviewed"
+                : identity?.documentsSubmitted
+                  ? `Submitted (${identity.docCount})`
+                  : "Submit"}
             </Button>
           </div>
           <div className="rounded-lg bg-charcoal/5 p-3">

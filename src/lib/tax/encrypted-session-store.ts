@@ -101,6 +101,12 @@ function unseal(row: { nonce: string; ciphertext: string; authTag: string; keyVe
     if (!parsed || typeof parsed !== "object" || typeof parsed.sessionId !== "string") {
       throw new EncryptedSessionCorrupt("decrypted payload is not a session");
     }
+    // Legacy rows sealed before the identity-verification build: give them the
+    // new fail-closed defaults instead of trusting shapeless fields.
+    if (!parsed.identity) {
+      parsed.identity = { status: "none", documentsSubmitted: false, docCount: 0 };
+    }
+    if (!Array.isArray(parsed.notifications)) parsed.notifications = [];
     return parsed;
   } catch (error) {
     if (error instanceof EncryptedSessionCorrupt) throw error;
@@ -144,6 +150,31 @@ export const encryptedTaxSessionStore = {
       );
     }
     return unseal(row, loaded.key);
+  },
+
+  async list(): Promise<Session[]> {
+    const rows = await prisma.taxOnboardingSession.findMany({ orderBy: { createdAt: "asc" } });
+    const loaded = loadSessionEncryptionKey();
+    const out: Session[] = [];
+    for (const row of rows) {
+      try {
+        if (typeof row.keyVersion !== "number") throw new EncryptedSessionCorrupt("row has no key version");
+        if (row.keyVersion !== loaded.keyVersion) {
+          throw new EncryptedSessionCorrupt(`key version mismatch (row ${row.keyVersion}, active ${loaded.keyVersion})`);
+        }
+        out.push(unseal(row, loaded.key));
+      } catch (error) {
+        // A tampered or stale-key row is never silently decrypted. It is also
+        // never enumerated in the preparer queue with its content: skip it and
+        // surface only that something was skipped, no identifiers.
+        if (error instanceof EncryptedSessionCorrupt) {
+          console.warn("[tax] skipping unreadable session row during preparer queue scan");
+          continue;
+        }
+        throw error;
+      }
+    }
+    return out;
   },
 
   async delete(sessionId: string): Promise<void> {

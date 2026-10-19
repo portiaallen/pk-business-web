@@ -2,20 +2,22 @@ import { NextResponse } from "next/server";
 import {
   attest,
   closeAccess,
-  grantAccess,
+  requestIdentityVerification,
+  submitIdentityDocuments,
   uploadDocument,
-  verifyIdentity,
 } from "@/lib/tax/onboarding-core";
 import { taxSessionStoreOrThrow } from "@/lib/tax/session-storage";
 import { rejectIfSensitive } from "@/lib/tax/intake-screen";
 
-// POST /api/tax/documents - actions: verify | grant | upload | attest | close.
-// Identity verification and access control are fail-closed. The production
-// storage adapter (PK restricted backend/vault) is owner-configured; no file
-// content is accepted or transmitted in this build.
+// POST /api/tax/documents - actions: verify | identity_docs | upload | attest | close.
+// Identity proofing is preparer-reviewed (founder-approved, 2026-10-19): a
+// client may only REQUEST identity review here. Limited secure access is
+// opened by a WebAuthn-authenticated preparer, after which the client submits
+// ID documents through the approved secure client process. No file content is
+// accepted or transmitted in this build; access control stays fail-closed.
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as
-    | { sessionId?: string; action?: string; verified?: boolean; meta?: { name?: string } }
+    | { sessionId?: string; action?: string; meta?: { name?: string } }
     | null;
   if (!body || !body.sessionId || !body.action) {
     return NextResponse.json({ error: "sessionId and action are required" }, { status: 400 });
@@ -48,10 +50,10 @@ export async function POST(request: Request) {
   let ok = false;
   switch (body.action) {
     case "verify":
-      ok = verifyIdentity(session, body.verified === true);
+      ok = requestIdentityVerification(session);
       break;
-    case "grant":
-      ok = grantAccess(session);
+    case "identity_docs":
+      ok = submitIdentityDocuments(session);
       break;
     case "upload":
       ok = uploadDocument(session, body.meta);
@@ -67,5 +69,5 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "unknown action" }, { status: 400 });
   }
   await store.put(session);
-  return NextResponse.json({ ok, gates: session.gates, mode: store.mode });
+  return NextResponse.json({ ok, gates: session.gates, identity: session.identity, mode: store.mode });
 }

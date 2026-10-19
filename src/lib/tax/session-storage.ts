@@ -19,6 +19,7 @@ import {
 import {
   deleteSyntheticSession,
   getSyntheticSession,
+  listSyntheticSessions,
   putSyntheticSession,
   resetSyntheticSessions,
 } from "@/lib/tax/session-store";
@@ -29,6 +30,7 @@ export interface TaxSessionStore {
   readonly mode: TaxSessionStoreMode;
   get(sessionId: string): Promise<Session | null>;
   put(session: Session): Promise<void>;
+  list(): Promise<Session[]>;
   delete(sessionId: string): Promise<void>;
   reset(): Promise<void>;
 }
@@ -37,6 +39,7 @@ export const syntheticTaxSessionStore: TaxSessionStore = {
   mode: "synthetic",
   get: async (id) => getSyntheticSession(id),
   put: async (session) => { putSyntheticSession(session); },
+  list: async () => listSyntheticSessions(),
   delete: async (id) => { deleteSyntheticSession(id); },
   reset: async () => { resetSyntheticSessions(); },
 };

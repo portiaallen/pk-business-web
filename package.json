@@ -21,7 +21,8 @@
     "test:readiness:landing": "node scripts/test-readiness.mjs",
     "test:tax:onboarding": "node --import tsx --test scripts/test-tax-onboarding.mts",
     "test:tax:adapter": "node --import tsx --test scripts/test-tax-session-adapter.mts",
-    "test:roast": "node --import tsx --test scripts/test-roast-engine.mts"
+    "test:roast": "node --import tsx --test scripts/test-roast-engine.mts",
+    "test:tax:identity": "node --import tsx --test scripts/test-tax-identity-notifications.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",
