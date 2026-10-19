@@ -1,29 +1,65 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ShareCardDownload } from "./ShareCardCanvas";
 import { ASSESSMENT_URL } from "@/lib/auntpenny/roast-engine";
 import { DISCLAIMER } from "@/lib/auntpenny/report";
-import type { RoastReport } from "@/lib/auntpenny/roast-engine";
+import type { IntakeAnswers, RoastReport } from "@/lib/auntpenny/roast-engine";
+
+const fmt = (n: number) =>
+  `${n < 0 ? "-" : ""}$${Math.abs(Math.round(n)).toLocaleString("en-US")}`;
 
 export function ReportView({
   report,
   steps,
-  firstName,
+  intake,
 }: {
   report: RoastReport;
   steps: string[];
-  firstName: string;
+  intake: IntakeAnswers;
 }) {
-  const isTier6 = report.tier === 6;
   return (
     <div className="mt-10 ap-print">
       <div className="ap-card p-6">
-        <p className="ap-eyebrow">The Verdict</p>
-        <h2 className="mt-2 text-3xl font-bold sm:text-4xl">{report.tierName}</h2>
-        <p className="mt-2 text-lg opacity-90">{report.tierLine}</p>
-        <p className="mt-4 text-sm opacity-70">
-          Severity score: {report.points} points
-          {report.hardFlags.length > 0 && <> · hard flags: {report.hardFlags.join("; ")}</>}
-        </p>
+        <div className="ap-verdict-row">
+          <Image
+            src="/auntpenny/penny-calc.jpg"
+            alt="Aunt Penny with her calculator: the math don't lie"
+            width={204}
+            height={304}
+            className="ap-cameo"
+          />
+          <div>
+            <p className="ap-eyebrow">The Verdict</p>
+            <h2 className="mt-1 text-3xl font-bold sm:text-4xl">{report.tierName}</h2>
+            <p className="mt-2 text-lg opacity-90">{report.tierLine}</p>
+            <p className="mt-4 text-sm opacity-70">
+              Severity score: {report.points} points
+              {report.hardFlags.length > 0 && <> · hard flags: {report.hardFlags.join("; ")}</>}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="ap-card mt-6 p-6">
+        <p className="ap-eyebrow">The figures, labeled</p>
+        <ul className="mt-3 space-y-1 text-sm opacity-90">
+          <li>Submitted: average monthly revenue, {fmt(intake.monthlyRevenue)}</li>
+          <li>Submitted: average monthly expenses, {fmt(intake.monthlyExpenses)}</li>
+          <li>
+            Calculated: implied monthly net = revenue minus expenses ={" "}
+            {fmt(report.figureCheck.impliedMonthlyNet)}
+          </li>
+          <li>Submitted: net income over the last 3 months, {fmt(intake.netIncome3mo)}</li>
+          <li>
+            Calculated: that 3-month figure divided by 3 ={" "}
+            {fmt(report.figureCheck.fromThreeMonths)} per month
+          </li>
+        </ul>
+        {report.figureCheck.note && (
+          <p className="mt-3 rounded-md border border-[#d8b9c8] bg-white/70 p-3 text-sm" role="note">
+            {report.figureCheck.note}
+          </p>
+        )}
       </div>
 
       <div className="ap-card mt-6 p-6">
@@ -34,7 +70,7 @@ export function ReportView({
           ) : (
             report.triggered.map((t) => (
               <div key={t.id}>
-                <h3 className="font-semibold" style={{ color: "var(--ap-gold)" }}>{t.title}</h3>
+                <h3 className="font-semibold" style={{ color: "var(--ap-rose)" }}>{t.title}</h3>
                 {t.roastLines.map((line, i) => (
                   <p key={i}>{line}</p>
                 ))}
@@ -58,20 +94,53 @@ export function ReportView({
         </ul>
       </div>
 
+      {report.findings.length > 0 && (
+        <div className="ap-card mt-6 p-6">
+          <p className="ap-eyebrow">Every finding, traceable</p>
+          <p className="mt-1 text-xs opacity-70">
+            Educational guidance built only from the figures you submitted. Not professional advice.
+          </p>
+          {report.findings.map((f) => (
+            <div key={f.id} className="mt-4 border-t border-[#e5d8e2] pt-4">
+              <h3 className="font-semibold">{f.title}</h3>
+              <p className="mt-1 text-sm opacity-90">
+                <span className="font-semibold">Evidence:</span> {f.evidence}
+              </p>
+              <p className="mt-1 text-sm opacity-90">
+                <span className="font-semibold">Why it matters:</span> {f.matters}
+              </p>
+              <p className="mt-1 text-sm opacity-90">
+                <span className="font-semibold">What to check first:</span> {f.check}
+              </p>
+              <p className="mt-1 text-sm opacity-90">
+                <span className="font-semibold">A realistic next move:</span> {f.next}
+              </p>
+              <p className="mt-1 text-sm opacity-90">
+                <span className="font-semibold">When to get help:</span> {f.help}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="ap-card mt-6 p-6">
-        <p className="ap-eyebrow">Your Next Three Steps</p>
+        <p className="ap-eyebrow">Where to start: your first three moves</p>
         <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm opacity-90">
           {steps.map((s, i) => (
             <li key={i}>{s}</li>
           ))}
         </ol>
+        <p className="mt-3 text-xs opacity-70">
+          The full report walks the first seven days and the first thirty days with you, step by step.
+        </p>
       </div>
 
       {report.bridge.show && (
-        <div className="ap-card ap-leopard mt-6 p-6">
+        <div className="ap-card mt-6 p-6">
+          <div className="ap-leopard-strip mb-4" aria-hidden="true" />
           <p className="ap-eyebrow">The Bridge</p>
           <p className="mt-2 leading-relaxed">
-            {report.bridge.line}{" "}
+            {report.bridge.line.replace(ASSESSMENT_URL, "").trim()}{" "}
             <Link href={ASSESSMENT_URL}>Book the assessment</Link>.
           </p>
           <p className="mt-2 text-sm opacity-75">
@@ -81,19 +150,25 @@ export function ReportView({
         </div>
       )}
 
-      {/* Share card: certificate aesthetic, never prints figures, business name, or dates. */}
+      {/* Share card: ivory certificate with Penny on it, never prints figures, business name, or dates. */}
       <div className="mt-10 flex flex-col items-center">
         <p className="ap-eyebrow">Your share card</p>
         <div className="ap-sharecard mt-4">
-          <span className="ap-seal">Certified by Roast My Books</span>
+          <Image
+            src="/auntpenny/penny-serious.jpg"
+            alt="Aunt Penny laughing: be serious"
+            width={204}
+            height={304}
+            className="ap-cameo"
+          />
+          <p className="ap-eyebrow">Certified by Roast My Books</p>
           <h3 className="text-2xl font-bold">{report.tierName}</h3>
           <p className="text-lg">{report.funniestQuote}</p>
-          {firstName && <p className="text-sm opacity-80">{firstName} &apos;s books, officially rated.</p>}
         </div>
-        <ShareCardDownload report={report} firstName={firstName} />
+        <ShareCardDownload report={report} />
         <p className="mt-3 max-w-sm text-center text-xs opacity-70">
-          The card shows the verdict and one quip. It never prints your figures, business
-          name, or dates. Post it and let the funny line travel.
+          The card shows the verdict and one quip. It never prints your name, your
+          figures, the business name, or dates. Post it and let the funny line travel.
         </p>
       </div>
 
