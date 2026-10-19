@@ -1,10 +1,12 @@
 import { logSecurityEvent } from "@/lib/security-log";
+import { MARKETING_CONSENT_VERSION } from "@/lib/marketing-consent";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   sendContactEmail,
   type ContactFormPayload,
 } from "@/lib/contact-email";
+import { recordMarketingConsent } from "@/lib/marketing-consent";
 import { serviceOptions } from "@/content/services";
 import {
   screenContactSubmission,
@@ -36,6 +38,7 @@ function parsePayload(body: unknown): ContactFormPayload | null {
     typeof data.description === "string" ? data.description.trim() : "";
   const contactMethod =
     typeof data.contactMethod === "string" ? data.contactMethod.trim() : "email";
+  const marketingOptIn = data.marketingOptIn === true;
 
   if (!fullName || !email || !service || !description) {
     return null;
@@ -61,6 +64,7 @@ function parsePayload(body: unknown): ContactFormPayload | null {
     service,
     description,
     contactMethod,
+    marketingOptIn,
   };
 }
 
@@ -102,8 +106,15 @@ export async function POST(request: Request) {
         serviceSlug: payload.service,
         description: payload.description,
         contactMethod: payload.contactMethod,
+        marketingConsent: payload.marketingOptIn ? true : null,
+        marketingConsentAt: payload.marketingOptIn ? new Date() : null,
+        marketingConsentVersion: payload.marketingOptIn ? MARKETING_CONSENT_VERSION : null,
       },
     });
+
+    if (payload.marketingOptIn) {
+      await recordMarketingConsent(payload.email, true, "consultation-form");
+    }
 
     let emailSent = false;
     try {

@@ -570,7 +570,22 @@ model IntakeSubmission {
   @@index([email])
   @@index([createdAt])
   readinessAssessment ReadinessAssessment?
+  marketingConsent        Boolean?
+  marketingConsentAt      DateTime?
+  marketingConsentVersion String?
 
+}
+
+// ─── Marketing email consent (strict opt-in; no record means never asked) ───
+
+model MarketingConsent {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  current   Boolean
+  version   String
+  entries   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ─── Notifications ─────────────────────────────────────────────────────────────
