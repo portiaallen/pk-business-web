@@ -43,6 +43,26 @@ export interface Access {
   attested: boolean;
 }
 
+export type IdentityStatus = "none" | "requested" | "verified" | "rejected";
+
+export interface IdentityState {
+  status: IdentityStatus;
+  documentsSubmitted: boolean;
+  docCount: number;
+  requestedAt?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  notes?: string;
+}
+
+export interface PrepNotification {
+  id: string;
+  ts: string;
+  event: string;
+  detail: Record<string, unknown> | string;
+  read: boolean;
+}
+
 export interface Gates {
   engagement_agreement_signed: boolean;
   form_8879_signed: boolean;
@@ -50,6 +70,7 @@ export interface Gates {
   final_return_approval: boolean;
   client_attestation_uploaded: boolean;
   upload_access_closed: boolean;
+  identity_verified: boolean;
 }
 
 export interface AuditEntry {
@@ -90,6 +111,8 @@ export interface Session {
   gates: Gates;
   uploads: UploadRecord[];
   access: Access;
+  identity: IdentityState;
+  notifications: PrepNotification[];
 }
 
 export const TAG = {
@@ -170,9 +193,12 @@ export function createSession(taxYear?: number, id?: string): Session {
       final_return_approval: false,
       client_attestation_uploaded: false,
       upload_access_closed: false,
+      identity_verified: false,
     },
     uploads: [],
     access: { verified: false, granted: false, closed: false, attested: false },
+    identity: { status: "none", documentsSubmitted: false, docCount: 0 },
+    notifications: [],
   };
   log(s, "session_start", { sessionId: s.sessionId, taxYear: s.taxYear, mode: "synthetic-only" });
   return s;
@@ -434,23 +460,113 @@ function detectContradictions(s: Session): void {
   }
 }
 
-// ---- secure upload workflow (client identity -> limited access -> uploads ->
+// ---- secure workflow (identity request -> preparer opens access -> secure
+//      ID submission -> preparer-reviewed identity verification -> uploads ->
 //      attestation -> preparer notification -> manual closure)
+//
+// Identity proofing is preparer-reviewed (founder-approved checkpoint
+// configuration, 2026-10-19): the client can only REQUEST identity review;
+// a WebAuthn-authenticated preparer opens limited secure access so the client
+// can submit ID documents through the approved secure client process, and
+// only a preparer marks identity verified before anything else opens. No
+// automated ID-scanning service, no third-party vendor, no cost. Document
+// CONTENTS never enter this engine: only that a submission happened.
 
-export function verifyIdentity(s: Session, ok: boolean): boolean {
-  s.access.verified = !!ok;
-  log(s, "identity_verified", { verified: s.access.verified });
-  return s.access.verified;
+export function notifyPreparer(s: Session, event: string, detail: Record<string, unknown> | string): void {
+  s.notifications.push({ id: itemId(), ts: nowIso(), event, detail, read: false });
+  log(s, "preparer_notified", { event });
 }
 
-export function grantAccess(s: Session): boolean {
-  if (!s.access.verified) {
-    log(s, "access_denied", "unverified client");
+export function markNotificationsRead(s: Session): number {
+  const unread = s.notifications.filter((n) => !n.read).length;
+  for (const n of s.notifications) n.read = true;
+  return unread;
+}
+
+export function requestIdentityVerification(s: Session): boolean {
+  if (s.identity.status !== "none") {
+    log(s, "identity_request_ignored", { status: s.identity.status });
+    return false;
+  }
+  s.identity.status = "requested";
+  s.identity.requestedAt = nowIso();
+  log(s, "identity_review_requested", "client requested identity verification; preparer review required");
+  notifyPreparer(s, "identity_requested", "client requested identity verification; preparer review required");
+  return true;
+}
+
+export function preparerGrantAccess(s: Session, preparer: string): boolean {
+  if (s.identity.status !== "requested" || s.access.granted || s.access.closed) {
+    log(s, "access_denied", {
+      identity: s.identity.status,
+      granted: s.access.granted,
+      closed: s.access.closed,
+      note: "preparer grant refused: fail closed",
+    });
     return false;
   }
   s.access.granted = true;
-  log(s, "access_granted", "restricted intake folder, verified client only");
+  log(s, "access_granted", {
+    grantedBy: preparer,
+    note: "limited secure access for ID submission, WebAuthn-authenticated preparer",
+  });
   return true;
+}
+
+export function submitIdentityDocuments(s: Session, count = 1): boolean {
+  if (!s.access.granted || s.access.closed) {
+    log(s, "identity_docs_refused", "fail closed: secure access not open");
+    return false;
+  }
+  const n = Math.max(1, Math.floor(count));
+  s.identity.docCount += n;
+  s.identity.documentsSubmitted = true;
+  log(s, "identity_documents_submitted", {
+    count: n,
+    note: "submitted through the approved secure client process; contents never enter this engine",
+  });
+  notifyPreparer(s, "identity_documents", {
+    count: s.identity.docCount,
+    note: "ID documents submitted through the secure process; ready for preparer review",
+  });
+  return true;
+}
+
+export function preparerVerifyIdentity(s: Session, preparer: string, ok: boolean, notes?: string): boolean {
+  if (s.identity.status !== "requested") {
+    log(s, "identity_verification_refused", { status: s.identity.status, note: "nothing requested or already decided" });
+    return false;
+  }
+  if (ok && !s.identity.documentsSubmitted) {
+    log(s, "identity_verification_refused", "no ID documents submitted through the secure process");
+    return false;
+  }
+  s.identity.status = ok ? "verified" : "rejected";
+  s.identity.reviewedBy = preparer;
+  s.identity.reviewedAt = nowIso();
+  if (notes) s.identity.notes = notes;
+  s.gates.identity_verified = ok;
+  log(s, ok ? "identity_verified" : "identity_rejected", {
+    by: preparer,
+    notes: notes ?? null,
+    note: "WebAuthn-authenticated preparer decision",
+  });
+  return true;
+}
+
+export function preparerQueueRow(s: Session): Record<string, unknown> {
+  return {
+    sessionId: s.sessionId,
+    taxYear: s.taxYear,
+    startedAt: s.audit[0]?.ts,
+    identity: { status: s.identity.status, docCount: s.identity.docCount },
+    attested: s.gates.client_attestation_uploaded,
+    preparerReviewCleared: s.gates.preparer_review_cleared,
+    uploads: s.uploads.length,
+    unresolvedFlags: s.flags.length,
+    transmission: canTransmit(s),
+    notificationsPending: s.notifications.filter((n) => !n.read).length,
+  };
 }
 
 export function uploadDocument(s: Session, docMeta?: { name?: string }): boolean {
@@ -461,6 +577,7 @@ export function uploadDocument(s: Session, docMeta?: { name?: string }): boolean
   }
   s.uploads.push({ name: docMeta?.name, ts: nowIso() });
   log(s, "upload_recorded", { name: docMeta?.name });
+  notifyPreparer(s, "documents_logged", { name: docMeta?.name });
   return true;
 }
 
@@ -471,6 +588,7 @@ export function attest(s: Session): boolean {
   }
   s.access.attested = true;
   s.gates.client_attestation_uploaded = true;
+  notifyPreparer(s, "client_attestation", "client attested: I've Finished Uploading; preparer review required");
   log(s, "client_attestation", "I've Finished Uploading; preparer notified");
   return true;
 }

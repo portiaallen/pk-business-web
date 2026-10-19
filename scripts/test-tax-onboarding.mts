@@ -12,11 +12,12 @@ import {
   compute,
   createSession,
   clearPreparerGate,
-  grantAccess,
+  preparerGrantAccess,
+  submitIdentityDocuments,
   NS,
   recordAnswer,
   uploadDocument,
-  verifyIdentity,
+  requestIdentityVerification,
 } from "../src/lib/tax/onboarding-core";
 import { rejectIfSensitive } from "../src/lib/tax/intake-screen";
 
@@ -175,20 +176,21 @@ test("conflicting information flag", () => {
   assert(s.flags.some((f) => f.code === "CONTRADICTION_STATUS"));
 });
 
-test("unauthorized upload gating (fail closed)", () => {
+test("identity and access are preparer-gated (fail closed)", () => {
   const s = createSession();
-  assert.equal(verifyIdentity(s, false), false);
-  assert.equal(grantAccess(s), false);
-  assert.equal(verifyIdentity(s, true), true);
-  assert.equal(grantAccess(s), true);
+  assert.equal(preparerGrantAccess(s, "pk"), false); // no identity request yet
+  assert.equal(submitIdentityDocuments(s), false); // no secure access yet
+  assert.equal(requestIdentityVerification(s), true); // client can only ask
+  assert.equal(requestIdentityVerification(s), false); // no duplicate requests
+  assert.equal(preparerGrantAccess(s, "pk"), true); // preparer opens access
   closeAccess(s);
   assert.equal(uploadDocument(s, { name: "w2.pdf" }), false);
 });
 
 test("attestation requires at least one upload; closure after", () => {
   const s = createSession();
-  verifyIdentity(s, true);
-  grantAccess(s);
+  requestIdentityVerification(s);
+  preparerGrantAccess(s, "pk");
   assert.equal(attest(s), false);
   assert.equal(uploadDocument(s, { name: "w2.pdf" }), true);
   assert.equal(attest(s), true);
