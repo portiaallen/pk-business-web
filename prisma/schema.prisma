@@ -588,6 +588,44 @@ model MarketingConsent {
   updatedAt DateTime @updatedAt
 }
 
+// ─── Catch-Up 1040 intake (public, non-sensitive screening intake) ─────────────
+
+enum TaxCatchupStatus {
+  NEW_LEAD
+  NEEDS_REVIEW
+  QUOTE_SENT
+  ACCEPTED
+  DOCUMENTS_REQUESTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+model TaxCatchupIntake {
+  id             String           @id @default(cuid())
+  fullName       String
+  email          String
+  phone          String?
+  contactMethod  String           @default("email")
+  contactTime    String?
+  taxYears       String           @default("[]")
+  filingStatuses String           @default("{}")
+  alreadyFiled   String           @default("{}")
+  complexity     String           @default("[]")
+  notes          String?
+  states         String           @default("[]")
+  hasNotices     Boolean          @default(false)
+  recordsStatus  String           @default("not_sure")
+  simpleEligible Boolean          @default(false)
+  status         TaxCatchupStatus @default(NEW_LEAD)
+  emailSent      Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+}
+
 // ─── Notifications ─────────────────────────────────────────────────────────────
 
 model Notification {

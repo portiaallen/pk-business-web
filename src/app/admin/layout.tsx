@@ -30,6 +30,7 @@ const navItems = [
   { href: "/admin/clients", label: "Clients", icon: Users },
   { href: "/admin/requests", label: "Requests", icon: FileText },
   { href: "/admin/consultations", label: "Consultations", icon: Inbox },
+  { href: "/admin/tax-catchup", label: "Catch-Up 1040 intake", icon: ClipboardList },
   { href: "/admin/requests/cmtucijv50004fv0f9r26yy2w/ai-assistant", label: "AI Assistant", icon: Sparkles },
   { href: "/admin/invoices", label: "Invoices", icon: Receipt },
   { href: "/admin/documents", label: "Documents", icon: FolderOpen },
