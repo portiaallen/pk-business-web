@@ -70,6 +70,7 @@ export const taxServices: TaxService[] = [
       "Missing-year inventory",
       "Record reconstruction from what exists",
       "E-file availability verified per year before filing",
+      "Qualifying simple 1040s for 2023–2025 may qualify for the $99 Catch-Up 1040 Special — see above",
     ],
   },
 ];
@@ -107,8 +108,8 @@ export const taxAddOns: TaxAddOnGroup[] = [
 ];
 
 export const taxPricingPolicy = [
-  "No PK e-file fees.",
+  "No PK e-file fees on standard current-year tax preparation. (The Catch-Up 1040 Special carries a separate $35 federal e-file fee per eligible return.)",
   "No hidden markup fees.",
-  "Upfront payment by default, with an optional refund transfer.",
+  "Upfront payment by default; an optional refund transfer is available on standard services, not on the Catch-Up 1040 Special.",
   "Bookkeeping is billed separately from tax work.",
 ];
