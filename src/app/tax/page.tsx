@@ -12,6 +12,7 @@ import {
 } from "@/content/tax-services";
 import { TaxGutCheck } from "./TaxGutCheck";
 import { TaxChecklist } from "./TaxChecklist";
+import { CatchUpSpecial } from "./CatchUpSpecial";
 
 export const metadata: Metadata = {
   title: {
@@ -149,6 +150,9 @@ export default function TaxDivisionPage() {
           </div>
         </div>
       </Section>
+
+      {/* Catch-Up 1040 Special — founder-approved 2026-10-19 */}
+      <CatchUpSpecial />
 
       {/* Intro / founder voice */}
       <Section variant="cream" id="founder">
@@ -377,6 +381,11 @@ export default function TaxDivisionPage() {
             </div>
           ))}
         </div>
+        <p className="mt-6 text-xs leading-relaxed text-muted-gray">
+          Qualifying simple individual returns for tax years 2023–2025 may
+          qualify for the Catch-Up 1040 Special pricing shown at the top of
+          this page.
+        </p>
         <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 rounded-2xl border border-gold-light/60 bg-cream px-6 py-5">
           {taxPricingPolicy.map((line) => (
             <p
