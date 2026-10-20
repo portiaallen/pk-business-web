@@ -6,14 +6,13 @@ import {
   uploadDocument,
   verifyIdentity,
 } from "@/lib/tax/onboarding-core";
-import { getSyntheticSession } from "@/lib/tax/session-store";
+import { taxSessionStoreOrThrow } from "@/lib/tax/session-storage";
 import { rejectIfSensitive } from "@/lib/tax/intake-screen";
 
 // POST /api/tax/documents - actions: verify | grant | upload | attest | close.
 // Identity verification and access control are fail-closed. The production
-// storage adapter (PK restricted backend/vault) is owner-configured; this
-// build ships only the synthetic in-memory store and performs no real file
-// writes. No file content is accepted or transmitted in this build.
+// storage adapter (PK restricted backend/vault) is owner-configured; no file
+// content is accepted or transmitted in this build.
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as
     | { sessionId?: string; action?: string; verified?: boolean; meta?: { name?: string } }
@@ -21,7 +20,17 @@ export async function POST(request: Request) {
   if (!body || !body.sessionId || !body.action) {
     return NextResponse.json({ error: "sessionId and action are required" }, { status: 400 });
   }
-  const session = getSyntheticSession(body.sessionId);
+  let store;
+  try {
+    store = taxSessionStoreOrThrow();
+  } catch (error) {
+    const failClosed = error as { status?: number; response?: unknown };
+    if (failClosed.status === 503) {
+      return NextResponse.json(failClosed.response, { status: 503 });
+    }
+    throw error;
+  }
+  const session = await store.get(body.sessionId);
   if (!session) {
     return NextResponse.json({ error: "session not found" }, { status: 404 });
   }
@@ -57,5 +66,6 @@ export async function POST(request: Request) {
     default:
       return NextResponse.json({ error: "unknown action" }, { status: 400 });
   }
-  return NextResponse.json({ ok, access: session.access, uploads: session.uploads.length });
+  await store.put(session);
+  return NextResponse.json({ ok, gates: session.gates, mode: store.mode });
 }

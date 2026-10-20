@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { createSession } from "@/lib/tax/onboarding-core";
-import { putSyntheticSession } from "@/lib/tax/session-store";
+import { taxSessionStoreOrThrow } from "@/lib/tax/session-storage";
 import { rejectIfSensitive } from "@/lib/tax/intake-screen";
 
-// POST /api/tax/onboarding - create a synthetic-mode intake session.
-// No real taxpayer data is accepted in this build; sessions are synthetic
-// until security validation and founder sign-off.
+// POST /api/tax/onboarding - create an intake session.
+// No real taxpayer data is accepted in this build; the session store resolves
+// to the synthetic in-memory store under PK_CI_SYNTHETIC=1 and to the
+// encrypted at-rest adapter when the owner has configured it. It refuses
+// (503) rather than falling back to volatile storage.
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const screen = rejectIfSensitive(body);
@@ -18,11 +20,21 @@ export async function POST(request: Request) {
       { status: 422 },
     );
   }
+  let store;
+  try {
+    store = taxSessionStoreOrThrow();
+  } catch (error) {
+    const failClosed = error as { status?: number; response?: unknown };
+    if (failClosed.status === 503) {
+      return NextResponse.json(failClosed.response, { status: 503 });
+    }
+    throw error;
+  }
   const session = createSession(typeof body.taxYear === "number" ? body.taxYear : 2026);
-  putSyntheticSession(session);
+  await store.put(session);
   return NextResponse.json({
     sessionId: session.sessionId,
     taxYear: session.taxYear,
-    mode: "synthetic-only",
+    mode: store.mode,
   });
 }
