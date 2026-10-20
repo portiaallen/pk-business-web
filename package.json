@@ -20,6 +20,7 @@
     "test:browser:readiness": "prisma generate && node --import tsx scripts/verify-readiness-browser.mts",
     "test:readiness:landing": "node scripts/test-readiness.mjs",
     "test:tax:onboarding": "node --import tsx --test scripts/test-tax-onboarding.mts",
+    "test:tax:catchup": "node --import tsx --test scripts/test-tax-catchup-intake.mts",
     "test:roast": "node --import tsx --test scripts/test-roast-engine.mts"
   },
   "dependencies": {

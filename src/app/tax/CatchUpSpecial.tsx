@@ -86,10 +86,10 @@ export function CatchUpSpecial() {
               products.
             </p>
             <Link
-              href="#start"
+              href="/tax/catchup-intake"
               className="mt-6 block rounded-lg bg-charcoal px-6 py-4 text-center text-base font-semibold text-ivory transition-colors hover:bg-gold"
             >
-              Request Your Catch-Up Tax Quote →
+              Start My Catch-Up 1040 Intake →
             </Link>
           </div>
 

@@ -3,6 +3,7 @@ const EVENTS = new Set([
   "API_FAILURE", "CONTACT_EMAIL_FAILURE", "CONTACT_SUBMISSION_FAILURE",
   "DOCUMENT_STORAGE_FAILURE", "DELIVERABLE_STORAGE_FAILURE",
   "TRANSFER_FAILURE", "CHECKOUT_NETWORK_FAILURE", "CHECKOUT_PROVIDER_FAILURE", "RESET_EMAIL_FAILURE",
+  "CATCHUP_EMAIL_FAILURE",
 ]);
 export function safeRuntimeEvent(event: unknown): string {
   return typeof event === "string" && EVENTS.has(event) ? event : "PK_RUNTIME_EVENT";
