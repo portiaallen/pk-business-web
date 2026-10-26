@@ -1528,3 +1528,34 @@ model ReadinessPublicRateLimit {
   count Int @default(0)
   expiresAt DateTime
 }
+
+// ─── Groupon voucher verification (Nov 1 pilot, staging) ──────────────────────
+// One row per voucher claim. A redemption code can be claimed at most once:
+// the unique constraint makes the claim atomic. Staff verify the voucher's
+// live status in Groupon Merchant Center BEFORE approving; the merchant marks
+// the voucher redeemed in Groupon only after PK approves it here.
+
+enum GrouponRedemptionStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  REDEEMED
+}
+
+model GrouponRedemption {
+  id            String                  @id @default(cuid())
+  redemptionCode String                 @unique
+  fullName      String
+  email         String
+  phone         String?
+  status        GrouponRedemptionStatus @default(PENDING_REVIEW)
+  reviewedByStaffId String?
+  reviewNotes   String?
+  auditTrail    String                  @default("[]")
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  @@index([status])
+  @@index([email])
+  @@index([createdAt])
+}
