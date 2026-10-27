@@ -72,6 +72,69 @@ sqlite.exec(
 sqlite.exec(
   readFileSync("prisma/readiness-migrations/readiness-recovery-v1.sql", "utf8"),
 );
+
+// Keep the synthetic fixture in step with the current prisma/schema.prisma:
+// additive schema changes (the marketing-consent intake columns and later ones)
+// must be present or the app code under test writes columns this database
+// lacks. The readiness tables themselves stay exactly as the SQL migrations
+// create them, so statements recreating or dropping an existing table are
+// skipped outside Prisma's own redefine block, which is applied verbatim.
+const currentSchemaDelta = execFileSync(
+  "npx",
+  [
+    "prisma",
+    "migrate",
+    "diff",
+    "--from-schema",
+    baseline,
+    "--to-schema",
+    "prisma/schema.prisma",
+    "--script",
+  ],
+  { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+);
+const existingTables = new Set(
+  (
+    sqlite
+      .prepare("SELECT name FROM sqlite_master WHERE type IN ('table','view')")
+      .all() as { name: string }[]
+  ).map((row) => row.name),
+);
+let insideRedefine = false;
+const deltaStatements: string[] = [];
+for (const chunk of currentSchemaDelta.split(";")) {
+  const statement = chunk.trim();
+  if (
+    !statement ||
+    statement
+      .split("\n")
+      .every((line) => !line.trim() || line.trim().startsWith("--"))
+  )
+    continue;
+  if (statement.includes("PRAGMA defer_foreign_keys=ON")) insideRedefine = true;
+  if (statement.includes("PRAGMA defer_foreign_keys=OFF")) {
+    insideRedefine = false;
+    continue;
+  }
+  if (insideRedefine) {
+    deltaStatements.push(statement + ";");
+    continue;
+  }
+  if (/\bDROP\b/i.test(statement)) continue;
+  const target = (
+    /\bCREATE\s+(?:UNIQUE\s+)?INDEX\s+"[^"]+"\s+ON\s+"?(\w+)"?/i.exec(
+      statement,
+    ) ??
+    /\bCREATE\s+TABLE\s+"?(\w+)"?/i.exec(statement) ??
+    /\bALTER\s+TABLE\s+"?(\w+)"?/i.exec(statement)
+  )?.[1];
+  const createsStructure = /\bCREATE\s+(?:TABLE|(?:UNIQUE\s+)?INDEX)\b/i.test(
+    statement,
+  );
+  if (createsStructure && target && existingTables.has(target)) continue;
+  deltaStatements.push(statement + ";");
+}
+sqlite.exec(deltaStatements.join("\n"));
 const { prisma } = await import("../src/lib/prisma");
 const auth = await import("../src/lib/auth");
 const policy = await import("../src/lib/readiness/policy");
