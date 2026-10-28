@@ -19,6 +19,23 @@ const STATUS_FOR_ACTION: Record<Action, "APPROVED" | "REJECTED" | "REDEEMED" | "
   REOPEN: "PENDING_REVIEW",
 };
 
+function safeParseAuditTrail(raw: string): unknown[] {
+  // A corrupted or hand-edited audit trail must never take down a staff review:
+  // keep whatever parses, log the loss, and keep the decision auditable.
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [
+      {
+        at: new Date().toISOString(),
+        action: "audit_trail_corrupted_reset",
+        by: "system",
+      },
+    ];
+  }
+}
+
 function auditEntry(action: string, by: string, notes: string | null) {
   const entry: Record<string, unknown> = {
     at: new Date().toISOString(),
@@ -84,6 +101,26 @@ export async function PATCH(request: Request) {
     const existing = await prisma.grouponRedemption.findUnique({ where: { id } });
     if (!existing) throw ApiError.notFound();
 
+    // Pilot state machine: Groupon's voucher is marked redeemed ONLY after PK
+    // approves the claim (staff verify live status in Merchant Center first).
+    // Approvals and rejections move a claim out of PENDING_REVIEW once.
+    // MARK_REDEEMED is valid only from APPROVED; REOPEN is valid only from
+    // REJECTED. Every other transition is refused with a clear message.
+    const ALLOWED_FROM: Record<Action, readonly string[]> = {
+      APPROVE: ["PENDING_REVIEW"],
+      REJECT: ["PENDING_REVIEW"],
+      MARK_REDEEMED: ["APPROVED"],
+      REOPEN: ["REJECTED"],
+    };
+    if (!ALLOWED_FROM[action].includes(existing.status)) {
+      throw ApiError.badRequest(
+        `Cannot ${action.toLowerCase()} a claim that is ${existing.status.toLowerCase()}. ` +
+          (action === "MARK_REDEEMED"
+            ? "Approve the claim first, then mark the voucher redeemed in Groupon Merchant Center."
+            : `Allowed from ${existing.status.toLowerCase()}: none for this action.`),
+      );
+    }
+
     const updated = await prisma.grouponRedemption.update({
       where: { id },
       data: {
@@ -91,7 +128,7 @@ export async function PATCH(request: Request) {
         reviewedByStaffId: action === "REOPEN" ? null : user.id,
         reviewNotes: notes || (action === "REOPEN" ? null : existing.reviewNotes),
         auditTrail: JSON.stringify([
-          ...JSON.parse(existing.auditTrail),
+          ...safeParseAuditTrail(existing.auditTrail),
           auditEntry(action.toLowerCase(), user.id, notes || null),
         ]),
       },
