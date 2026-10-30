@@ -19,6 +19,7 @@ export async function requireAdminApiAccess(request: Request) {
   if (["requests", "documents", "dashboard"].includes(area))
     capability = "confidential_access";
   if (area === "intake-submissions") capability = "consultations";
+  if (area === "cpa-partners") capability = "consultations";
   if (area === "invoices") capability = "payments";
   if (area === "services") capability = "pricing";
   if (area === "activity") capability = "audit";

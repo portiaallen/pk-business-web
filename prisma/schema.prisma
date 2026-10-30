@@ -1559,3 +1559,51 @@ model GrouponRedemption {
   @@index([email])
   @@index([createdAt])
 }
+
+// ─── PK Practice Partners: CPA firm applications (paid B2B outsourcing) ──────
+// Distinct from the free PK Partner Circle: these are paid outsourcing
+// applications from CPA/accounting firms. Applications are non-sensitive by
+// design (no taxpayer files, SSNs, or client data), screened server-side
+// reject-before-persist, and linked to the existing IntakeSubmission record so
+// they surface in the existing admin workflow. Approval authority stays with
+// the founder (ADMIN role); there is no automatic approval.
+
+enum CpaPartnerStatus {
+  NEW_APPLICATION
+  IN_REVIEW
+  QUOTE_SENT
+  APPROVED
+  DECLINED
+  ONBOARDED
+}
+
+model CpaPartnerApplication {
+  id                 String           @id @default(cuid())
+  intakeSubmissionId String?
+  firmName           String
+  contactName        String
+  email              String
+  phone              String?
+  serviceNeeds       String           @default("[]")
+  partnershipModel   String
+  scopeNotes         String
+  acknowledgement    Boolean          @default(false)
+  status             CpaPartnerStatus @default(NEW_APPLICATION)
+  internalNotes      String           @default("[]")
+  quoteAmount        String?
+  quoteNotes         String?
+  secureFolderName   String?
+  secureFolderAccess String?
+  onboardingNotes    String?
+  onboardingComplete Boolean          @default(false)
+  approvedAt         DateTime?
+  declinedAt         DateTime?
+  onboardedAt        DateTime?
+  emailSent          Boolean          @default(false)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+}
