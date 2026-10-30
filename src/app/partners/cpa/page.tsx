@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import CpaPartnerApplicationForm from "@/components/forms/CpaPartnerApplicationForm";
+import { CPA_PAYMENT_TERMS } from "@/content/cpa-partners";
 
 export const metadata: Metadata = {
   title: "PK Practice Partners | CPA Outsourcing & Practice Support",
@@ -27,7 +28,7 @@ export default function CPAPartnersPage() {
           <p className="mb-4 text-sm font-semibold uppercase tracking-[0.22em] text-gold-light">PK Practice Partners</p>
           <h1 className="max-w-4xl font-heading text-5xl leading-tight sm:text-7xl">Your practice. Your clients. Your choice. <span className="text-gold-light">Our support.</span></h1>
           <p className="mt-7 max-w-2xl text-lg leading-relaxed text-ivory/85">Flexible outsourced bookkeeping and practice support for CPA firms, tax professionals, and accounting practices. Expand capacity without giving up your client relationships.</p>
-          <a className="mt-9 inline-flex min-h-12 items-center justify-center rounded-md bg-pink px-7 py-3 font-semibold text-white hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-4" href="mailto:info@pkservices.business?subject=PK%20Practice%20Partners%20-%20Partnership%20Inquiry">Request a partner conversation</a>
+          <a className="mt-9 inline-flex min-h-12 items-center justify-center rounded-md bg-pink px-7 py-3 font-semibold text-white hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-4" href="#apply">Apply for a partner conversation</a>
           <p className="mt-3 text-sm text-ivory/70">No sensitive client or taxpayer documents by email, please.</p>
         </div>
       </section>
@@ -60,25 +61,39 @@ export default function CPAPartnersPage() {
         </div>
       </section>
       <section className="section-padding">
-        <div className="container-narrow grid gap-10 md:grid-cols-2">
-          <div>
-            <p className="font-semibold uppercase tracking-widest text-pink">How it works</p>
-            <h2 className="mt-3 text-4xl">A straightforward partnership.</h2>
+        <div className="container-narrow">
+          <p className="font-semibold uppercase tracking-widest text-pink">How engagements start</p>
+          <h2 className="mt-3 text-4xl">Clear terms before any work begins.</h2>
+          <div className="mt-8 grid gap-5 md:grid-cols-3">
+            <div className="rounded-xl border border-border bg-card p-7">
+              <h3 className="text-xl">Quote and agreement</h3>
+              <p className="mt-3 leading-relaxed text-muted-gray">{CPA_PAYMENT_TERMS.agreement}.</p>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-7">
+              <h3 className="text-xl">{CPA_PAYMENT_TERMS.deposit}</h3>
+              <p className="mt-3 leading-relaxed text-muted-gray">A 50% deposit secures your start date. Work begins after the deposit clears.</p>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-7">
+              <h3 className="text-xl">{CPA_PAYMENT_TERMS.smallInvoice}</h3>
+              <p className="mt-3 leading-relaxed text-muted-gray">Smaller engagements are fully prepaid, so there is nothing to track after delivery.</p>
+            </div>
           </div>
-          <ol className="space-y-5 text-lg leading-relaxed">
-            <li><strong>01. Connect.</strong> Tell us about your practice and the capacity you need.</li>
-            <li><strong>02. Scope.</strong> Agree on deliverables, communication, pricing, and confidentiality.</li>
-            <li><strong>03. Onboard.</strong> Complete the appropriate agreements and secure-access checks.</li>
-            <li><strong>04. Deliver.</strong> PK supports the assigned work; your firm maintains final review and approval.</li>
-          </ol>
+          <p className="mt-6 text-sm text-muted-gray">
+            Your firm always keeps the client relationship. PK does not solicit your clients. Pricing is quoted privately for each engagement; wholesale rates are not published.
+          </p>
         </div>
       </section>
-      <section className="bg-charcoal px-5 py-16 text-center text-ivory">
-        <h2 className="text-4xl">Let's build a better way to handle overflow.</h2>
-        <p className="mx-auto mt-4 max-w-xl text-ivory/80">Wholesale partner pricing is customized by engagement scope and volume.</p>
-        <a href="mailto:info@pkservices.business?subject=PK%20Practice%20Partners%20-%20Partnership%20Inquiry" className="mt-8 inline-flex min-h-12 items-center rounded-md bg-pink px-7 py-3 font-semibold text-white">Contact PK about partnering</a>
-        <p className="mt-5 text-sm text-ivory/70">PK Business Services · Professional with Personality</p>
-        <Link className="mt-3 inline-block text-sm underline underline-offset-4" href="/contact">General service inquiries</Link>
+      <section id="apply" className="section-padding bg-secondary">
+        <div className="container-narrow">
+          <p className="font-semibold uppercase tracking-widest text-pink">Apply</p>
+          <h2 className="mt-3 text-4xl">Start a partner application.</h2>
+          <p className="mt-4 max-w-2xl text-muted-gray">
+            Tell us about your firm and what you need. PK reviews every application personally, and founder approval is required before any firm is onboarded. This form is for general inquiries only: never submit taxpayer files, Social Security numbers, or sensitive client data here.
+          </p>
+          <div className="mt-8">
+            <CpaPartnerApplicationForm />
+          </div>
+        </div>
       </section>
     </>
   );
