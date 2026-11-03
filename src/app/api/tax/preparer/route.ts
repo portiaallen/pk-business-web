@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { requireStaff } from "@/lib/capabilities";
 import { requireRecentAuthentication } from "@/lib/auth";
-import { canTransmit, clearPreparerGate } from "@/lib/tax/onboarding-core";
+import {
+  canTransmit,
+  clearPreparerGate,
+  markNotificationsRead,
+  preparerGrantAccess,
+  preparerQueueRow,
+  preparerVerifyIdentity,
+} from "@/lib/tax/onboarding-core";
 import { taxSessionStoreOrThrow } from "@/lib/tax/session-storage";
 import { ApiError, handleApiError } from "@/lib/api-error";
 
@@ -24,9 +31,18 @@ function failClosedResponse(error: unknown): NextResponse | null {
 export async function GET(request: Request) {
   try {
     await requireStaff(request); // WebAuthn-assured staff session required
-    const sessionId = new URL(request.url).searchParams.get("sessionId") ?? "";
+    const params = new URL(request.url).searchParams;
+    if (params.get("queue") === "1") {
+      const store = taxSessionStoreOrThrow();
+      const sessions = await store.list();
+      return NextResponse.json({
+        queue: sessions.map((session) => preparerQueueRow(session)),
+        mode: store.mode,
+      });
+    }
+    const sessionId = params.get("sessionId") ?? "";
     if (!sessionId) {
-      return NextResponse.json({ error: "sessionId is required" }, { status: 400 });
+      return NextResponse.json({ error: "sessionId or queue=1 is required" }, { status: 400 });
     }
     const store = taxSessionStoreOrThrow();
     const session = await store.get(sessionId);
@@ -38,6 +54,8 @@ export async function GET(request: Request) {
       flags: session.flags,
       checklist: session.checklist,
       audit: session.audit,
+      identity: session.identity,
+      notifications: session.notifications,
       transmission: canTransmit(session),
       mode: store.mode,
     });
@@ -54,7 +72,7 @@ export async function POST(request: Request) {
     const user = await requireStaff(request);
     requireRecentAuthentication(user); // step-up before any state change
     const body = (await request.json().catch(() => null)) as
-      | { sessionId?: string; action?: string; preparer?: string }
+      | { sessionId?: string; action?: string; preparer?: string; notes?: string }
       | null;
     if (!body || !body.sessionId || !body.action) {
       return NextResponse.json({ error: "sessionId and action are required" }, { status: 400 });
@@ -64,10 +82,31 @@ export async function POST(request: Request) {
     if (!session) {
       return NextResponse.json({ error: "session not found" }, { status: 404 });
     }
+    const preparer = body.preparer ?? user.name ?? "unnamed preparer";
     if (body.action === "clear_review_gate") {
-      clearPreparerGate(session, body.preparer ?? user.name ?? "unnamed preparer");
+      clearPreparerGate(session, preparer);
       await store.put(session);
       return NextResponse.json({ cleared: true, transmission: canTransmit(session), mode: store.mode });
+    }
+    if (body.action === "grant_access") {
+      const ok = preparerGrantAccess(session, preparer);
+      await store.put(session);
+      return NextResponse.json({ ok, access: session.access, mode: store.mode });
+    }
+    if (body.action === "verify_identity" || body.action === "reject_identity") {
+      const ok = preparerVerifyIdentity(
+        session,
+        preparer,
+        body.action === "verify_identity",
+        typeof body.notes === "string" ? body.notes : undefined,
+      );
+      await store.put(session);
+      return NextResponse.json({ ok, identity: session.identity, gates: session.gates, mode: store.mode });
+    }
+    if (body.action === "mark_read") {
+      const cleared = markNotificationsRead(session);
+      await store.put(session);
+      return NextResponse.json({ cleared, mode: store.mode });
     }
     return NextResponse.json({ error: "unknown action" }, { status: 400 });
   } catch (error) {

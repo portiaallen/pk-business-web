@@ -12,6 +12,10 @@ export function getSyntheticSession(id: string): Session | null {
   return sessions.get(id) ?? null;
 }
 
+export function listSyntheticSessions(): Session[] {
+  return [...sessions.values()];
+}
+
 export function putSyntheticSession(s: Session): void {
   sessions.set(s.sessionId, s);
 }
