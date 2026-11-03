@@ -39,6 +39,9 @@ export async function GET(request: Request) {
         description: s.description,
         contactMethod: s.contactMethod,
         processed: s.processed,
+        sourceChannel: s.sourceChannel,
+        questionnaireVersion: s.questionnaireVersion,
+        questionnaireJson: s.questionnaireJson,
         createdAt: s.createdAt.toISOString(),
       }))
     );

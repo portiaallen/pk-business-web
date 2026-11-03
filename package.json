@@ -21,6 +21,7 @@
     "test:readiness:landing": "node scripts/test-readiness.mjs",
     "test:tax:onboarding": "node --import tsx --test scripts/test-tax-onboarding.mts",
     "test:tax:catchup": "node --import tsx --test scripts/test-tax-catchup-intake.mts",
+    "test:clarity:intake": "node --import tsx --test scripts/test-clarity-intake.mts",
     "test:roast": "node --import tsx --test scripts/test-roast-engine.mts",
     "test:cpa:partners": "node --import tsx --test scripts/test-cpa-partners.mts"
   },

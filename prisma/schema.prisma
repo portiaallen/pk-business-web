@@ -567,6 +567,14 @@ model IntakeSubmission {
   processed     Boolean  @default(false)
   createdAt     DateTime @default(now())
 
+  // Clarity Collection intake (M2): source/channel tracking + per-product
+  // questionnaire answers. All optional so existing rows and the additive-only
+  // schema sync are unaffected. questionnaireJson stores ONLY validated,
+  // screened answers; sensitive identifiers are rejected before persistence.
+  sourceChannel          String? // "direct" | "groupon"
+  questionnaireVersion   String?
+  questionnaireJson      String?
+
   @@index([email])
   @@index([createdAt])
   readinessAssessment ReadinessAssessment?

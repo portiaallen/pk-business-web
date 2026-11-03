@@ -9,6 +9,7 @@ import {
   clarityProducts,
   type ClarityProductId,
 } from "@/content/clarity";
+import { ClarityIntakeForm } from "@/components/forms/ClarityIntakeForm";
 
 interface Params {
   params: Promise<{ slug: string }>;
@@ -85,16 +86,31 @@ export default async function ClarityProductPage({ params }: Params) {
               </p>
             </div>
             <Button
-              render={<Link href="/contact" />}
+              render={<Link href="#intake" />}
               className="mt-4 h-11 w-full bg-charcoal text-ivory hover:bg-charcoal/90"
             >
-              Request a Consultation
+              Start Your Product Intake
             </Button>
             <p className="mt-4 text-xs leading-relaxed text-muted-gray">
               Never send Social Security numbers, ITINs, ID photos, or tax documents through this
               website. Sensitive information moves through PK&apos;s secure client process.
             </p>
           </aside>
+        </div>
+      </Section>
+      <Section>
+        <div id="intake" className="mx-auto max-w-3xl scroll-mt-24">
+          <h2 className="pk-heading text-2xl font-semibold text-charcoal">
+            Start your {product.shortName} intake
+          </h2>
+          <p className="mt-2 text-base leading-relaxed text-muted-gray">
+            Answer the product questionnaire and PK follows up with next steps, including
+            the secure process for any documents. Checkout opens at public launch; the
+            intake reserves your place in line.
+          </p>
+          <div className="mt-6 rounded-lg border border-border bg-card p-6 sm:p-8">
+            <ClarityIntakeForm productId={product.id} />
+          </div>
         </div>
       </Section>
       <Section>
@@ -117,7 +133,7 @@ export default async function ClarityProductPage({ params }: Params) {
       </Section>
       <CTASection
         title="Ready for a clearer picture?"
-        description="Request a consultation and note the Clarity Collection product you are interested in. Checkout opens at public launch."
+        description="Complete the product intake on any Clarity Collection page, or request a consultation and note the product you are interested in."
       />
     </>
   );

@@ -14,8 +14,37 @@ type Submission = {
   description: string;
   contactMethod: string;
   processed: boolean;
+  sourceChannel: string | null;
+  questionnaireVersion: string | null;
+  questionnaireJson: string | null;
   createdAt: string;
 };
+
+function formatQuestionnaire(json: string): string {
+  try {
+    const parsed = JSON.parse(json) as Record<string, unknown>;
+    return Object.entries(parsed)
+      .map(([key, value]) => {
+        const label = key
+          .split("-")
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" ");
+        if (Array.isArray(value)) {
+          return `${label}: ${value
+            .map((item) =>
+              typeof item === "object" && item !== null
+                ? Object.values(item as Record<string, unknown>).join(" / ")
+                : String(item)
+            )
+            .join(" | ")}`;
+        }
+        return `${label}: ${String(value)}`;
+      })
+      .join("\n");
+  } catch {
+    return "(answers unavailable)";
+  }
+}
 
 export default function ConsultationsPage() {
   const [subs, setSubs] = useState<Submission[] | null>(null);
@@ -138,7 +167,7 @@ export default function ConsultationsPage() {
         <div className="rounded-lg border border-border bg-card p-8 text-center">
           <p className="font-medium text-charcoal">No {filter === "new" ? "new " : ""}consultations yet</p>
           <p className="mt-1 text-sm text-muted-gray">
-            Website consultation requests will appear here the moment they're submitted.
+            Website consultation requests will appear here the moment they&apos;re submitted.
           </p>
         </div>
       ) : (
@@ -174,6 +203,22 @@ export default function ConsultationsPage() {
                     <span className="text-muted-gray">Prefers: {s.contactMethod}</span>
                   </p>
                   <p className="mt-2 whitespace-pre-wrap text-sm text-charcoal">{s.description}</p>
+                  {s.sourceChannel && (
+                    <p className="mt-2 text-xs text-muted-gray">
+                      Source: <span className="font-medium text-charcoal">{s.sourceChannel}</span>
+                      {s.questionnaireVersion ? ` · questionnaire ${s.questionnaireVersion}` : ""}
+                    </p>
+                  )}
+                  {s.questionnaireJson && (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-xs font-medium text-charcoal underline">
+                        Product intake answers
+                      </summary>
+                      <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded-md bg-cream p-3 text-xs leading-relaxed text-charcoal">
+                        {formatQuestionnaire(s.questionnaireJson)}
+                      </pre>
+                    </details>
+                  )}
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-2">
                   <button
