@@ -10,6 +10,10 @@ import {
 import { ApiError, handleApiError } from "@/lib/api-error";
 import { readDeleteId, requireAdminForDelete } from "@/lib/admin-delete";
 import { serviceOptions } from "@/content/services";
+import {
+  canTransitionFulfillmentStatus,
+  isClarityFulfillmentStatus,
+} from "@/lib/clarity-fulfillment";
 
 function serviceLabel(slug: string): string {
   return serviceOptions.find((o) => o.value === slug)?.label ?? slug;
@@ -42,6 +46,8 @@ export async function GET(request: Request) {
         sourceChannel: s.sourceChannel,
         questionnaireVersion: s.questionnaireVersion,
         questionnaireJson: s.questionnaireJson,
+        fulfillmentStatus: s.fulfillmentStatus,
+        assignedToUserId: s.assignedToUserId,
         createdAt: s.createdAt.toISOString(),
       }))
     );
@@ -107,23 +113,72 @@ export async function PATCH(request: Request) {
     const body = (await request.json().catch(() => null)) as {
       id?: string;
       processed?: boolean;
+      fulfillmentStatus?: string;
+      assignedToUserId?: string | null;
     } | null;
-    if (!body?.id || typeof body.processed !== "boolean") {
-      throw ApiError.badRequest("id and processed are required");
+    if (!body?.id) {
+      throw ApiError.badRequest("id is required");
     }
 
     const existing = await prisma.intakeSubmission.findUnique({
       where: { id: body.id },
-      select: { id: true },
+      select: { id: true, fulfillmentStatus: true },
     });
     if (!existing) throw ApiError.notFound("Submission not found");
 
-    await prisma.intakeSubmission.update({
+    const data: Record<string, unknown> = {};
+
+    if (typeof body.processed === "boolean") {
+      data.processed = body.processed;
+    }
+
+    if (body.fulfillmentStatus !== undefined) {
+      if (!isClarityFulfillmentStatus(body.fulfillmentStatus)) {
+        throw ApiError.badRequest(
+          `Invalid fulfillmentStatus. Valid: new | in_review | awaiting_client | fulfilled`
+        );
+      }
+      if (
+        body.fulfillmentStatus !== existing.fulfillmentStatus &&
+        !canTransitionFulfillmentStatus(existing.fulfillmentStatus, body.fulfillmentStatus)
+      ) {
+        throw ApiError.conflict(
+          `Cannot move a fulfilled submission back to ${body.fulfillmentStatus}. Reopen to in_review first.`
+        );
+      }
+      data.fulfillmentStatus = body.fulfillmentStatus;
+    }
+
+    if (body.assignedToUserId !== undefined) {
+      if (body.assignedToUserId === null || body.assignedToUserId === "") {
+        data.assignedToUserId = null;
+      } else if (typeof body.assignedToUserId === "string") {
+        const assignee = await prisma.user.findUnique({
+          where: { id: body.assignedToUserId },
+          select: { id: true, role: true },
+        });
+        if (!assignee || !hasRole(assignee, "ADMIN", "STAFF")) {
+          throw ApiError.badRequest("Assignee must be an existing ADMIN or STAFF user");
+        }
+        data.assignedToUserId = assignee.id;
+      }
+    }
+
+    if (Object.keys(data).length === 0) {
+      throw ApiError.badRequest("Nothing to update");
+    }
+
+    const updated = await prisma.intakeSubmission.update({
       where: { id: body.id },
-      data: { processed: body.processed },
+      data,
     });
 
-    return NextResponse.json({ id: body.id, processed: body.processed });
+    return NextResponse.json({
+      id: updated.id,
+      processed: updated.processed,
+      fulfillmentStatus: updated.fulfillmentStatus,
+      assignedToUserId: updated.assignedToUserId,
+    });
   } catch (error) {
     return handleApiError(error);
   }

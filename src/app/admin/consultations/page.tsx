@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Mail, Phone, Building2, CheckCircle2, Circle, Trash2 } from "lucide-react";
 import { confirmDelete } from "@/lib/confirm-delete";
+import { CLARITY_TIME_CATEGORIES } from "@/lib/clarity-fulfillment";
 
 type Submission = {
   id: string;
@@ -17,8 +18,24 @@ type Submission = {
   sourceChannel: string | null;
   questionnaireVersion: string | null;
   questionnaireJson: string | null;
+  fulfillmentStatus: string;
+  assignedToUserId: string | null;
   createdAt: string;
 };
+
+type TeamMember = { id: string; name: string | null; role: string };
+type TimeEntryRow = {
+  id: string;
+  userName: string | null;
+  category: string;
+  note: string | null;
+  startedAt: string;
+  stoppedAt: string | null;
+  durationDisplay: string;
+  isRunning: boolean;
+};
+
+const FULFILLMENT_STATUSES = ["new", "in_review", "awaiting_client", "fulfilled"] as const;
 
 function formatQuestionnaire(json: string): string {
   try {
@@ -52,6 +69,15 @@ export default function ConsultationsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "new">("all");
   const [deleteError, setDeleteError] = useState("");
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  const [openTimeId, setOpenTimeId] = useState<string | null>(null);
+  const [timeEntries, setTimeEntries] = useState<TimeEntryRow[]>([]);
+  const [timeTotals, setTimeTotals] = useState<{ totalDisplay: string }>({ totalDisplay: "0:00:00" });
+  const [timeError, setTimeError] = useState("");
+  const [timeBusy, setTimeBusy] = useState(false);
+  const [timeCategory, setTimeCategory] = useState("");
+  const [timeNote, setTimeNote] = useState("");
+  const [manualMinutes, setManualMinutes] = useState("");
 
   async function deleteSubmission(id: string, name: string) {
     if (!confirmDelete(`Permanently delete the consultation from ${name}? This cannot be undone.`)) return;
@@ -89,6 +115,12 @@ export default function ConsultationsPage() {
 
   useEffect(() => {
     load();
+    fetch("/api/admin/team")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((rows: TeamMember[]) =>
+        setTeam(rows.filter((u) => u.role === "ADMIN" || u.role === "STAFF"))
+      )
+      .catch(() => setTeam([]));
   }, []);
 
   async function toggleProcessed(id: string, processed: boolean) {
@@ -107,6 +139,107 @@ export default function ConsultationsPage() {
     } finally {
       setBusyId(null);
     }
+  }
+
+  async function updateFulfillment(id: string, patch: Record<string, unknown>) {
+    setBusyId(id);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/intake-submissions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...patch }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Update failed (${res.status})`);
+      }
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function loadTime(id: string) {
+    setTimeError("");
+    try {
+      const res = await fetch(`/api/admin/intake-submissions/${id}/time-entries`);
+      if (!res.ok) throw new Error(`Failed to load time entries (${res.status})`);
+      const data = (await res.json()) as { entries: TimeEntryRow[]; totals: { totalDisplay: string } };
+      setTimeEntries(data.entries);
+      setTimeTotals(data.totals);
+    } catch (e) {
+      setTimeError(e instanceof Error ? e.message : "Failed to load time entries");
+      setTimeEntries([]);
+    }
+  }
+
+  function toggleTimePanel(id: string) {
+    if (openTimeId === id) {
+      setOpenTimeId(null);
+      return;
+    }
+    setOpenTimeId(id);
+    setTimeCategory("");
+    setTimeNote("");
+    setManualMinutes("");
+    loadTime(id);
+  }
+
+  async function timeAction(id: string, method: string, body: Record<string, unknown>) {
+    setTimeBusy(true);
+    setTimeError("");
+    try {
+      const res = await fetch(`/api/admin/intake-submissions/${id}/time-entries`, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Request failed (${res.status})`);
+      }
+      await loadTime(id);
+    } catch (e) {
+      setTimeError(e instanceof Error ? e.message : "Request failed");
+    } finally {
+      setTimeBusy(false);
+    }
+  }
+
+  async function startTimer(id: string) {
+    if (!timeCategory) {
+      setTimeError("Pick a category first.");
+      return;
+    }
+    await timeAction(id, "POST", { category: timeCategory, note: timeNote });
+  }
+
+  async function stopTimer(id: string, entryId: string) {
+    await timeAction(id, "PATCH", { id: entryId });
+  }
+
+  async function addManual(id: string) {
+    const minutes = Number(manualMinutes);
+    if (!timeCategory || !Number.isFinite(minutes) || minutes <= 0) {
+      setTimeError("Pick a category and enter minutes.");
+      return;
+    }
+    await timeAction(id, "POST", {
+      category: timeCategory,
+      note: timeNote,
+      isManual: true,
+      durationSeconds: Math.round(minutes * 60),
+    });
+    setTimeNote("");
+    setManualMinutes("");
+  }
+
+  async function deleteEntry(id: string, entryId: string) {
+    if (!confirmDelete("Delete this time entry? This cannot be undone.")) return;
+    await timeAction(id, "DELETE", { id: entryId });
   }
 
   const visible = (subs ?? []).filter((s) => (filter === "new" ? !s.processed : true));
@@ -250,6 +383,143 @@ export default function ConsultationsPage() {
                     Delete
                   </button>
                 </div>
+              </div>
+
+              {/* Clarity fulfillment (M3): status, assignment, time tracking */}
+              <div className="mt-4 space-y-3 rounded-md border border-border bg-cream/40 p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="flex items-center gap-2 text-sm text-charcoal">
+                    Status
+                    <select
+                      value={s.fulfillmentStatus}
+                      onChange={(e) => updateFulfillment(s.id, { fulfillmentStatus: e.target.value })}
+                      disabled={busyId === s.id}
+                      className="min-h-[36px] rounded-md border border-border bg-background px-2 py-1 text-sm text-charcoal"
+                    >
+                      {FULFILLMENT_STATUSES.map((st) => (
+                        <option key={st} value={st}>
+                          {st.replace(/_/g, " ")}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-charcoal">
+                    Assigned to
+                    <select
+                      value={s.assignedToUserId ?? ""}
+                      onChange={(e) =>
+                        updateFulfillment(s.id, { assignedToUserId: e.target.value || null })
+                      }
+                      disabled={busyId === s.id || team.length === 0}
+                      className="min-h-[36px] max-w-[220px] rounded-md border border-border bg-background px-2 py-1 text-sm text-charcoal"
+                    >
+                      <option value="">Unassigned</option>
+                      {team.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name ?? u.id} ({u.role.toLowerCase()})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <details>
+                  <summary
+                    className="cursor-pointer text-xs font-medium text-charcoal underline"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      toggleTimePanel(s.id);
+                    }}
+                  >
+                    Fulfillment time
+                  </summary>
+                  {openTimeId === s.id && (
+                    <div className="mt-2 space-y-2 text-sm">
+                      {timeError && <p className="text-xs text-red-800">{timeError}</p>}
+                      <p className="text-xs text-muted-gray">
+                        Total logged: {timeTotals.totalDisplay}
+                      </p>
+                      <ul className="space-y-1">
+                        {timeEntries.map((t) => (
+                          <li key={t.id} className="flex flex-wrap items-center gap-2 text-xs text-charcoal">
+                            <span className="font-medium">{t.category}</span>
+                            <span>{t.durationDisplay}</span>
+                            <span className="text-muted-gray">
+                              {t.userName ?? ""} · {new Date(t.startedAt).toLocaleString()}
+                              {t.isRunning ? " · running" : ""}
+                            </span>
+                            {t.isRunning ? (
+                              <button
+                                type="button"
+                                onClick={() => stopTimer(s.id, t.id)}
+                                disabled={timeBusy}
+                                className="min-h-[32px] rounded-md border border-border bg-background px-2 py-1 text-xs font-medium text-charcoal hover:bg-muted disabled:opacity-50"
+                              >
+                                Stop
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => deleteEntry(s.id, t.id)}
+                                disabled={timeBusy}
+                                className="min-h-[32px] rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-800 hover:bg-red-50 disabled:opacity-50"
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </li>
+                        ))}
+                        {timeEntries.length === 0 && (
+                          <li className="text-xs text-muted-gray">No time logged yet.</li>
+                        )}
+                      </ul>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <select
+                          value={timeCategory}
+                          onChange={(e) => setTimeCategory(e.target.value)}
+                          className="min-h-[36px] rounded-md border border-border bg-background px-2 py-1 text-xs text-charcoal"
+                        >
+                          <option value="">Category…</option>
+                          {CLARITY_TIME_CATEGORIES.map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="text"
+                          value={timeNote}
+                          onChange={(e) => setTimeNote(e.target.value)}
+                          placeholder="Note (optional)"
+                          className="min-h-[36px] w-40 rounded-md border border-border bg-background px-2 py-1 text-xs text-charcoal"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => startTimer(s.id)}
+                          disabled={timeBusy}
+                          className="min-h-[36px] rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-charcoal hover:bg-muted disabled:opacity-50"
+                        >
+                          Start timer
+                        </button>
+                        <input
+                          type="number"
+                          min="1"
+                          value={manualMinutes}
+                          onChange={(e) => setManualMinutes(e.target.value)}
+                          placeholder="min"
+                          className="min-h-[36px] w-16 rounded-md border border-border bg-background px-2 py-1 text-xs text-charcoal"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => addManual(s.id)}
+                          disabled={timeBusy}
+                          className="min-h-[36px] rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-charcoal hover:bg-muted disabled:opacity-50"
+                        >
+                          Add manual
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </details>
               </div>
             </li>
           ))}
