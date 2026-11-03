@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { canTransmit, clearPreparerGate } from "@/lib/tax/onboarding-core";
-import { getSyntheticSession } from "@/lib/tax/session-store";
+import { taxSessionStoreOrThrow } from "@/lib/tax/session-storage";
 
 // Preparer-only dashboard and review gate.
 //
@@ -20,7 +20,17 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
   }
   const sessionId = new URL(request.url).searchParams.get("sessionId") ?? "";
-  const session = getSyntheticSession(sessionId);
+  let store;
+  try {
+    store = taxSessionStoreOrThrow();
+  } catch (error) {
+    const failClosed = error as { status?: number; response?: unknown };
+    if (failClosed.status === 503) {
+      return NextResponse.json(failClosed.response, { status: 503 });
+    }
+    throw error;
+  }
+  const session = await store.get(sessionId);
   if (!session) {
     return NextResponse.json({ error: "session not found" }, { status: 404 });
   }
@@ -30,6 +40,7 @@ export async function GET(request: Request) {
     checklist: session.checklist,
     audit: session.audit,
     transmission: canTransmit(session),
+    mode: store.mode,
   });
 }
 
@@ -43,13 +54,24 @@ export async function POST(request: Request) {
   if (!body || !body.sessionId || !body.action) {
     return NextResponse.json({ error: "sessionId and action are required" }, { status: 400 });
   }
-  const session = getSyntheticSession(body.sessionId);
+  let store;
+  try {
+    store = taxSessionStoreOrThrow();
+  } catch (error) {
+    const failClosed = error as { status?: number; response?: unknown };
+    if (failClosed.status === 503) {
+      return NextResponse.json(failClosed.response, { status: 503 });
+    }
+    throw error;
+  }
+  const session = await store.get(body.sessionId);
   if (!session) {
     return NextResponse.json({ error: "session not found" }, { status: 404 });
   }
   if (body.action === "clear_review_gate") {
     clearPreparerGate(session, body.preparer ?? "unnamed preparer");
-    return NextResponse.json({ cleared: true, transmission: canTransmit(session) });
+    await store.put(session);
+    return NextResponse.json({ cleared: true, transmission: canTransmit(session), mode: store.mode });
   }
   return NextResponse.json({ error: "unknown action" }, { status: 400 });
 }
