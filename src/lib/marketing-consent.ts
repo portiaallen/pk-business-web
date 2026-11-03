@@ -14,7 +14,12 @@ export const MARKETING_CONSENT_COPY =
 
 const MAX_ENTRIES = 50;
 
-export type ConsentSource = "consultation-form" | "settings" | "unsubscribe-link" | "admin";
+export type ConsentSource =
+  | "consultation-form"
+  | "clarity-intake"
+  | "settings"
+  | "unsubscribe-link"
+  | "admin";
 
 export interface ConsentEntry {
   status: "opted-in" | "opted-out";

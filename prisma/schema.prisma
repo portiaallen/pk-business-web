@@ -567,6 +567,14 @@ model IntakeSubmission {
   processed     Boolean  @default(false)
   createdAt     DateTime @default(now())
 
+  // Clarity Collection intake (M2): source/channel tracking + per-product
+  // questionnaire answers. All optional so existing rows and the additive-only
+  // schema sync are unaffected. questionnaireJson stores ONLY validated,
+  // screened answers; sensitive identifiers are rejected before persistence.
+  sourceChannel          String? // "direct" | "groupon"
+  questionnaireVersion   String?
+  questionnaireJson      String?
+
   @@index([email])
   @@index([createdAt])
   readinessAssessment ReadinessAssessment?
@@ -574,6 +582,14 @@ model IntakeSubmission {
   marketingConsentAt      DateTime?
   marketingConsentVersion String?
 
+  // Clarity fulfillment (M3): workflow status + assignment. fulfillmentStatus
+  // values: new | in_review | awaiting_client | fulfilled (validated in
+  // src/lib/clarity-fulfillment.ts). assignedToUserId references a staff/admin
+  // User. fulfillmentTimeEntries tracks fulfillment minutes via TimeEntry.
+  fulfillmentStatus     String  @default("new")
+  assignedToUserId      String?
+
+  fulfillmentTimeEntries TimeEntry[]
 }
 
 // ─── Marketing email consent (strict opt-in; no record means never asked) ───
@@ -911,7 +927,7 @@ model AiActivityLog {
 
 model TimeEntry {
   id          String        @id @default(cuid())
-  requestId   String
+  requestId   String?       // Null for Clarity fulfillment entries, which link via intakeSubmissionId
   userId      String
   category    String        // Work category
   note        String?       // Optional internal note
@@ -922,12 +938,18 @@ model TimeEntry {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  request VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  request VerificationRequest? @relation(fields: [requestId], references: [id], onDelete: Cascade)
   user    User               @relation("TimeEntryUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Clarity fulfillment (M3): optional link to an IntakeSubmission. Exactly one
+  // of requestId / intakeSubmissionId is set; the API routes enforce it.
+  intakeSubmissionId String?
+  intakeSubmission   IntakeSubmission? @relation(fields: [intakeSubmissionId], references: [id], onDelete: Cascade)
 
   @@index([requestId])
   @@index([userId])
   @@index([requestId, startedAt])
+  @@index([intakeSubmissionId])
 }
 
 model QbCleanupReview {

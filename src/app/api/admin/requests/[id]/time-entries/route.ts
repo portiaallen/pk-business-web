@@ -187,7 +187,7 @@ export async function POST(
     await prisma.auditLog.create({
       data: {
         actorId: admin.id,
-        clientId: req.clientId,
+        clientId: req.clientId ?? null,
         action: "ADMIN_ACTION",
         resource: "time_entry",
         resourceId: entry.id,
@@ -250,7 +250,7 @@ export async function PATCH(
       await prisma.auditLog.create({
         data: {
           actorId: admin.id,
-          clientId: existing.request.clientId,
+          clientId: existing.request?.clientId ?? null,
           action: "ADMIN_ACTION",
           resource: "time_entry",
           resourceId: entryId,
@@ -294,7 +294,7 @@ export async function PATCH(
       await prisma.auditLog.create({
         data: {
           actorId: admin.id,
-          clientId: existing.request.clientId,
+          clientId: existing.request?.clientId ?? null,
           action: "ADMIN_ACTION",
           resource: "time_entry",
           resourceId: entryId,
@@ -350,7 +350,7 @@ export async function DELETE(
     await prisma.auditLog.create({
       data: {
         actorId: admin.id,
-        clientId: existing.request.clientId,
+        clientId: existing.request?.clientId ?? null,
         action: "ADMIN_ACTION",
         resource: "time_entry",
         resourceId: entryId,
