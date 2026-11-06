@@ -62,7 +62,6 @@ export async function GET(request: Request) {
   } catch (error) {
     const failClosed = failClosedResponse(error);
     if (failClosed) return failClosed;
-    if (error instanceof ApiError) return handleApiError(error);
     return handleApiError(error);
   }
 }
