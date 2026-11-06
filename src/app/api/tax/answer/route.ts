@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { compute, recordAnswer } from "@/lib/tax/onboarding-core";
-import { getSyntheticSession } from "@/lib/tax/session-store";
+import { taxSessionStoreOrThrow } from "@/lib/tax/session-storage";
 import { rejectIfSensitive } from "@/lib/tax/intake-screen";
 
 // POST /api/tax/answer - record a non-sensitive intake answer.
@@ -23,14 +23,26 @@ export async function POST(request: Request) {
       { status: 422 },
     );
   }
-  const session = getSyntheticSession(body.sessionId);
+  let store;
+  try {
+    store = taxSessionStoreOrThrow();
+  } catch (error) {
+    const failClosed = error as { status?: number; response?: unknown };
+    if (failClosed.status === 503) {
+      return NextResponse.json(failClosed.response, { status: 503 });
+    }
+    throw error;
+  }
+  const session = await store.get(body.sessionId);
   if (!session) {
     return NextResponse.json({ error: "session not found" }, { status: 404 });
   }
   recordAnswer(session, body.key, body.value);
   compute(session);
+  await store.put(session);
   return NextResponse.json({
     recorded: true,
+    mode: store.mode,
     flags: session.flags.map((f) => ({ code: f.code, severity: f.severity })),
     ddTriggers: session.ddTriggers,
     checklist: session.checklist,
