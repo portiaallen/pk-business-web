@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { siteConfig } from "@/content/site";
 import { Button } from "@/components/ui/button";
 
 export function Hero() {
@@ -23,10 +22,10 @@ export function Hero() {
           </p>
           <div className="pk-hero-actions">
             <Button
-              render={<Link href={siteConfig.cta.href} />}
+              render={<a href="https://cal.com/pk-business-services/books-business-coffee-chat" target="_blank" rel="noopener noreferrer" />}
               className="pk-primary-button"
             >
-              {siteConfig.cta.label}
+              Book a free 20-minute coffee chat
               <ArrowUpRight aria-hidden="true" className="size-4" />
             </Button>
             <Link href="/services" className="pk-text-link pk-text-link-light">
