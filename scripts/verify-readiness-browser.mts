@@ -302,6 +302,9 @@ try {
   await page.getByText("READY TO SUBMIT", { exact: false }).waitFor();
   await page.getByLabel("I understand that once I submit").check();
   await page
+    .getByPlaceholder("Your full legal name")
+    .fill("Synthetic Browser Owner");
+  await page
     .getByRole("button", { name: "Submit my Assessment for PK review" })
     .click();
   await page.getByText("SUBMITTED FOR REVIEW", { exact: false }).waitFor();
