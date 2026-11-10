@@ -20,7 +20,7 @@ export default async function PaidReportPage({ searchParams }: { searchParams: P
     const session = await sandboxStripe().checkout.sessions.retrieve(lookupSessionId);
     if (session.payment_status !== "paid" || session.mode !== "payment" || session.currency !== "usd" || session.amount_total !== PRICE_CENTS || session.metadata?.productCode !== PRODUCT_CODE) throw new Error("Unpaid");
     const order = await prisma.auntPennyOrder.findUnique({ where: { stripeSessionId: session.id } });
-    if (!order || (hasToken && recoveredOrder?.id !== order.id) || order.id !== session.metadata?.orderId || order.amountCents !== PRICE_CENTS || order.status !== "PAID") throw new Error("Not fulfilled");
+    if (!order || (hasToken && recoveredOrder?.id !== order.id) || order.id !== session.metadata?.orderId || order.amountCents !== PRICE_CENTS || order.status !== "PAID" || session.client_reference_id !== order.id || session.customer_details?.email?.trim().toLowerCase() !== order.email) throw new Error("Not fulfilled");
     answers = JSON.parse(order.intakeJson) as IntakeAnswers;
   } catch {
     return <main className="mx-auto max-w-xl px-6 py-20"><h1 className="text-3xl font-bold">Aunt Penny is checking the receipt.</h1><p className="mt-4">Your sandbox report is not available until payment is confirmed. No real purchases are enabled.</p><Link href="/auntpenny/roastmybooks/recover">Recover your purchased report</Link><p className="mt-4"><Link href="/auntpenny/roastmybooks/start">Return to the free roast</Link></p></main>;
