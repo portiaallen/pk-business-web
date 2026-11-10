@@ -159,3 +159,54 @@ body:has(.ap) .pk-footer { display: none !important; }
   .ap-no-print { display: none !important; }
   .ap-sharecard { max-width: 3.6in !important; }
 }
+
+
+/* Theatrical Aunt Penny experience, isolated to the new .ap-stage surface. */
+.ap .ap-stage{background:#180b1b;color:#f8e9da;min-height:100vh;overflow:hidden}
+.ap .ap-stage a{color:inherit}
+.ap .ap-stage h1,.ap .ap-stage h2,.ap .ap-stage h3{color:#fff2df;line-height:1.03}
+.ap-stage-nav{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem clamp(1rem,4vw,3rem);background:#210e25;border-bottom:1px solid #c99d56}
+.ap .ap-stage-logo{font-family:Georgia,serif;font-size:clamp(1rem,2vw,1.5rem);font-weight:700;text-decoration:none;letter-spacing:.03em}
+.ap-stage-logo span{display:block;font:600 .56rem system-ui,sans-serif;letter-spacing:.24em;color:#edb66b;margin-top:.3rem}
+.ap .ap-stage-nav-link{font-size:.7rem;letter-spacing:.09em;text-decoration:none;text-align:right;font-weight:800}
+.ap-marquee{text-align:center;background:#b78a42;color:#240f24;font-weight:900;font-size:.7rem;letter-spacing:.17em;padding:.7rem .4rem}
+.ap-curtain{background:radial-gradient(ellipse at 35% 30%,#74335d 0%,#3c1537 42%,#1b0b20 88%);position:relative}
+.ap-curtain:before,.ap-curtain:after{content:"";position:absolute;top:2.2rem;bottom:2.2rem;width:7%;background:repeating-linear-gradient(90deg,rgba(13,2,17,.1) 0 9px,rgba(247,107,168,.11) 10px 18px);pointer-events:none}
+.ap-curtain:before{left:0}.ap-curtain:after{right:0}
+.ap-curtain-inner{max-width:1200px;margin:auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:clamp(1rem,4vw,4rem);padding:clamp(2rem,5vw,5rem) clamp(1.2rem,7vw,5rem)}
+.ap-stage-portrait{position:relative;min-width:0;transform:rotate(-2deg)}
+.ap-stage-hero-image{width:100%;height:auto;max-height:610px;object-fit:cover;border:5px solid #d8a34e;border-radius:48% 48% 1rem 1rem;box-shadow:0 0 0 8px rgba(255,220,149,.13),0 25px 80px #0b0215}
+.ap-stage-stamp{position:absolute;bottom:1.3rem;left:-.7rem;background:#efb853;color:#2d1029;padding:.65rem .9rem;font-size:.65rem;font-weight:900;letter-spacing:.08em;transform:rotate(-4deg);box-shadow:4px 5px 0 #3b1430}
+.ap-stage-kicker{font-size:.7rem;letter-spacing:.23em;color:#f1ba69!important;font-weight:900}
+.ap .ap-stage-copy h1{font-size:clamp(2.9rem,6vw,6rem);margin:1rem 0;letter-spacing:-.035em}
+.ap .ap-stage em{color:#f5a5c8;font-weight:500}
+.ap-stage-copy>p:not(.ap-stage-kicker):not(.ap-stage-fine){font-size:clamp(1rem,1.6vw,1.3rem);max-width:34rem;color:#f4dce8}
+.ap-stage-actions{display:flex;flex-wrap:wrap;align-items:center;gap:.85rem;margin-top:1.7rem}
+.ap .ap-stage-primary{display:inline-flex;align-items:center;justify-content:center;gap:1rem;background:linear-gradient(135deg,#f7d17f,#d59b45);color:#2b1129!important;text-decoration:none;padding:1rem 1.4rem;border-radius:.4rem;font-weight:900;letter-spacing:.05em;box-shadow:0 6px 0 #8c572c;transition:transform .2s}
+.ap .ap-stage-primary:hover{transform:translateY(-3px)}
+.ap .ap-stage-secondary{font-size:.78rem;font-weight:800;letter-spacing:.07em;text-decoration:underline}
+.ap .ap-stage-fine{font-size:.75rem;color:#e7c6d3;margin-top:1.6rem}
+.ap-stage-rooms{padding:clamp(3rem,7vw,6rem) clamp(1rem,5vw,4rem);max-width:1300px;margin:auto}
+.ap-stage-section-head{text-align:center;margin-bottom:2rem}
+.ap .ap-stage-section-head h2{font-size:clamp(2.4rem,5vw,4.5rem);margin-top:.7rem}
+.ap-stage-room-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.2rem}
+.ap-stage-room{padding:clamp(1.4rem,4vw,3rem);border:2px solid #ad7a49;background:linear-gradient(145deg,#4d1b42,#260e2c);border-radius:1rem;min-width:0;box-shadow:inset 0 0 40px #0002}
+.ap-stage-room-show{background:linear-gradient(145deg,#482153,#251029)}
+.ap-stage-room-number{color:#f3c777;font-size:.72rem;letter-spacing:.18em;font-weight:900}
+.ap .ap-stage-room h3{font-size:clamp(2rem,4vw,3.7rem);margin:1.5rem 0}
+.ap-stage-room p{color:#f3dce7;max-width:32rem}
+.ap .ap-stage-room a,.ap-stage-coming{display:inline-block;margin-top:1.5rem;font-size:.8rem;font-weight:900;letter-spacing:.1em;color:#f6c779;text-decoration:underline}
+.ap-stage-closer,.ap-stage-report{display:grid;grid-template-columns:1fr 1.3fr;align-items:center;gap:2rem;max-width:1150px;margin:0 auto 4rem;padding:2rem;background:#37152f;border:1px solid #bd894c;border-radius:1.5rem}
+.ap-stage-closer img{max-height:320px;width:auto;justify-self:center;border-radius:1rem;border:3px solid #e5b96e}
+.ap .ap-stage-closer h2,.ap .ap-stage-report h2{font-size:clamp(2.5rem,5vw,4.7rem);margin:1rem 0}
+.ap-stage-closer .ap-stage-primary,.ap-stage-report .ap-stage-primary{margin-top:1.2rem}
+.ap-stage-report{grid-template-columns:1fr 1fr;padding:clamp(1.5rem,5vw,4rem)}
+.ap-stage-report img{width:100%;height:auto;border:3px solid #d7a75d;border-radius:.7rem}
+.ap-stage-three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.ap-stage-three .ap-stage-room h3{font-size:clamp(1.8rem,3vw,3rem)}
+.ap-stage-bottom-note{padding:1.5rem;text-align:center;color:#e4c9d4;font-size:.8rem;max-width:850px;margin:auto}
+.ap-stage-footer{border-top:1px solid #a57b4e;background:#210e25;padding:1.5rem clamp(1rem,4vw,3rem);display:flex;flex-wrap:wrap;justify-content:space-between;gap:1rem;font-size:.7rem;letter-spacing:.09em}
+.ap-stage-footer small{opacity:.8}
+.ap .ap-stage a:focus-visible{outline:3px solid #f7d17f;outline-offset:5px}
+@media(max-width:700px){.ap-curtain-inner{grid-template-columns:1fr;padding:1.8rem 1.4rem 2.7rem}.ap-stage-portrait{width:min(78%,360px);margin:0 auto}.ap-stage-copy{text-align:center}.ap-stage-copy h1{font-size:clamp(2.9rem,11vw,4.7rem)}.ap-stage-actions{justify-content:center}.ap-stage-room-grid,.ap-stage-three{grid-template-columns:1fr}.ap-stage-closer,.ap-stage-report{grid-template-columns:1fr;margin:0 1rem 2rem}.ap-stage-closer{text-align:center}.ap-stage-closer img{max-height:230px}.ap-stage-report img{max-width:420px;margin:auto}.ap-stage-room h3{margin:.8rem 0}.ap-stage-stamp{font-size:.5rem}.ap-stage-nav{padding:.8rem 1rem}.ap-stage-nav-link{max-width:42%}}
+@media(prefers-reduced-motion:reduce){.ap .ap-stage-primary{transition:none}}
