@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
-import { sandboxStripe, requireSandbox, PRICE_CENTS } from "../src/lib/auntpenny/paid.ts";
+import { sandboxStripe, requireSandbox, PRICE_CENTS } from "../src/lib/auntpenny/paid";
 
 test("sandbox fails closed without enablement and test key", () => {
   const prior = process.env.AUNT_PENNY_PAID_SANDBOX_ENABLED;
