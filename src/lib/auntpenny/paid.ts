@@ -44,7 +44,7 @@ export function sandboxStripe() {
       const fields = header.split(",").map(part => part.trim().split("="));
       const timestamp = fields.find(pair => pair[0] === "t")?.[1];
       const signatures = fields.filter(pair => pair[0] === "v1").map(pair => pair[1]);
-      if (!timestamp || !/^\\d{10,}$/.test(timestamp) || Math.abs(Date.now()/1000 - Number(timestamp)) > 300 || !signatures.length) throw new Error("Invalid signature timestamp");
+      if (!timestamp || !/^\d{10,}$/.test(timestamp) || Math.abs(Date.now()/1000 - Number(timestamp)) > 300 || !signatures.length) throw new Error("Invalid signature timestamp");
       const expected = createHmac("sha256", secret).update(timestamp + "." + payload).digest();
       const valid = signatures.some(signature => {
         if (!/^[a-f0-9]{64}$/i.test(signature)) return false;
