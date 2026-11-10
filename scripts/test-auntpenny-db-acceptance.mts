@@ -40,7 +40,7 @@ function payload() {
 }
 test("real isolated database: signed webhook, replay, authorization, recovery failure", async () => {
   const order = await prisma.auntPennyOrder.create({ data: {
-    email, intakeJson: "{}", amountCents: PRICE_CENTS, status: "PENDING", stripeSessionId: sessionId
+    email, intakeJson: JSON.stringify({"recordsMethod":"software","softwareName":"QuickBooks","monthlyRevenue":10000,"monthlyExpenses":8000,"cashOnHand":5000,"monthsSinceReconciliation":2,"uncategorizedPercent":10,"uncategorizedTransactions":12,"overdueInvoicesTotal":1000,"softwareSubscriptions":4,"headcount":2,"ownerDraws3mo":3000,"netIncome3mo":6000,"cardBalanceCarried":500,"monthsCarryingCard":2,"monthsWithoutProfessional":3,"firstName":"Synthetic"}), amountCents: PRICE_CENTS, status: "PENDING", stripeSessionId: sessionId
   } });
   currentOrderId = order.id;
   try {
