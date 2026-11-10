@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     const order = await prisma.auntPennyOrder.findFirst({ where: { email, status: "PAID" }, orderBy: { paidAt: "desc" } });
     if (!order?.stripeSessionId) return generic();
     const session = await sandboxStripe().checkout.sessions.retrieve(order.stripeSessionId);
-    if (session.payment_status !== "paid" || session.amount_total !== PRICE_CENTS || session.currency !== "usd" || session.mode !== "payment" || session.metadata?.productCode !== PRODUCT_CODE || session.metadata?.orderId !== order.id || session.customer_details?.email?.trim().toLowerCase() !== email) return generic();
+    if (session.payment_status !== "paid" || session.amount_total !== PRICE_CENTS || session.currency !== "usd" || session.mode !== "payment" || session.metadata?.productCode !== PRODUCT_CODE || session.metadata?.orderId !== order.id || session.client_reference_id !== order.id || session.id !== order.stripeSessionId || session.customer_details?.email?.trim().toLowerCase() !== email) return generic();
     const token = issueToken();
     const link = publicOrigin() + "/auntpenny/roastmybooks/paid?access_token=" + encodeURIComponent(token);
     assertResourceEnvironment("EMAIL");
