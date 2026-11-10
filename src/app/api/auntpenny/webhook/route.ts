@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const orderId = session.metadata?.orderId;
     if (!orderId) return NextResponse.json({ error: "Missing order" }, { status: 400 });
     const order = await prisma.auntPennyOrder.findUnique({ where: { id: orderId } });
-    if (!order || order.stripeSessionId !== session.id || order.amountCents !== PRICE_CENTS) return NextResponse.json({ error: "Order mismatch" }, { status: 400 });
+    if (!order || order.stripeSessionId !== session.id || order.amountCents !== PRICE_CENTS || session.client_reference_id !== order.id || session.customer_details?.email?.trim().toLowerCase() !== order.email) return NextResponse.json({ error: "Order mismatch" }, { status: 400 });
     if (order.status === "PAID") return NextResponse.json({ received: true });
 
     // Atomic, idempotent state transition; access is verified against Stripe on report request.
