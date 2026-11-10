@@ -228,6 +228,8 @@ assert.ok(!canvasSrc.includes("fetch("), "canvas must not call the network");
 assert.ok(canvasSrc.includes("approved artwork could not load"), "missing approved artwork must fail visibly");
 assert.ok(!canvasSrc.includes("proceed without the cameo"), "unbranded fallback must not silently pass");
 assert.ok(canvasSrc.includes("role=\"alert\""), "share card error must be announced accessibly");
+assert.ok(canvasSrc.includes("lines.length > 2"), "long tier names must not overlap the seal");
+assert.ok(canvasSrc.includes("quipLines.length > 3"), "overlong quips must not be compressed into unreadable text");
 assert.ok(DISCLAIMER.length > 50, "disclaimer present");
 
 // ---- Next-three-steps shape ----
