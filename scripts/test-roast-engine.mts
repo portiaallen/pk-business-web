@@ -225,6 +225,9 @@ for (const banned of ["fetch(", "XMLHttpRequest", "localStorage.setItem", "docum
   assert.ok(!libSrc.includes(banned), `engine must not contain ${banned}`);
 }
 assert.ok(!canvasSrc.includes("fetch("), "canvas must not call the network");
+assert.ok(canvasSrc.includes("approved artwork could not load"), "missing approved artwork must fail visibly");
+assert.ok(!canvasSrc.includes("proceed without the cameo"), "unbranded fallback must not silently pass");
+assert.ok(canvasSrc.includes("role=\"alert\""), "share card error must be announced accessibly");
 assert.ok(DISCLAIMER.length > 50, "disclaimer present");
 
 // ---- Next-three-steps shape ----
