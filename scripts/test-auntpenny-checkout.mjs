@@ -20,6 +20,9 @@ test("checkout is sandbox-only and server validates intake", () => {
 });
 test("server rejects live Stripe keys and disabled sandbox", () => {
   assert.match(config, /sk_test_/);
+  assert.match(config, /createHmac/);
+  assert.match(config, /timingSafeEqual/);
+  assert.match(config, /AbortSignal.timeout/);
   assert.match(config, /AUNT_PENNY_PAID_SANDBOX_ENABLED/);
   assert.doesNotMatch(config, /sk_live_/);
 });
@@ -42,7 +45,8 @@ test("order schema exists and includes unique session identifier", () => {
   assert.match(schema, /model AuntPennyOrder/);
   assert.match(schema, /stripeSessionId String\? @unique/);
 });
-test("Stripe package-lock agrees with package manifest", () => {
-  assert.equal(lock.packages[""].dependencies.stripe, pkg.dependencies.stripe, "Run npm install --package-lock-only to regenerate the lockfile");
-  assert.ok(lock.packages["node_modules/stripe"]?.integrity, "Missing Stripe integrity in lockfile");
+test("native Stripe REST avoids external SDK lockfile mismatch", () => {
+  assert.equal(pkg.dependencies.stripe, undefined, "Stripe SDK should not be required");
+  assert.equal(lock.packages[""].dependencies.stripe, undefined, "No Stripe SDK should be locked");
+  assert.equal(lock.packages["node_modules/stripe"], undefined, "No Stripe SDK package should be locked");
 });
