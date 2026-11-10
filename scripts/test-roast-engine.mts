@@ -206,6 +206,9 @@ const reportViewSrc = await (await import("node:fs/promises")).readFile(
   new URL("../src/app/auntpenny/roastmybooks/ReportView.tsx", import.meta.url), "utf8",
 );
 assert.ok(!reportViewSrc.includes("officially rated"), "report view must not render the personal-name line");
+for (const heading of ["Your 7-day rescue plan", "Your 30-day improvement plan", "Questions for your bookkeeper or tax professional"]) {
+  assert.ok(reportViewSrc.includes(heading), `report view must contain ${heading}`);
+}
 const intakeSrc = await (await import("node:fs/promises")).readFile(
   new URL("../src/app/auntpenny/roastmybooks/IntakeForm.tsx", import.meta.url), "utf8",
 );
