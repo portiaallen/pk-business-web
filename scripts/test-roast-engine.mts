@@ -227,6 +227,9 @@ assert.ok(DISCLAIMER.length > 50, "disclaimer present");
 // ---- Next-three-steps shape ----
 const steps = nextThreeSteps(sampleReport.triggered);
 assert.equal(steps.length, 3, "exactly three next steps");
+const zeroFindingSteps = nextThreeSteps([]);
+assert.equal(zeroFindingSteps.length, 3, "zero findings still receive three maintenance steps");
+assert.ok(zeroFindingSteps.every((s) => s.length > 0), "maintenance steps are substantive");
 assert.ok(steps.every((s) => s.length > 0));
 
 // ================= QA table for the founder =================
