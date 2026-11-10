@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ShareCardDownload } from "./ShareCardCanvas";
+import { SandboxPurchase } from "./SandboxPurchase";
 import { ASSESSMENT_URL } from "@/lib/auntpenny/roast-engine";
 import { DISCLAIMER } from "@/lib/auntpenny/report";
 import type { IntakeAnswers, RoastReport } from "@/lib/auntpenny/roast-engine";
@@ -203,6 +204,8 @@ export function ReportView({
           figures, the business name, or dates. Post it and let the funny line travel.
         </p>
       </div>
+
+      <SandboxPurchase answers={intake} />
 
       <div className="ap-card mt-10 p-6">
         <p className="ap-eyebrow">Your full PDF</p>
