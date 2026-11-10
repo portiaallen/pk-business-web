@@ -22,7 +22,8 @@
     "test:tax:onboarding": "node --import tsx --test scripts/test-tax-onboarding.mts",
     "test:tax:catchup": "node --import tsx --test scripts/test-tax-catchup-intake.mts",
     "test:roast": "node --import tsx --test scripts/test-roast-engine.mts",
-    "test:cpa:partners": "node --import tsx --test scripts/test-cpa-partners.mts"
+    "test:cpa:partners": "node --import tsx --test scripts/test-cpa-partners.mts",
+    "test:auntpenny:checkout": "node --test scripts/test-auntpenny-checkout.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",
