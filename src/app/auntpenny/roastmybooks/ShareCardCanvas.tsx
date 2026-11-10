@@ -13,12 +13,17 @@ import type { RoastReport } from "@/lib/auntpenny/roast-engine";
 export function ShareCardDownload({ report }: { report: RoastReport }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [drawing, setDrawing] = useState(false);
 
   const draw = async () => {
+    setReady(false);
+    setError(null);
+    setDrawing(true);
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) { setDrawing(false); setError("The share card is unavailable on this device."); return; }
     const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!ctx) { setDrawing(false); setError("Your browser cannot draw this share card."); return; }
     const S = 1080;
     canvas.width = S;
     canvas.height = S;
@@ -39,7 +44,7 @@ export function ShareCardDownload({ report }: { report: RoastReport }) {
     ctx.lineWidth = 3;
     ctx.strokeRect(58, 58, S - 116, S - 116);
 
-    // The approved character cameo, centered near the top.
+    // The approved character cameo is mandatory: never deliver an unbranded card.
     try {
       const img = new Image();
       img.src = "/auntpenny/penny-serious.jpg";
@@ -65,7 +70,9 @@ export function ShareCardDownload({ report }: { report: RoastReport }) {
       ctx.arc(cx + r, cy + r, r + 4, 0, Math.PI * 2);
       ctx.stroke();
     } catch {
-      // Art missing: proceed without the cameo rather than fail the card.
+      setError("Aunt Penny’s approved artwork could not load. Please retry once it is available.");
+      setDrawing(false);
+      return;
     }
 
     ctx.textAlign = "center";
@@ -91,9 +98,16 @@ export function ShareCardDownload({ report }: { report: RoastReport }) {
     ctx.font = "italic 42px Georgia, serif";
     const quipLines = wrap(ctx, `"${report.funniestQuote}"`, S - 260);
     y = Math.max(y + 26, 700);
+    const available = S - 160 - y;
+    const lineHeight = Math.min(58, available / Math.max(quipLines.length, 1));
+    if (lineHeight < 22) {
+      setError("This verdict is too long for the share card. Please use the report instead.");
+      setDrawing(false);
+      return;
+    }
     for (const line of quipLines) {
-      ctx.fillText(line, S / 2, y);
-      y += 58;
+      ctx.fillText(line, S / 2, y, S - 260);
+      y += lineHeight;
     }
 
     // Bottom mark.
@@ -102,6 +116,7 @@ export function ShareCardDownload({ report }: { report: RoastReport }) {
     ctx.fillText("AUNT PENNY, ROAST MY BOOKS!", S / 2, S - 100);
 
     setReady(true);
+    setDrawing(false);
   };
 
   const download = () => {
@@ -117,9 +132,10 @@ export function ShareCardDownload({ report }: { report: RoastReport }) {
   return (
     <div className="ap-no-print mt-6 flex flex-col items-center gap-3">
       <canvas ref={canvasRef} className="hidden" aria-hidden="true" />
+      {error && <p role="alert" className="text-sm" style={{ color: "var(--ap-rose)" }}>{error}</p>}
       {!ready ? (
-        <button className="ap-cta" type="button" onClick={draw}>
-          Make my 1080×1080 share card
+        <button className="ap-cta" type="button" onClick={draw} disabled={drawing}>
+          {drawing ? "Preparing Aunt Penny’s card…" : "Make my 1080×1080 share card"}
         </button>
       ) : (
         <button className="ap-cta" type="button" onClick={download}>
