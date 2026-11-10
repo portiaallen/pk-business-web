@@ -210,3 +210,13 @@ body:has(.ap) .pk-footer { display: none !important; }
 .ap .ap-stage a:focus-visible{outline:3px solid #f7d17f;outline-offset:5px}
 @media(max-width:700px){.ap-curtain-inner{grid-template-columns:1fr;padding:1.8rem 1.4rem 2.7rem}.ap-stage-portrait{width:min(78%,360px);margin:0 auto}.ap-stage-copy{text-align:center}.ap-stage-copy h1{font-size:clamp(2.9rem,11vw,4.7rem)}.ap-stage-actions{justify-content:center}.ap-stage-room-grid,.ap-stage-three{grid-template-columns:1fr}.ap-stage-closer,.ap-stage-report{grid-template-columns:1fr;margin:0 1rem 2rem}.ap-stage-closer{text-align:center}.ap-stage-closer img{max-height:230px}.ap-stage-report img{max-width:420px;margin:auto}.ap-stage-room h3{margin:.8rem 0}.ap-stage-stamp{font-size:.5rem}.ap-stage-nav{padding:.8rem 1rem}.ap-stage-nav-link{max-width:42%}}
 @media(prefers-reduced-motion:reduce){.ap .ap-stage-primary{transition:none}}
+
+/* Confessional entrance; form retains original scoring and inputs. */
+.ap-intake-stage{background:radial-gradient(circle at 50% 0%,#57234b,#210f26 38%,#fbf7f2 38.1%);color:#4a2140}
+.ap .ap-intake-back{color:#f9d28b;font-size:.72rem;font-weight:800;letter-spacing:.1em}
+.ap-intake-intro{text-align:center;padding:2.5rem 1rem 3rem;color:#f8e9da}
+.ap .ap-intake-intro h1{color:#fff1e5;font-size:clamp(2.8rem,7vw,4.7rem);line-height:1.04;margin:.9rem auto}
+.ap-intake-intro h1 em{color:#f6b2d0}
+.ap-intake-intro p:not(.ap-eyebrow){max-width:35rem;margin:0 auto;color:#f8e9da}
+.ap-intake-seal{display:inline-block;margin-top:1.2rem;border:1px solid #d4aa62;color:#f5d18b;border-radius:2rem;padding:.5rem .9rem;font-size:.67rem;letter-spacing:.12em;font-weight:800}
+@media(max-width:700px){.ap-intake-stage{background:linear-gradient(to bottom,#34162f 0,#34162f 360px,#fbf7f2 360px)}.ap-intake-intro{padding:1.8rem .2rem 2.6rem}}
