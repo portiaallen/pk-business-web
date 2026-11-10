@@ -1607,3 +1607,21 @@ model CpaPartnerApplication {
   @@index([status])
   @@index([createdAt])
 }
+
+
+/** Sandbox-only Aunt Penny payment order. No raw card details or access tokens stored. */
+model AuntPennyOrder {
+  id String @id @default(cuid())
+  email String
+  intakeJson String
+  amountCents Int
+  status String @default("PENDING")
+  stripeSessionId String? @unique
+  accessTokenHash String? @unique
+  accessExpiresAt DateTime?
+  paidAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([email])
+  @@index([status])
+}
