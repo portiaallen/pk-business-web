@@ -86,8 +86,13 @@ export function ShareCardDownload({ report }: { report: RoastReport }) {
     ctx.fillStyle = "#4a2140";
     ctx.font = "bold 72px Georgia, serif";
     const lines = wrap(ctx, report.tierName, S - 220);
-    // A long tier name must never climb into the seal above it.
-    let y = Math.max(585 - (lines.length - 1) * 44, 545);
+    // Fail closed rather than overlap the seal or the quip on long tier names.
+    if (lines.length > 2) {
+      setError("This verdict is too long for the share card. Please use the report instead.");
+      setDrawing(false);
+      return;
+    }
+    let y = lines.length === 2 ? 550 : 585;
     for (const line of lines) {
       ctx.fillText(line, S / 2, y);
       y += 88;
@@ -99,8 +104,8 @@ export function ShareCardDownload({ report }: { report: RoastReport }) {
     const quipLines = wrap(ctx, `"${report.funniestQuote}"`, S - 260);
     y = Math.max(y + 26, 700);
     const available = S - 160 - y;
-    const lineHeight = Math.min(58, available / Math.max(quipLines.length, 1));
-    if (lineHeight < 22) {
+    const lineHeight = 58;
+    if (quipLines.length > 3 || available < quipLines.length * lineHeight + 16) {
       setError("This verdict is too long for the share card. Please use the report instead.");
       setDrawing(false);
       return;
