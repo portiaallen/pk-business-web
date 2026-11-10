@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { prisma } from "@/lib/prisma";
 import { assertResourceEnvironment } from "@/lib/security-environment";
-import { issueToken, tokenHash, TOKEN_TTL_MS, publicOrigin, requireSandbox, sandboxStripe, PRICE_CENTS, PRODUCT_CODE } from "@/lib/auntpenny/paid";
+import { issueToken, tokenHash, publicOrigin, requireSandbox, sandboxStripe, PRICE_CENTS, PRODUCT_CODE } from "@/lib/auntpenny/paid";
 
 export const runtime = "nodejs";
 const generic = () => NextResponse.json({ message: "If a verified purchase matches, a private access link will be sent." }, { headers: { "Cache-Control": "no-store" } });
@@ -25,8 +25,8 @@ export async function POST(request: Request) {
     const link = publicOrigin() + "/auntpenny/roastmybooks/paid?access_token=" + encodeURIComponent(token);
     assertResourceEnvironment("EMAIL");
     const transporter = nodemailer.createTransport({ service: "gmail", auth: { user: gmailUser, pass: gmailAppPassword } });
-    await transporter.sendMail({ from: `PK Business Services <${gmailUser}>`, to: email, subject: "Your private Aunt Penny report link", text: "Your private report link (do not forward): " + link + "\nThis link expires in 24 hours." });
     await prisma.auntPennyOrder.update({ where: { id: order.id }, data: { accessTokenHash: tokenHash(token), accessExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) } });
+    await transporter.sendMail({ from: `PK Business Services <${gmailUser}>`, to: email, subject: "Your private Aunt Penny report link", text: "Your private report link (do not forward): " + link + "\nThis link expires in 24 hours." });
     return generic();
   } catch {
     return NextResponse.json({ error: "Recovery temporarily unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
