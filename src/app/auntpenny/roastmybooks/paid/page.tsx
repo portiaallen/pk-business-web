@@ -1,20 +1,26 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { buildReport, nextThreeSteps, DISCLAIMER } from "@/lib/auntpenny/report";
-import { PRICE_CENTS, PRODUCT_CODE, requireSandbox, sandboxStripe } from "@/lib/auntpenny/paid";
+import { PRICE_CENTS, PRODUCT_CODE, requireSandbox, sandboxStripe, tokenHash } from "@/lib/auntpenny/paid";
 import type { IntakeAnswers } from "@/lib/auntpenny/roast-engine";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Your purchased Aunt Penny report", robots: { index: false, follow: false } };
-export default async function PaidReportPage({ searchParams }: { searchParams: Promise<{ session_id?: string }> }) {
-  const { session_id } = await searchParams;
+export default async function PaidReportPage({ searchParams }: { searchParams: Promise<{ session_id?: string; access_token?: string }> }) {
+  const { session_id, access_token } = await searchParams;
   let answers: IntakeAnswers | null = null;
   try {
     requireSandbox();
-    if (!session_id || !/^cs_test_[a-zA-Z0-9_]+$/.test(session_id) || session_id.length > 255) throw new Error("Invalid session");
-    const session = await sandboxStripe().checkout.sessions.retrieve(session_id);
+    const hasToken = typeof access_token === "string" && /^[A-Za-z0-9_-]{43}$/.test(access_token);
+    const hasSession = typeof session_id === "string" && /^cs_test_[a-zA-Z0-9_]+$/.test(session_id) && session_id.length <= 255;
+    if (!hasToken && !hasSession) throw new Error("Missing credential");
+    const recoveredOrder = hasToken ? await prisma.auntPennyOrder.findUnique({ where: { accessTokenHash: tokenHash(access_token!) } }) : null;
+    if (hasToken && (!recoveredOrder || !recoveredOrder.accessExpiresAt || recoveredOrder.accessExpiresAt.getTime() <= Date.now())) throw new Error("Expired recovery");
+    const lookupSessionId = recoveredOrder?.stripeSessionId ?? session_id;
+    if (!lookupSessionId) throw new Error("Missing session");
+    const session = await sandboxStripe().checkout.sessions.retrieve(lookupSessionId);
     if (session.payment_status !== "paid" || session.mode !== "payment" || session.currency !== "usd" || session.amount_total !== PRICE_CENTS || session.metadata?.productCode !== PRODUCT_CODE) throw new Error("Unpaid");
     const order = await prisma.auntPennyOrder.findUnique({ where: { stripeSessionId: session.id } });
-    if (!order || order.id !== session.metadata?.orderId || order.amountCents !== PRICE_CENTS || order.status !== "PAID") throw new Error("Not fulfilled");
+    if (!order || (hasToken && recoveredOrder?.id !== order.id) || order.id !== session.metadata?.orderId || order.amountCents !== PRICE_CENTS || order.status !== "PAID") throw new Error("Not fulfilled");
     answers = JSON.parse(order.intakeJson) as IntakeAnswers;
   } catch {
     return <main className="mx-auto max-w-xl px-6 py-20"><h1 className="text-3xl font-bold">Aunt Penny is checking the receipt.</h1><p className="mt-4">Your sandbox report is not available until payment is confirmed. No real purchases are enabled.</p><Link href="/auntpenny/roastmybooks/start">Return to the free roast</Link></main>;
