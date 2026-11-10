@@ -1,0 +1,40 @@
+name: Aunt Penny isolated QA (manual only)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auntpenny-isolated-qa-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  qa:
+    if: github.ref == 'refs/heads/fix/auntpenny-zero-findings-20261109'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - name: Checkout exact branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify checked-out revision
+        run: |
+          git rev-parse HEAD
+          git status --short
+      - name: Run synthetic roast engine QA
+        run: npm run test:roast
+      - name: Verify checkout remains fail-closed
+        run: npm run test:auntpenny:checkout

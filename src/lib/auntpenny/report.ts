@@ -92,5 +92,16 @@ export function buildReport(a: IntakeAnswers): RoastReport {
 export function nextThreeSteps(triggered: TriggeredTemplate[]): string[] {
   const steps: string[] = [];
   for (const t of triggered) for (const s of t.steps) if (steps.length < 3) steps.push(s);
+  // Even healthy books deserve useful, non-alarmist next steps.
+  // No fabricated findings: these are general maintenance suggestions.
+  const maintenance = [
+    "Reconcile the latest bank and card statements against your records.",
+    "Review uncategorized transactions and confirm income and expense categories.",
+    "Schedule a monthly books check-in and save supporting receipts securely.",
+  ];
+  for (const step of maintenance) {
+    if (steps.length >= 3) break;
+    if (!steps.includes(step)) steps.push(step);
+  }
   return steps;
 }

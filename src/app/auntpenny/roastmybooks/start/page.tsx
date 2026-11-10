@@ -1,27 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Brand } from "@/components/layout/Brand";
 import { IntakeForm } from "../IntakeForm";
-
-export const metadata: Metadata = {
-  title: "Start the roast | Aunt Penny, Roast My Books!",
-  robots: { index: false, follow: false },
-};
-
-export default function StartPage() {
-  return (
-    <main className="min-h-screen px-5 py-14 sm:px-8">
-      <div className="mx-auto max-w-2xl">
-        <p className="ap-eyebrow">Aunt Penny, Roast My Books!</p>
-        <h1 className="mt-3 text-3xl font-bold sm:text-4xl">The intake</h1>
-        <p className="mt-3 opacity-85">
-          Figures only, baby. No statements, no screenshots, no documents. Every field is
-          scored right here in your browser.
-        </p>
-        <p className="mt-2 text-sm opacity-70">
-          <Link href="/auntpenny/roastmybooks">Back to what this is</Link>
-        </p>
-        <IntakeForm />
-      </div>
-    </main>
-  );
-}
+export const metadata: Metadata = {title:"The Confessional | Aunt Penny, Roast My Books!",robots:{index:false,follow:false}};
+export default function StartPage(){return <main className="ap-intake-stage min-h-screen px-5 py-12 sm:px-8"><div className="mx-auto max-w-2xl"><div className="ap-intake-brand"><Link href="/" aria-label="PK Business Services homepage"><Brand light /></Link><Link href="/auntpenny" className="ap-intake-home">Aunt Penny Home</Link></div><nav className="ap-intake-crumbs" aria-label="Roast journey"><Link href="/auntpenny/roastmybooks">Roast My Books</Link><span aria-hidden="true">›</span><span aria-current="step">Step 1: Your Numbers</span></nav><div className="ap-intake-intro"><p className="ap-eyebrow">AUNT PENNY'S PRIVATE CONFESSIONAL</p><h1>Baby, let's see <em>those receipts.</em></h1><p>Numbers only. No names, statements, screenshots, or bank logins. Your figures are scored right here in your browser.</p><span className="ap-intake-seal">✦ NO SHAME. JUST SIDE-EYE. ✦</span></div><IntakeForm /></div></main>}

@@ -131,8 +131,40 @@ export function ReportView({
           ))}
         </ol>
         <p className="mt-3 text-xs opacity-70">
-          The full report walks the first seven days and the first thirty days with you, step by step.
+          Use the seven-day and thirty-day checkpoints below to organize your next moves.
         </p>
+      </div>
+
+      <div className="ap-card mt-6 p-6">
+        <p className="ap-eyebrow">Your 7-day rescue plan</p>
+        <p className="mt-2 text-sm opacity-80">
+          These are checkpoints based on the findings above, not a promise that a backlog can be finished in a week.
+        </p>
+        <ol className="mt-3 list-decimal space-y-3 pl-5 text-sm leading-relaxed">
+          <li><strong>Days 1–2:</strong> Recheck your submitted figures against records you control; investigate any discrepancy before acting.</li>
+          <li><strong>Days 3–4:</strong> Start with your highest-priority action: {steps[0]}</li>
+          <li><strong>Days 5–6:</strong> Continue with your next checkpoint: {steps[1]}</li>
+          <li><strong>Day 7:</strong> Review what changed, document unfinished work, and set the next realistic appointment: {steps[2]}</li>
+        </ol>
+      </div>
+
+      <div className="ap-card mt-6 p-6">
+        <p className="ap-eyebrow">Your 30-day improvement plan</p>
+        <ol className="mt-3 list-decimal space-y-3 pl-5 text-sm leading-relaxed">
+          <li><strong>Week 1:</strong> Complete the seven-day checkpoints as far as the records allow; record anything that needs further investigation.</li>
+          <li><strong>Week 2:</strong> Repeat the first priority in manageable work sessions. Do not force a reconciliation or assume an unexplained amount is an error.</li>
+          <li><strong>Week 3:</strong> Review whether the next two priorities are moving, and identify any work that needs professional help.</li>
+          <li><strong>Week 4:</strong> Recheck the figures and create a monthly maintenance routine. Reassess unresolved items instead of claiming they are fixed.</li>
+        </ol>
+      </div>
+
+      <div className="ap-card mt-6 p-6">
+        <p className="ap-eyebrow">Questions for your bookkeeper or tax professional</p>
+        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed">
+          <li>Which of these observations can be confirmed from my actual records?</li>
+          <li>What documents or reconciliations would you need before recommending a correction?</li>
+          <li>Which unresolved item should I prioritize, and what would a realistic scope of work look like?</li>
+        </ul>
       </div>
 
       {report.bridge.show && (

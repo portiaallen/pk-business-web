@@ -206,6 +206,9 @@ const reportViewSrc = await (await import("node:fs/promises")).readFile(
   new URL("../src/app/auntpenny/roastmybooks/ReportView.tsx", import.meta.url), "utf8",
 );
 assert.ok(!reportViewSrc.includes("officially rated"), "report view must not render the personal-name line");
+for (const heading of ["Your 7-day rescue plan", "Your 30-day improvement plan", "Questions for your bookkeeper or tax professional"]) {
+  assert.ok(reportViewSrc.includes(heading), `report view must contain ${heading}`);
+}
 const intakeSrc = await (await import("node:fs/promises")).readFile(
   new URL("../src/app/auntpenny/roastmybooks/IntakeForm.tsx", import.meta.url), "utf8",
 );
@@ -222,11 +225,19 @@ for (const banned of ["fetch(", "XMLHttpRequest", "localStorage.setItem", "docum
   assert.ok(!libSrc.includes(banned), `engine must not contain ${banned}`);
 }
 assert.ok(!canvasSrc.includes("fetch("), "canvas must not call the network");
+assert.ok(canvasSrc.includes("approved artwork could not load"), "missing approved artwork must fail visibly");
+assert.ok(!canvasSrc.includes("proceed without the cameo"), "unbranded fallback must not silently pass");
+assert.ok(canvasSrc.includes("role=\"alert\""), "share card error must be announced accessibly");
+assert.ok(canvasSrc.includes("lines.length > 2"), "long tier names must not overlap the seal");
+assert.ok(canvasSrc.includes("quipLines.length > 3"), "overlong quips must not be compressed into unreadable text");
 assert.ok(DISCLAIMER.length > 50, "disclaimer present");
 
 // ---- Next-three-steps shape ----
 const steps = nextThreeSteps(sampleReport.triggered);
 assert.equal(steps.length, 3, "exactly three next steps");
+const zeroFindingSteps = nextThreeSteps([]);
+assert.equal(zeroFindingSteps.length, 3, "zero findings still receive three maintenance steps");
+assert.ok(zeroFindingSteps.every((s) => s.length > 0), "maintenance steps are substantive");
 assert.ok(steps.every((s) => s.length > 0));
 
 // ================= QA table for the founder =================
@@ -289,6 +300,6 @@ lines.push("");
 lines.push(`Disclaimer in every report: "${DISCLAIMER}"`);
 lines.push("");
 
-writeFileSync("/workspace/rmb_qa_table.md", lines.join("\n"));
+writeFileSync("rmb_qa_table.md", lines.join("\n"));
 console.log(lines.join("\n"));
 console.log(`\nALL ${rows.length + 12} ASSERTION GROUPS PASS.`);
