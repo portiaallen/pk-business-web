@@ -53,6 +53,13 @@ jobs:
           npx prisma db push --url=file:$GITHUB_WORKSPACE/ci-auntpenny.db
       - name: Run native Stripe sandbox synthetic signature tests
         run: node --import tsx --test scripts/test-auntpenny-stripe.mts
+      - name: Run isolated database-backed Aunt Penny acceptance
+        env:
+          PK_ENVIRONMENT: development
+          DATABASE_URL: 'file:./ci-auntpenny.db'
+          DATABASE_AUTH_TOKEN: ci-synthetic
+          PK_CI_SYNTHETIC: '1'
+        run: node --import tsx --test scripts/test-auntpenny-db-acceptance.mts
       - name: Run synthetic roast engine QA
         run: npm run test:roast
       - name: Verify checkout remains fail-closed
