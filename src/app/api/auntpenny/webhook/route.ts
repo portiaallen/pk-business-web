@@ -20,9 +20,14 @@ export async function POST(request: Request) {
     const order = await prisma.auntPennyOrder.findUnique({ where: { id: orderId } });
     if (!order || order.stripeSessionId !== session.id || order.amountCents !== PRICE_CENTS || session.client_reference_id !== order.id || session.customer_details?.email?.trim().toLowerCase() !== order.email) return NextResponse.json({ error: "Order mismatch" }, { status: 400 });
     if (order.status === "PAID") return NextResponse.json({ received: true });
+    if (order.status !== "PENDING") return NextResponse.json({ error: "Order not payable" }, { status: 409 });
 
     // Atomic, idempotent state transition; access is verified against Stripe on report request.
-    await prisma.auntPennyOrder.updateMany({ where: { id: order.id, status: "PENDING" }, data: { status: "PAID", paidAt: new Date() } });
+    const transition = await prisma.auntPennyOrder.updateMany({ where: { id: order.id, status: "PENDING" }, data: { status: "PAID", paidAt: new Date() } });
+    if (transition.count !== 1) {
+      const current = await prisma.auntPennyOrder.findUnique({ where: { id: order.id } });
+      if (current?.status !== "PAID") return NextResponse.json({ error: "Payment state not recorded" }, { status: 409 });
+    }
     // The raw access token is deliberately NOT logged, stored, or emailed by this webhook.
     // Fulfillment email / buyer recovery requires a separate verified secure implementation.
     return NextResponse.json({ received: true });
