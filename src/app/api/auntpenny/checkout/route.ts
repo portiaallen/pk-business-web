@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     if (!body || typeof body !== "object") return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     const data = body as Record<string, unknown>;
     const email = typeof data.email === "string" ? data.email.trim().toLowerCase() : "";
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 254) return NextResponse.json({ error: "Valid email required" }, { status: 400 });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) return NextResponse.json({ error: "Valid email required" }, { status: 400 });
     const answers = data.answers as IntakeAnswers;
     if (!answers || validateIntake(answers).length) return NextResponse.json({ error: "Invalid figures" }, { status: 400 });
     const snapshot = JSON.stringify(answers);
