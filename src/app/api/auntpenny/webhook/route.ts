@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { issueToken, PRICE_CENTS, PRODUCT_CODE, requireSandbox, sandboxStripe, tokenHash, TOKEN_TTL_MS } from "@/lib/auntpenny/paid";
+import { PRICE_CENTS, PRODUCT_CODE, requireSandbox, sandboxStripe } from "@/lib/auntpenny/paid";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
@@ -20,9 +20,9 @@ export async function POST(request: Request) {
     const order = await prisma.auntPennyOrder.findUnique({ where: { id: orderId } });
     if (!order || order.stripeSessionId !== session.id || order.amountCents !== PRICE_CENTS) return NextResponse.json({ error: "Order mismatch" }, { status: 400 });
     if (order.status === "PAID") return NextResponse.json({ received: true });
-    const token = issueToken();
-    // A durable hashed entitlement is created once; webhook retries cannot create multiple grants.
-    await prisma.auntPennyOrder.updateMany({ where: { id: order.id, status: "PENDING" }, data: { status: "PAID", accessTokenHash: tokenHash(token), paidAt: new Date(), accessExpiresAt: new Date(Date.now() + TOKEN_TTL_MS) } });
+
+    // Atomic, idempotent state transition; access is verified against Stripe on report request.
+    await prisma.auntPennyOrder.updateMany({ where: { id: order.id, status: "PENDING" }, data: { status: "PAID", paidAt: new Date() } });
     // The raw access token is deliberately NOT logged, stored, or emailed by this webhook.
     // Fulfillment email / buyer recovery requires a separate verified secure implementation.
     return NextResponse.json({ received: true });
