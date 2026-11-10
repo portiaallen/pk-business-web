@@ -300,6 +300,6 @@ lines.push("");
 lines.push(`Disclaimer in every report: "${DISCLAIMER}"`);
 lines.push("");
 
-writeFileSync("/workspace/rmb_qa_table.md", lines.join("\n"));
+writeFileSync("rmb_qa_table.md", lines.join("\n"));
 console.log(lines.join("\n"));
 console.log(`\nALL ${rows.length + 12} ASSERTION GROUPS PASS.`);
