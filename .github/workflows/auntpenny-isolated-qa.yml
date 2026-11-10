@@ -2,6 +2,13 @@ name: Aunt Penny isolated QA (manual only)
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'src/lib/auntpenny/**'
+      - 'src/app/api/auntpenny/**'
+      - 'src/app/auntpenny/roastmybooks/paid/**'
+      - 'scripts/test-auntpenny-**'
+      - '.github/workflows/auntpenny-isolated-qa.yml'
 
 permissions:
   contents: read
@@ -12,7 +19,7 @@ concurrency:
 
 jobs:
   qa:
-    if: github.ref == 'refs/heads/fix/auntpenny-zero-findings-20261109'
+    if: github.event_name == 'pull_request' && github.head_ref == 'launch/auntpenny-paid-readiness-20261110' || github.ref == 'refs/heads/launch/auntpenny-paid-readiness-20261110'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -34,6 +41,18 @@ jobs:
         run: |
           git rev-parse HEAD
           git status --short
+      - name: Generate Prisma and push disposable schema
+        env:
+          PK_ENVIRONMENT: development
+          DATABASE_URL: 'file:./ci-auntpenny.db'
+          DATABASE_AUTH_TOKEN: ci-synthetic
+          SYNC_TARGET_URL: 'file:./ci-auntpenny.db'
+          PK_CI_SYNTHETIC: '1'
+        run: |
+          npx prisma generate
+          npx prisma db push --url=file:$GITHUB_WORKSPACE/ci-auntpenny.db
+      - name: Run native Stripe sandbox synthetic signature tests
+        run: node --import tsx --test scripts/test-auntpenny-stripe.mts
       - name: Run synthetic roast engine QA
         run: npm run test:roast
       - name: Verify checkout remains fail-closed
