@@ -23,7 +23,7 @@ export default async function PaidReportPage({ searchParams }: { searchParams: P
     if (!order || (hasToken && recoveredOrder?.id !== order.id) || order.id !== session.metadata?.orderId || order.amountCents !== PRICE_CENTS || order.status !== "PAID") throw new Error("Not fulfilled");
     answers = JSON.parse(order.intakeJson) as IntakeAnswers;
   } catch {
-    return <main className="mx-auto max-w-xl px-6 py-20"><h1 className="text-3xl font-bold">Aunt Penny is checking the receipt.</h1><p className="mt-4">Your sandbox report is not available until payment is confirmed. No real purchases are enabled.</p><Link href="/auntpenny/roastmybooks/start">Return to the free roast</Link></main>;
+    return <main className="mx-auto max-w-xl px-6 py-20"><h1 className="text-3xl font-bold">Aunt Penny is checking the receipt.</h1><p className="mt-4">Your sandbox report is not available until payment is confirmed. No real purchases are enabled.</p><Link href="/auntpenny/roastmybooks/recover">Recover your purchased report</Link><p className="mt-4"><Link href="/auntpenny/roastmybooks/start">Return to the free roast</Link></p></main>;
   }
   const report = buildReport(answers);
   const steps = nextThreeSteps(report.triggered);
