@@ -225,7 +225,7 @@ export function ReportView({
       <p className="mt-8 text-xs leading-relaxed opacity-70">{DISCLAIMER}</p>
       <p className="mt-4 text-xs opacity-70">
         From the world of Aunt Penny: <Link href="https://pkservices.business">PK Business Services</Link>.
-        The Dear Aunt Penny Podcast arrives with the PK Family Launch, Nov 30. Ask PK is paused and is
+        The Dear Aunt Penny Podcast is on hold through December 2026, with a January 2027 reassessment. Ask PK is paused and is
         not linked here on purpose.
       </p>
     </div>
