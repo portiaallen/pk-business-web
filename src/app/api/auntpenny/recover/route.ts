@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { assertResourceEnvironment } from "@/lib/security-environment";
 import { issueToken, tokenHash, publicOrigin, requireSandbox, sandboxStripe, PRICE_CENTS, PRODUCT_CODE } from "@/lib/auntpenny/paid";
@@ -14,6 +15,16 @@ export async function POST(request: Request) {
     if (!body || typeof body !== "object") return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     const email = typeof (body as {email?:unknown}).email === "string" ? (body as {email:string}).email.trim().toLowerCase() : "";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) return NextResponse.json({ error: "Invalid email" }, { status: 400 });
+    // Durable per-address limit, shared across server instances; never store plaintext email in the limiter key.
+    const limitKey = "aunt-penny-recover:" + createHash("sha256").update(email).digest("hex");
+    const now = new Date();
+    const existing = await prisma.readinessPublicRateLimit.findUnique({ where: { key: limitKey } });
+    if (existing && existing.expiresAt > now && existing.count >= 3) return generic();
+    if (!existing || existing.expiresAt <= now) {
+      await prisma.readinessPublicRateLimit.upsert({ where: { key: limitKey }, create: { key: limitKey, count: 1, expiresAt: new Date(Date.now() + 60 * 60 * 1000) }, update: { count: 1, expiresAt: new Date(Date.now() + 60 * 60 * 1000) } });
+    } else {
+      await prisma.readinessPublicRateLimit.update({ where: { key: limitKey }, data: { count: { increment: 1 } } });
+    }
     const gmailUser = process.env.GMAIL_USER?.trim();
     const gmailAppPassword = process.env.GMAIL_APP_PASSWORD?.trim();
     if (!gmailUser || !gmailAppPassword) return NextResponse.json({ error: "Recovery unavailable" }, { status: 503 });
