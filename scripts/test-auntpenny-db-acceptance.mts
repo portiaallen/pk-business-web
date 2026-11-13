@@ -6,7 +6,10 @@ import nodemailer from "nodemailer";
 import { prisma } from "../src/lib/prisma";
 import { POST as webhook } from "../src/app/api/auntpenny/webhook/route";
 import { POST as recover } from "../src/app/api/auntpenny/recover/route";
-import PaidReportPage from "../src/app/auntpenny/roastmybooks/paid/page";
+import * as PaidReportPageModule from "../src/app/auntpenny/roastmybooks/paid/page";
+// The Node tsx runner can expose Next page exports through a CJS interop wrapper.
+const pageExport = (PaidReportPageModule as { default?: unknown }).default ?? PaidReportPageModule;
+const PaidReportPage = (typeof pageExport === "function" ? pageExport : (pageExport as { default?: unknown }).default) as (props: { searchParams: Promise<{ session_id: string }> }) => Promise<unknown>;
 import { PRICE_CENTS, PRODUCT_CODE } from "../src/lib/auntpenny/paid";
 
 const email = "synthetic-auntpenny@example.test";
