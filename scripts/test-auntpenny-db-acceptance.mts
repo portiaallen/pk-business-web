@@ -1,10 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
+import { mock } from "node:test";
+import nodemailer from "nodemailer";
 import { prisma } from "../src/lib/prisma";
 import { POST as webhook } from "../src/app/api/auntpenny/webhook/route";
 import { POST as recover } from "../src/app/api/auntpenny/recover/route";
-import PaidReportPage from "../src/app/auntpenny/roastmybooks/paid/page";
+import * as PaidReportPageModule from "../src/app/auntpenny/roastmybooks/paid/page";
+// The Node tsx runner can expose Next page exports through a CJS interop wrapper.
+const pageExport = (PaidReportPageModule as { default?: unknown }).default ?? PaidReportPageModule;
+const PaidReportPage = (typeof pageExport === "function" ? pageExport : (pageExport as { default?: unknown }).default) as (props: { searchParams: Promise<{ session_id: string }> }) => Promise<unknown>;
 import { PRICE_CENTS, PRODUCT_CODE } from "../src/lib/auntpenny/paid";
 
 const email = "synthetic-auntpenny@example.test";
@@ -70,6 +75,28 @@ test("real isolated database: signed webhook, replay, authorization, recovery fa
     }));
     assert.equal(recovery.status, 503);
     assert.equal((await prisma.auntPennyOrder.findUniqueOrThrow({ where: { id: order.id } })).accessTokenHash, null);
+    // Exercise the actual mail-send rejection against the isolated database.
+    // No network SMTP request is made.
+    process.env.PK_EMAIL_ENVIRONMENT = "development";
+    process.env.GMAIL_USER = "synthetic-sender@example.test";
+    process.env.GMAIL_APP_PASSWORD = "synthetic-only-not-a-secret";
+    const transportMock = mock.method(nodemailer, "createTransport", () => ({
+      sendMail: async () => { throw new Error("synthetic SMTP delivery failure"); },
+    }));
+    try {
+      const failedDelivery = await recover(new Request("https://example.test/api/auntpenny/recover", {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email }),
+      }));
+      assert.equal(failedDelivery.status, 503);
+      const afterFailure = await prisma.auntPennyOrder.findUniqueOrThrow({ where: { id: order.id } });
+      assert.equal(afterFailure.accessTokenHash, null, "undelivered access token must be revoked");
+      assert.equal(afterFailure.accessExpiresAt, null, "undelivered token expiry must be cleared");
+    } finally {
+      transportMock.mock.restore();
+      delete process.env.PK_EMAIL_ENVIRONMENT;
+      delete process.env.GMAIL_USER;
+      delete process.env.GMAIL_APP_PASSWORD;
+    }
   } finally {
     globalThis.fetch = originalFetch;
     await prisma.auntPennyOrder.delete({ where: { id: order.id } });
