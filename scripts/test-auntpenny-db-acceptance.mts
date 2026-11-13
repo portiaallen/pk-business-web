@@ -74,6 +74,7 @@ test("real isolated database: signed webhook, replay, authorization, recovery fa
     assert.equal((await prisma.auntPennyOrder.findUniqueOrThrow({ where: { id: order.id } })).accessTokenHash, null);
     // Exercise the actual mail-send rejection against the isolated database.
     // No network SMTP request is made.
+    process.env.PK_EMAIL_ENVIRONMENT = "development";
     process.env.GMAIL_USER = "synthetic-sender@example.test";
     process.env.GMAIL_APP_PASSWORD = "synthetic-only-not-a-secret";
     const transportMock = mock.method(nodemailer, "createTransport", () => ({
@@ -89,6 +90,7 @@ test("real isolated database: signed webhook, replay, authorization, recovery fa
       assert.equal(afterFailure.accessExpiresAt, null, "undelivered token expiry must be cleared");
     } finally {
       transportMock.mock.restore();
+      delete process.env.PK_EMAIL_ENVIRONMENT;
       delete process.env.GMAIL_USER;
       delete process.env.GMAIL_APP_PASSWORD;
     }
