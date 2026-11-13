@@ -37,6 +37,8 @@ jobs:
           cache: npm
       - name: Install dependencies without lifecycle scripts
         run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build isolated SQLite native binding
+        run: npm rebuild better-sqlite3 --no-audit --no-fund
       - name: Verify checked-out revision
         run: |
           git rev-parse HEAD
