@@ -340,7 +340,7 @@ export async function recordPayment(
     sessionData.client_reference_id !== a.id ||
     typeof sessionData.id !== "string" ||
     !/^cs_[A-Za-z0-9_]+$/.test(sessionData.id) ||
-    (a.stripeSessionId && a.stripeSessionId !== sessionData.id) ||
+    (!a.stripeSessionId || a.stripeSessionId !== sessionData.id) ||
     (founderZero ? sessionData.amount_total !== 0 : sessionData.amount_total !== PRICE_CENTS) ||
     sessionData.currency !== "usd" ||
     (founderZero && (sessionData.total_details as Record<string, unknown> | undefined)?.amount_discount !== PRICE_CENTS) ||
