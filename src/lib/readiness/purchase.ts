@@ -334,7 +334,7 @@ export async function recordPayment(
   if (typeof id !== "string")
     throw ApiError.badRequest("Readiness association is missing");
   const a = await tx.readinessAssessment.findUnique({ where: { id } });
-  const founderZero = isVerifiedFounderZeroCheckout(sessionData, { assessmentId: id, sessionId: String(sessionData.id) });
+  const founderZero = isVerifiedFounderZeroCheckout(sessionData as Parameters<typeof isVerifiedFounderZeroCheckout>[0], { assessmentId: id, sessionId: String(sessionData.id) });
   if (
     !a ||
     sessionData.client_reference_id !== a.id ||
@@ -420,7 +420,7 @@ export async function recordPayment(
   await tx.invoiceActivity.create({
     data: { invoiceId: a.invoiceId, event: founderZero ? "FOUNDER_ZERO_DOLLAR_TEST_VERIFIED" : "READINESS_PAYMENT_VERIFIED" },
   });
-  await audit(tx, null, a, "PAYMENT_VERIFIED", { amountCents: founderZero ? 0 : PRICE_CENTS, founderAcceptance: founderZero });
+  await audit(tx, null, a, "PAYMENT_VERIFIED", { amountCents: founderZero ? 0 : PRICE_CENTS, reason: founderZero ? "FOUNDER_ACCEPTANCE" : "PAID_PURCHASE" });
   await notify(tx, a.id, a.ownerUserId, "PAYMENT", `${a.id}:payment`);
   if (!founderZero) await track(tx, "purchase_success", a.id);
   return { duplicate: false };
