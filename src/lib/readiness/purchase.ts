@@ -211,15 +211,6 @@ export async function beginCheckout(request: Request) {
     throw new ApiError(503, "Card checkout is not configured");
   if (!mailConfigured())
     throw new ApiError(503, "Approved onboarding email is not configured");
-  const founderAuthorized = await prisma.$transaction(async (tx) => {
-    const email = process.env.PK_FOUNDER_TEST_EMAIL?.trim().toLowerCase();
-    const promo = founderPromotionId(process.env.PK_FOUNDER_PROMOTION_ID);
-    if (!email || !promo || process.env.PK_FOUNDER_TEST_ENABLED !== "true") return false;
-    try {
-      const user = await session(tx, request);
-      return user.role === "ADMIN" && user.email.toLowerCase() === email;
-    } catch { return false; }
-  });
   const a = await prisma.$transaction(async (tx) => {
     await limitPublic(tx, request, "checkout", 30);
     const assessment = await purchaseAssessment(tx, request);
@@ -234,14 +225,33 @@ export async function beginCheckout(request: Request) {
   });
   if (a.paymentStatus === "PAID")
     return { paid: true, url: "/readiness/start" };
+  const promotionId = founderPromotionId(process.env.PK_FOUNDER_PROMOTION_ID);
+  let founderAuthorized = false;
+  if (promotionId && process.env.PK_FOUNDER_TEST_ENABLED === "true") {
+    // Approve one assessment selected by the operator after public intake.
+    // The assessment above comes from the existing HttpOnly purchase cookie.
+    const testAssessmentId = process.env.PK_FOUNDER_TEST_ASSESSMENT_ID?.trim();
+    founderAuthorized = a.id === testAssessmentId;
+    const email = process.env.PK_FOUNDER_TEST_EMAIL?.trim().toLowerCase();
+    if (!testAssessmentId && email) {
+      founderAuthorized = await prisma.$transaction(async (tx) => {
+        try {
+          const user = await session(tx, request);
+          return user.role === "ADMIN" && user.email.toLowerCase() === email;
+        } catch {
+          return false;
+        }
+      });
+    }
+  }
   const origin = checkoutOrigin(request);
   const form = new URLSearchParams();
   form.set("mode", "payment");
   form.set("payment_method_types[0]", "card");
   form.set("client_reference_id", a.id);
   form.set("metadata[readinessAssessmentId]", a.id);
-  if (founderAuthorized) {
-    form.set("discounts[0][promotion_code]", founderPromotionId(process.env.PK_FOUNDER_PROMOTION_ID)!);
+  if (founderAuthorized && promotionId) {
+    form.set("discounts[0][promotion_code]", promotionId);
     form.set("metadata[pkFounderAcceptance]", "v1");
   }
   form.set("line_items[0][price_data][currency]", "usd");
