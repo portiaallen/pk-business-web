@@ -1866,3 +1866,92 @@ test("one operator-approved assessment can reach $0 without an admin session", a
     where: { id: selected.assessmentId },
   })).stripeSessionId, `cs_test_${selected.assessmentId}`);
 });
+
+
+test("a saved customer session can confirm a verified $0 payment exactly once", async (t) => {
+  const path = "/api/readiness/status";
+  const lookup = await import("../src/app/api/readiness/status/route");
+  const selected = await purchase.startPurchase(new Request(origin + path), preliminary);
+  const cookie = selected.cookie.split(";")[0];
+  const sessionId = `cs_test_${selected.assessmentId}`;
+  const assessment = await prisma.readinessAssessment.update({
+    where: { id: selected.assessmentId },
+    data: { stripeSessionId: sessionId, status: "PAYMENT_PENDING" },
+  });
+  const session = {
+    object: "checkout.session",
+    id: sessionId,
+    livemode: false,
+    mode: "payment",
+    status: "complete",
+    payment_status: "paid",
+    payment_intent: null,
+    amount_total: 0,
+    currency: "usd",
+    client_reference_id: assessment.id,
+    metadata: { readinessAssessmentId: assessment.id, pkFounderAcceptance: "v1" },
+    total_details: { amount_discount: 9900 },
+  };
+  let payload: Record<string, unknown> = session;
+  const transport: typeof fetch = async (url, options) => {
+    assert.equal(String(url), `https://api.stripe.com/v1/checkout/sessions/${sessionId}`);
+    assert.equal(options?.body, undefined);
+    assert.equal(new Headers(options?.headers).get("authorization"), "Bearer sk_test_synthetic_fixture");
+    return Response.json(payload);
+  };
+  const stripe = t.mock.method(globalThis, "fetch", transport);
+  const post = (purchaseSession = cookie, source = origin, input: object = {}) =>
+    lookup.POST(new Request(origin + path, {
+      method: "POST",
+      headers: { origin: source, "content-type": "application/json", cookie: purchaseSession },
+      body: JSON.stringify(input),
+    }));
+  const get = () => lookup.GET(new Request(origin + path, { headers: { cookie } }));
+  assert.equal((await (await get()).json()).paymentStatus, "PENDING");
+  assert.equal((await post("")).status, 401);
+  assert.equal((await post(`pk_readiness_purchase=${"0".repeat(64)}`)).status, 401);
+  assert.equal((await post(cookie, "https://outside.example")).status, 403);
+  assert.equal((await post(cookie, origin, { sessionId })).status, 400);
+  assert.equal(stripe.mock.callCount(), 0);
+  const salesBefore = await prisma.readinessAnalyticsEvent.count({ where: { event: "purchase_success" } });
+  const paidRevenue = async () => (await prisma.payment.aggregate({
+    where: { status: "PAID" },
+    _sum: { amountCents: true },
+  }))._sum.amountCents ?? 0;
+  const revenueBefore = await paidRevenue();
+
+  for (const mismatch of [
+    { id: "cs_test_another" },
+    { livemode: true },
+    { status: "open" },
+    { client_reference_id: "another-assessment" },
+    { metadata: { readinessAssessmentId: assessment.id } },
+    { total_details: { amount_discount: 9899 } },
+    { currency: "eur" },
+    { amount_total: 9900, payment_intent: "pi_test_paid" },
+  ]) {
+    payload = { ...session, ...mismatch };
+    const pending = await post();
+    assert.equal(pending.status, 200);
+    assert.equal((await pending.json()).paymentStatus, "PENDING");
+  }
+  assert.equal(await prisma.payment.count({ where: { invoiceId: assessment.invoiceId } }), 0);
+
+  payload = session;
+  const accepted = await post();
+  assert.equal(accepted.status, 200);
+  assert.equal((await accepted.json()).paymentStatus, "PAID");
+  const calls = stripe.mock.callCount();
+  assert.equal((await (await post()).json()).paymentStatus, "PAID");
+  assert.equal(stripe.mock.callCount(), calls);
+  const redelivery = await signed(session);
+  assert.equal(redelivery.status, 200);
+  assert.equal((await redelivery.json()).duplicate, true);
+  const payments = await prisma.payment.findMany({ where: { invoiceId: assessment.invoiceId } });
+  assert.equal(payments.length, 1);
+  assert.equal(payments[0].amountCents, 0);
+  assert.equal(payments[0].providerReference, null);
+  assert.equal(payments[0].notes, "FOUNDER_ACCEPTANCE_TEST_ZERO_DOLLAR_NOT_REVENUE");
+  assert.equal(await prisma.readinessAnalyticsEvent.count({ where: { event: "purchase_success" } }), salesBefore);
+  assert.equal(await paidRevenue(), revenueBefore);
+});

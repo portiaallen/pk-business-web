@@ -334,7 +334,65 @@ export async function publicStatus(request: Request) {
     };
   });
 }
-/** Called only inside the existing verified Stripe webhook transaction. */
+export async function confirmPurchase(request: Request) {
+  requireEnabled();
+  const assessment = await prisma.$transaction(async (tx) => {
+    const current = await purchaseAssessment(tx, request);
+    await limitPublic(tx, request, "payment_confirmation", 12);
+    return current;
+  });
+  const sessionId = assessment.stripeSessionId;
+  if (
+    assessment.paymentStatus !== "PENDING" ||
+    !["PURCHASE_STARTED", "PAYMENT_PENDING"].includes(assessment.status) ||
+    !sessionId ||
+    !/^cs_[A-Za-z0-9_]+$/.test(sessionId)
+  ) {
+    return publicStatus(request);
+  }
+
+  if (!isStripeConfigured())
+    throw new ApiError(503, "Payment verification is unavailable");
+  const expectedLiveMode = securityEnvironment() === "production";
+  let sessionData: Record<string, unknown>;
+  try {
+    const response = await fetch(
+      `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`,
+      {
+        cache: "no-store",
+        redirect: "error",
+        signal: AbortSignal.timeout(10000),
+        headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY!.trim()}` },
+      },
+    );
+    const data: unknown = response.ok ? await response.json() : null;
+    if (!data || typeof data !== "object" || Array.isArray(data))
+      throw new Error("Invalid Stripe session response");
+    sessionData = data as Record<string, unknown>;
+  } catch {
+    throw new ApiError(502, "Payment confirmation is temporarily unavailable. Please try again.");
+  }
+
+  const totals = sessionData.total_details as Record<string, unknown> | undefined;
+  if (
+    sessionData.livemode === expectedLiveMode &&
+    isVerifiedFounderZeroCheckout(
+      sessionData as Parameters<typeof isVerifiedFounderZeroCheckout>[0],
+      { assessmentId: assessment.id, sessionId },
+    ) &&
+    totals?.amount_discount === PRICE_CENTS
+  ) {
+    await prisma.$transaction(async (tx) => {
+      const current = await purchaseAssessment(tx, request);
+      if (current.id !== assessment.id || current.stripeSessionId !== sessionId)
+        throw ApiError.conflict("Checkout association changed");
+      await recordPayment(tx, sessionData);
+    });
+  }
+  return publicStatus(request);
+}
+
+/** Called inside a transaction after the server verifies the Stripe session. */
 export async function recordPayment(
   tx: Tx,
   sessionData: Record<string, unknown>,
