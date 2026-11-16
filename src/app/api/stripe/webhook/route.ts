@@ -96,14 +96,16 @@ export async function POST(request: Request) {
       throw ApiError.badRequest("Invalid Checkout session event.");
     }
 
-    if (session.payment_status !== "paid") {
+    const readinessSession = isRecord(session.metadata) && typeof session.metadata.readinessAssessmentId === "string";
+    const founderZero = readinessSession && session.payment_status === "no_payment_required" && session.amount_total === 0 && isRecord(session.metadata) && session.metadata.pkFounderAcceptance === "v1" && event.type === "checkout.session.completed";
+    if (session.payment_status !== "paid" && !founderZero) {
       if (event.type === "checkout.session.completed") {
         return NextResponse.json({ received: true, pending: true });
       }
       throw ApiError.badRequest("Checkout session is not paid.");
     }
 
-    if (isRecord(session.metadata) && typeof session.metadata.readinessAssessmentId === "string") {
+    if (readinessSession) {
       if (session.livemode !== event.livemode) throw ApiError.badRequest("Checkout mode mismatch");
       const result = await prisma.$transaction((tx) => recordReadinessPayment(tx, session));
       return NextResponse.json({ received: true, ...result });
