@@ -31,6 +31,15 @@ globalThis.fetch = (async (url: string | URL | Request) => {
   }), { status: 200, headers: { "content-type": "application/json" } });
 }) as typeof fetch;
 
+function renderedText(node: unknown): string {
+  if (node === null || node === undefined || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(renderedText).join(" ");
+  if (typeof node !== "object") return "";
+  // Read React element children only: JSON.stringify traverses circular Next/React metadata.
+  const element = node as { props?: { children?: unknown } };
+  return renderedText(element.props?.children);
+}
 function signed(body: string, signatureOverride?: string) {
   const t = String(Math.floor(Date.now() / 1000));
   const signature = signatureOverride ?? createHmac("sha256", secret).update(t + "." + body).digest("hex");
@@ -50,7 +59,7 @@ test("real isolated database: signed webhook, replay, authorization, recovery fa
   currentOrderId = order.id;
   try {
     const deniedBefore = await PaidReportPage({ searchParams: Promise.resolve({ session_id: sessionId }) });
-    assert.match(JSON.stringify(deniedBefore), /checking the receipt/);
+    assert.match(renderedText(deniedBefore), /checking the receipt/);
     assert.equal((await webhook(signed(payload(), "0".repeat(64)))).status, 400);
     assert.equal((await prisma.auntPennyOrder.findUniqueOrThrow({ where: { id: order.id } })).status, "PENDING");
     syntheticPaid = false;
@@ -64,10 +73,10 @@ test("real isolated database: signed webhook, replay, authorization, recovery fa
     const second = await prisma.auntPennyOrder.findUniqueOrThrow({ where: { id: order.id } });
     assert.equal(second.paidAt?.getTime(), first.paidAt?.getTime());
     const allowed = await PaidReportPage({ searchParams: Promise.resolve({ session_id: sessionId }) });
-    assert.match(JSON.stringify(allowed), /Your Roast My Books Report/);
+    assert.match(renderedText(allowed), /Your Roast My Books Report/);
     syntheticPaid = false;
     const revoked = await PaidReportPage({ searchParams: Promise.resolve({ session_id: sessionId }) });
-    assert.match(JSON.stringify(revoked), /checking the receipt/);
+    assert.match(renderedText(revoked), /checking the receipt/);
     syntheticPaid = true;
     delete process.env.GMAIL_APP_PASSWORD;
     const recovery = await recover(new Request("https://example.test/api/auntpenny/recover", {
