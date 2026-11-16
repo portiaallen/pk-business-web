@@ -17,9 +17,9 @@ export function Hero() {
             <span>Your books shouldn’t be.</span>
           </h1>
           <p className="pk-hero-description">
-            Messy books? We can work with that. Practical bookkeeping and
-            financial documentation support for small businesses, self-employed
-            professionals, and individuals.
+            Running an LLC or small business and unsure whether your books are ready?
+            PK helps with QuickBooks cleanup, ongoing bookkeeping, and clear
+            next steps before tax season.
           </p>
           <div className="pk-hero-actions">
             <Button
@@ -31,6 +31,14 @@ export function Hero() {
             </Button>
             <Link href="/services" className="pk-text-link pk-text-link-light">
               Find your service <span aria-hidden="true">→</span>
+            </Link>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+            <Link href="/services#quickbooks-cleanup" className="pk-text-link pk-text-link-light">
+              Need QuickBooks cleanup? Start here <span aria-hidden="true">→</span>
+            </Link>
+            <Link href="/assessment" className="pk-text-link pk-text-link-light">
+              Not sure what needs fixing? $99 readiness review <span aria-hidden="true">→</span>
             </Link>
           </div>
           <p className="pk-hero-note">
