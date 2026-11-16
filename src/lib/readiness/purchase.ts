@@ -18,6 +18,7 @@ import { PRICE_CENTS, PRODUCT_NAME, preliminaryInput } from "./policy";
 import { audit, session, type Tx } from "./access";
 import { track } from "./analytics";
 import { mailConfigured, sendMail, notify } from "./notifications";
+import { founderPromotionId, isVerifiedFounderZeroCheckout } from "@/lib/checkout/founder-acceptance";
 
 export const PURCHASE_COOKIE = "pk_readiness_purchase";
 export function purchaseToken(request: Request) {
@@ -210,6 +211,15 @@ export async function beginCheckout(request: Request) {
     throw new ApiError(503, "Card checkout is not configured");
   if (!mailConfigured())
     throw new ApiError(503, "Approved onboarding email is not configured");
+  const founderAuthorized = await prisma.$transaction(async (tx) => {
+    const email = process.env.PK_FOUNDER_TEST_EMAIL?.trim().toLowerCase();
+    const promo = founderPromotionId(process.env.PK_FOUNDER_PROMOTION_ID);
+    if (!email || !promo || process.env.PK_FOUNDER_TEST_ENABLED !== "true") return false;
+    try {
+      const user = await session(tx, request);
+      return user.role === "ADMIN" && user.email.toLowerCase() === email;
+    } catch { return false; }
+  });
   const a = await prisma.$transaction(async (tx) => {
     await limitPublic(tx, request, "checkout", 30);
     const assessment = await purchaseAssessment(tx, request);
@@ -230,6 +240,10 @@ export async function beginCheckout(request: Request) {
   form.set("payment_method_types[0]", "card");
   form.set("client_reference_id", a.id);
   form.set("metadata[readinessAssessmentId]", a.id);
+  if (founderAuthorized) {
+    form.set("discounts[0][promotion_code]", founderPromotionId(process.env.PK_FOUNDER_PROMOTION_ID)!);
+    form.set("metadata[pkFounderAcceptance]", "v1");
+  }
   form.set("line_items[0][price_data][currency]", "usd");
   form.set("line_items[0][price_data][unit_amount]", String(PRICE_CENTS));
   form.set("line_items[0][price_data][product_data][name]", PRODUCT_NAME);
@@ -245,7 +259,7 @@ export async function beginCheckout(request: Request) {
       headers: {
         Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY!.trim()}`,
         "Content-Type": "application/x-www-form-urlencoded",
-        "Idempotency-Key": `pk-readiness-${a.id}`,
+        "Idempotency-Key": `pk-readiness-${a.id}-${founderAuthorized ? "founder" : "regular"}`,
       },
       body: form,
     });
@@ -265,7 +279,9 @@ export async function beginCheckout(request: Request) {
     !/^cs_[A-Za-z0-9_]+$/.test(data.id) ||
     data.mode !== "payment" ||
     data.livemode !== (securityEnvironment() === "production") ||
-    data.amount_total !== PRICE_CENTS ||
+    data.amount_total !== (founderAuthorized ? 0 : PRICE_CENTS) ||
+    (founderAuthorized && data.metadata?.pkFounderAcceptance !== "v1") ||
+    (!founderAuthorized && data.metadata?.pkFounderAcceptance === "v1") ||
     data.currency !== "usd" ||
     data.client_reference_id !== a.id ||
     data.metadata?.readinessAssessmentId !== a.id ||
@@ -317,15 +333,16 @@ export async function recordPayment(
   if (typeof id !== "string")
     throw ApiError.badRequest("Readiness association is missing");
   const a = await tx.readinessAssessment.findUnique({ where: { id } });
+  const founderZero = isVerifiedFounderZeroCheckout(sessionData, { assessmentId: id, sessionId: String(sessionData.id) });
   if (
     !a ||
     sessionData.client_reference_id !== a.id ||
     typeof sessionData.id !== "string" ||
     !/^cs_[A-Za-z0-9_]+$/.test(sessionData.id) ||
     (a.stripeSessionId && a.stripeSessionId !== sessionData.id) ||
-    sessionData.amount_total !== PRICE_CENTS ||
+    (founderZero ? sessionData.amount_total !== 0 : sessionData.amount_total !== PRICE_CENTS) ||
     sessionData.currency !== "usd" ||
-    sessionData.payment_status !== "paid" ||
+    sessionData.payment_status !== (founderZero ? "no_payment_required" : "paid") ||
     sessionData.mode !== "payment" ||
     sessionData.status !== "complete" ||
     a.priceCents !== PRICE_CENTS ||
@@ -352,7 +369,7 @@ export async function recordPayment(
     typeof sessionData.payment_intent === "string"
       ? sessionData.payment_intent
       : null;
-  if (!intent || !/^pi_[A-Za-z0-9_]+$/.test(intent))
+  if (!founderZero && (!intent || !/^pi_[A-Za-z0-9_]+$/.test(intent)))
     throw ApiError.badRequest("Verified payment reference is required");
   if (
     await tx.payment.findFirst({
@@ -372,12 +389,13 @@ export async function recordPayment(
       clientId: a.clientId,
       requestId: a.requestId,
       invoiceId: a.invoiceId,
-      amountCents: PRICE_CENTS,
+      amountCents: founderZero ? 0 : PRICE_CENTS,
       currency: "USD",
       status: "PAID",
       method: "STRIPE",
       transactionReference: sessionData.id,
       providerReference: intent,
+      notes: founderZero ? "FOUNDER_ACCEPTANCE_TEST_ZERO_DOLLAR_NOT_REVENUE" : null,
       paidAt: new Date(),
     },
   });
@@ -398,11 +416,11 @@ export async function recordPayment(
     data: { status: "PAID", paidAt: new Date() },
   });
   await tx.invoiceActivity.create({
-    data: { invoiceId: a.invoiceId, event: "READINESS_PAYMENT_VERIFIED" },
+    data: { invoiceId: a.invoiceId, event: founderZero ? "FOUNDER_ZERO_DOLLAR_TEST_VERIFIED" : "READINESS_PAYMENT_VERIFIED" },
   });
-  await audit(tx, null, a, "PAYMENT_VERIFIED", { amountCents: PRICE_CENTS });
+  await audit(tx, null, a, "PAYMENT_VERIFIED", { amountCents: founderZero ? 0 : PRICE_CENTS, founderAcceptance: founderZero });
   await notify(tx, a.id, a.ownerUserId, "PAYMENT", `${a.id}:payment`);
-  await track(tx, "purchase_success", a.id);
+  if (!founderZero) await track(tx, "purchase_success", a.id);
   return { duplicate: false };
 }
 export async function requestOnboardingCode(request: Request) {
