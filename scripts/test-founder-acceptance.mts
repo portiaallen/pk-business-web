@@ -12,6 +12,7 @@ const base = {
   mode: "payment",
   status: "complete",
   payment_status: "no_payment_required",
+  payment_intent: null,
   amount_total: 0,
   currency: "usd",
   client_reference_id: "assessment-123",
@@ -26,10 +27,13 @@ const expected = {
 };
 test("Founder zero-dollar acceptance requires all provider-verified fields", () => {
   assert.equal(isVerifiedFounderZeroCheckout(base, expected), true);
+  assert.equal(isVerifiedFounderZeroCheckout({ ...base, payment_status: "paid" }, expected), true);
   for (const patch of [
     { status: "open" },
     { payment_status: "unpaid" },
-    { payment_status: "paid" },
+    { payment_status: "paid", payment_intent: "pi_test_other" },
+    { payment_status: "paid", amount_total: 9900 },
+    { payment_intent: undefined },
     { amount_total: 9900 },
     { id: "cs_test_other" },
     { client_reference_id: "someone-else" },

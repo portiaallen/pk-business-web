@@ -12,6 +12,7 @@ export type VerifiedCheckout = {
   mode: unknown;
   status: unknown;
   payment_status: unknown;
+  payment_intent?: unknown;
   amount_total: unknown;
   currency: unknown;
   client_reference_id: unknown;
@@ -34,7 +35,9 @@ export function isVerifiedFounderZeroCheckout(
     /^cs_(test_)?[A-Za-z0-9_]+$/.test(expected.sessionId) &&
     session.mode === "payment" &&
     session.status === "complete" &&
-    session.payment_status === "no_payment_required" &&
+    (session.payment_status === "no_payment_required" ||
+      session.payment_status === "paid") &&
+    session.payment_intent === null &&
     session.amount_total === 0 &&
     session.currency === "usd" &&
     session.client_reference_id === expected.assessmentId &&
