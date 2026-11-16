@@ -10,6 +10,10 @@ interface ServiceDetailProps {
 
 export function ServiceDetail({ service }: ServiceDetailProps) {
   const isIncomeVerification = service.id === "income-verification";
+  const consultationHref =
+    service.id === "quickbooks-cleanup"
+      ? "/contact?service=quickbooks-cleanup"
+      : "/contact";
 
   return (
     <article
@@ -81,7 +85,7 @@ export function ServiceDetail({ service }: ServiceDetailProps) {
             ))}
           </ul>
           <Button
-            render={<Link href="/contact" />}
+            render={<Link href={consultationHref} />}
             className="h-11 w-full bg-charcoal text-ivory hover:bg-charcoal/90"
           >
             {siteConfig.cta.label}
