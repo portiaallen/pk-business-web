@@ -259,7 +259,7 @@ export async function beginCheckout(request: Request) {
       headers: {
         Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY!.trim()}`,
         "Content-Type": "application/x-www-form-urlencoded",
-        "Idempotency-Key": `pk-readiness-${a.id}-${founderAuthorized ? "founder" : "regular"}`,
+        "Idempotency-Key": founderAuthorized ? `pk-readiness-${a.id}-founder` : `pk-readiness-${a.id}`,
       },
       body: form,
     });
