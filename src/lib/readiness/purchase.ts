@@ -386,9 +386,10 @@ export async function recordPayment(
   if (
     await tx.payment.findFirst({
       where: {
+        method: "STRIPE",
         OR: [
-          { method: "STRIPE", transactionReference: sessionData.id },
-          ...(intent ? [{ method: "STRIPE", providerReference: intent }] : []),
+          { transactionReference: sessionData.id },
+          ...(intent ? [{ providerReference: intent }] : []),
         ],
       },
     })
