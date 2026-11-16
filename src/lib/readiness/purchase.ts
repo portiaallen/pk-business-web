@@ -280,6 +280,7 @@ export async function beginCheckout(request: Request) {
     data.mode !== "payment" ||
     data.livemode !== (securityEnvironment() === "production") ||
     data.amount_total !== (founderAuthorized ? 0 : PRICE_CENTS) ||
+    (founderAuthorized && data.total_details?.amount_discount !== PRICE_CENTS) ||
     (founderAuthorized && data.metadata?.pkFounderAcceptance !== "v1") ||
     (!founderAuthorized && data.metadata?.pkFounderAcceptance === "v1") ||
     data.currency !== "usd" ||
@@ -342,6 +343,7 @@ export async function recordPayment(
     (a.stripeSessionId && a.stripeSessionId !== sessionData.id) ||
     (founderZero ? sessionData.amount_total !== 0 : sessionData.amount_total !== PRICE_CENTS) ||
     sessionData.currency !== "usd" ||
+    (founderZero && (sessionData.total_details as Record<string, unknown> | undefined)?.amount_discount !== PRICE_CENTS) ||
     sessionData.payment_status !== (founderZero ? "no_payment_required" : "paid") ||
     sessionData.mode !== "payment" ||
     sessionData.status !== "complete" ||
