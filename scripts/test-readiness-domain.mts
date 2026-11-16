@@ -1812,3 +1812,57 @@ test("revoked security version denies stale session and tenant queue excludes ot
   await assert.rejects(async () => svc.detail(request("admin"), aId, true));
   assert.deepEqual(sqlite.prepare("PRAGMA foreign_key_check").all(), []);
 });
+
+test("one operator-approved assessment can reach $0 without an admin session", async (t) => {
+  const endpoint = origin + "/api/readiness/checkout";
+  const selected = await purchase.startPurchase(new Request(endpoint), preliminary);
+  const other = await purchase.startPurchase(new Request(endpoint), preliminary);
+  const env = {
+    PK_FOUNDER_TEST_ENABLED: "true",
+    PK_FOUNDER_PROMOTION_ID: "promo_SyntheticOnly",
+    PK_FOUNDER_TEST_ASSESSMENT_ID: selected.assessmentId,
+  };
+  const previous = Object.keys(env).map((key) => [key, process.env[key]] as const);
+  Object.assign(process.env, env);
+  t.after(() => {
+    for (const [key, value] of previous) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  });
+
+  const syntheticFetch: typeof fetch = async (url, options) => {
+    assert.equal(String(url), "https://api.stripe.com/v1/checkout/sessions");
+    const form = new URLSearchParams(String(options?.body));
+    const id = form.get("client_reference_id");
+    assert.ok(id === selected.assessmentId || id === other.assessmentId);
+    const approved = id === selected.assessmentId;
+    assert.equal(form.get("discounts[0][promotion_code]"), approved ? "promo_SyntheticOnly" : null);
+    assert.equal(form.get("metadata[pkFounderAcceptance]"), approved ? "v1" : null);
+    assert.equal(form.get("line_items[0][price_data][unit_amount]"), "9900");
+    assert.equal(new Headers(options?.headers).get("Idempotency-Key"), `pk-readiness-${id}${approved ? "-founder" : ""}`);
+    const sessionId = `cs_test_${id}`;
+    return Response.json({
+      id: sessionId, mode: "payment", livemode: false, status: "open",
+      amount_total: approved ? 0 : 9900, currency: "usd", client_reference_id: id,
+      total_details: { amount_discount: approved ? 9900 : 0 },
+      metadata: { readinessAssessmentId: id, ...(approved && { pkFounderAcceptance: "v1" }) },
+      url: `https://checkout.stripe.com/c/pay/${sessionId}`,
+    });
+  };
+  const stripe = t.mock.method(globalThis, "fetch", syntheticFetch);
+
+  // A supplied ID is insufficient. The purchase cookie selects the assessment.
+  const url = `${endpoint}?assessmentId=${selected.assessmentId}`;
+  await assert.rejects(purchase.beginCheckout(new Request(url)));
+  assert.equal(stripe.mock.callCount(), 0);
+  for (const intake of [other, selected, selected]) {
+    const req = new Request(url, { headers: { cookie: intake.cookie.split(";")[0] } });
+    const result = await purchase.beginCheckout(req);
+    assert.equal(result.url, `https://checkout.stripe.com/c/pay/cs_test_${intake.assessmentId}`);
+  }
+  assert.equal(stripe.mock.callCount(), 3);
+  assert.equal((await prisma.readinessAssessment.findUniqueOrThrow({
+    where: { id: selected.assessmentId },
+  })).stripeSessionId, `cs_test_${selected.assessmentId}`);
+});
