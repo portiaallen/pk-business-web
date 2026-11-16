@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { serviceOptions } from "@/content/services";
 import { siteConfig } from "@/content/site";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,15 @@ export function ConsultationForm() {
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [submitError, setSubmitError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    // Honor only known service IDs. Ignore arbitrary query values rather than
+    // placing untrusted text into a client inquiry.
+    const requested = new URLSearchParams(window.location.search).get("service");
+    if (requested && serviceOptions.some((option) => option.value === requested)) {
+      setFormData((previous) => ({ ...previous, service: requested }));
+    }
+  }, []);
 
   function validate(): FormErrors {
     const newErrors: FormErrors = {};

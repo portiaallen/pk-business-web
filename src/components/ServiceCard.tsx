@@ -49,6 +49,9 @@ export function ServiceCard({
       </p>
       <div className="pk-service-card-bottom">
         <p className="text-sm font-semibold text-charcoal">{service.price}</p>
+        <Link href={`/contact?service=${encodeURIComponent(service.id)}`} className="text-sm font-semibold underline underline-offset-4">
+          Request this service
+        </Link>
         <Link href={service.href} className="pk-service-link">
           <span className="sr-only">Explore {service.shortName}</span>
           <ArrowUpRight className="size-5" aria-hidden="true" />

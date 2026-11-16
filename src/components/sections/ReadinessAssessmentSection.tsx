@@ -28,6 +28,10 @@ export function ReadinessAssessmentSection() {
         <p className="mt-2 text-sm text-ivory/70">
           Full terms are shown before you pay.
         </p>
+        <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-ivory/75">
+          Your assessment is a focused review, not a full bookkeeping cleanup or tax return.
+          You can review the scope and terms before checkout.
+        </p>
         <div className="mt-8">
           <Button
             render={<Link href="/assessment" />}
@@ -36,6 +40,9 @@ export function ReadinessAssessmentSection() {
             Start your $99 assessment
           </Button>
         </div>
+        <p className="mt-5 text-sm text-ivory/75">
+          Have questions first? <Link href="/contact?service=not-sure" className="underline underline-offset-4 hover:text-ivory">Ask PK about the assessment</Link>.
+        </p>
       </div>
     </Section>
   );
