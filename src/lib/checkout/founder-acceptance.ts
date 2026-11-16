@@ -1,7 +1,7 @@
 /**
  * Founder $0 acceptance contract shared by future PK product checkout adapters.
  * This module never grants payment/fulfillment access on its own.
- * Only a verified Stripe checkout.session.completed webhook may do that.
+ * Fulfillment verifies the session through Stripe's signed webhook or authenticated API.
  */
 export const FOUNDER_ACCEPTANCE_METADATA_KEY = "pkFounderAcceptance" as const;
 export const FOUNDER_ACCEPTANCE_VERSION = "v1" as const;

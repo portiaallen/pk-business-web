@@ -77,13 +77,19 @@ export default function ReadinessStart() {
               ? "Your assessment is saved. Payment is waiting for secure confirmation."
               : "Start from the readiness page to enter your preliminary details."}
           </p>
-          <button
-            className="rounded border px-4 py-3"
-            disabled={busy}
-            onClick={() => void refresh()}
-          >
-            Check payment status
-          </button>
+          {status.assessmentId && (
+            <button
+              className="rounded border px-4 py-3"
+              disabled={busy}
+              onClick={() =>
+                void action(async () => {
+                  setStatus(await readinessFetch("/api/readiness/status", undefined, {}));
+                })
+              }
+            >
+              Check payment status
+            </button>
+          )}
           {!status.checkoutAvailable && (
             <div className="space-y-2">
               <a
