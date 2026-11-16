@@ -354,7 +354,7 @@ export async function recordPayment(
     (founderZero ? sessionData.amount_total !== 0 : sessionData.amount_total !== PRICE_CENTS) ||
     sessionData.currency !== "usd" ||
     (founderZero && (sessionData.total_details as Record<string, unknown> | undefined)?.amount_discount !== PRICE_CENTS) ||
-    sessionData.payment_status !== (founderZero ? "no_payment_required" : "paid") ||
+    (!founderZero && sessionData.payment_status !== "paid") ||
     sessionData.mode !== "payment" ||
     sessionData.status !== "complete" ||
     a.priceCents !== PRICE_CENTS ||
@@ -386,9 +386,10 @@ export async function recordPayment(
   if (
     await tx.payment.findFirst({
       where: {
+        method: "STRIPE",
         OR: [
-          { method: "STRIPE", transactionReference: sessionData.id },
-          { method: "STRIPE", providerReference: intent },
+          { transactionReference: sessionData.id },
+          ...(intent ? [{ providerReference: intent }] : []),
         ],
       },
     })

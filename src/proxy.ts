@@ -10,7 +10,9 @@ export function proxy(request: NextRequest) {
 
   // Browser mutations require same-origin requests. Stripe verifies its own signature.
   if (pathname.startsWith("/api/") && !["GET", "HEAD", "OPTIONS"].includes(request.method) &&
-      pathname !== "/api/stripe/webhook" && pathname !== "/api/ordinary-transfer/internal" && pathname !== "/api/setup/seed") {
+      pathname !== "/api/stripe/webhook" &&
+      pathname !== "/api/payments/stripe/webhook" &&
+      pathname !== "/api/ordinary-transfer/internal" && pathname !== "/api/setup/seed") {
     if (request.headers.get("origin") !== request.nextUrl.origin) {
       return NextResponse.json({ error: "Same-origin request required" }, { status: 403 });
     }
