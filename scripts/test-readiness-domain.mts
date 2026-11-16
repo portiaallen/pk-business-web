@@ -1831,7 +1831,7 @@ test("one operator-approved assessment can reach $0 without an admin session", a
     }
   });
 
-  const stripe = t.mock.method(globalThis, "fetch", async (url, options) => {
+  const syntheticFetch: typeof fetch = async (url, options) => {
     assert.equal(String(url), "https://api.stripe.com/v1/checkout/sessions");
     const form = new URLSearchParams(String(options?.body));
     const id = form.get("client_reference_id");
@@ -1849,7 +1849,8 @@ test("one operator-approved assessment can reach $0 without an admin session", a
       metadata: { readinessAssessmentId: id, ...(approved && { pkFounderAcceptance: "v1" }) },
       url: `https://checkout.stripe.com/c/pay/${sessionId}`,
     });
-  });
+  };
+  const stripe = t.mock.method(globalThis, "fetch", syntheticFetch);
 
   // A supplied ID is insufficient. The purchase cookie selects the assessment.
   const url = `${endpoint}?assessmentId=${selected.assessmentId}`;
