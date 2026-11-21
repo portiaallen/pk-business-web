@@ -84,6 +84,35 @@ test("real isolated database: signed webhook, replay, authorization, recovery fa
     }));
     assert.equal(recovery.status, 503);
     assert.equal((await prisma.auntPennyOrder.findUniqueOrThrow({ where: { id: order.id } })).accessTokenHash, null);
+    // Successful synthetic recovery must issue a durable, redeemable token without SMTP traffic.
+    process.env.PK_EMAIL_ENVIRONMENT = "development";
+    process.env.GMAIL_USER = "synthetic-sender@example.test";
+    process.env.GMAIL_APP_PASSWORD = "synthetic-only-not-a-secret";
+    let deliveredLink = "";
+    const successTransport = mock.method(nodemailer, "createTransport", () => ({
+      sendMail: async (message: { text: string }) => {
+        deliveredLink = message.text.match(/https:\/\/[^\s]+/)?.[0] ?? "";
+        return { messageId: "synthetic-success" };
+      },
+    }));
+    try {
+      const successResponse = await recover(new Request("https://example.test/api/auntpenny/recover", {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email })
+      }));
+      assert.equal(successResponse.status, 200);
+      const successOrder = await prisma.auntPennyOrder.findUniqueOrThrow({ where: { id: order.id } });
+      assert.ok(successOrder.accessTokenHash, "successful recovery must persist a token hash");
+      assert.ok(successOrder.accessExpiresAt && successOrder.accessExpiresAt.getTime() > Date.now());
+      const accessToken = new URL(deliveredLink).searchParams.get("access_token");
+      assert.ok(accessToken, "successful recovery must deliver an access token");
+      const recoveredReport = await PaidReportPage({ searchParams: Promise.resolve({ access_token: accessToken }) });
+      assert.match(renderedText(recoveredReport), /Your Roast My Books Report/);
+    } finally {
+      successTransport.mock.restore();
+      delete process.env.PK_EMAIL_ENVIRONMENT;
+      delete process.env.GMAIL_USER;
+      delete process.env.GMAIL_APP_PASSWORD;
+    }
     // Exercise the actual mail-send rejection against the isolated database.
     // No network SMTP request is made.
     process.env.PK_EMAIL_ENVIRONMENT = "development";
