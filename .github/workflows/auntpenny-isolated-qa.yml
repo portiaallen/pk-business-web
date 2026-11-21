@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   qa:
-    if: github.event_name == 'pull_request' && (github.head_ref == 'launch/auntpenny-paid-readiness-20261110' || github.head_ref == 'fix/auntpenny-recovery-email-failure-20261113') || github.ref == 'refs/heads/launch/auntpenny-paid-readiness-20261110'
+    if: github.event_name == 'pull_request' && (github.head_ref == 'launch/auntpenny-paid-readiness-20261110' || github.head_ref == 'fix/auntpenny-recovery-email-failure-20261113') || (github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/launch/auntpenny-paid-readiness-20261110' || github.ref == 'refs/heads/fix/auntpenny-recovery-email-failure-20261113'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
