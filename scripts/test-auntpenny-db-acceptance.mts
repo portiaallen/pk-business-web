@@ -1,10 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
+import { mock } from "node:test";
+import nodemailer from "nodemailer";
 import { prisma } from "../src/lib/prisma";
 import { POST as webhook } from "../src/app/api/auntpenny/webhook/route";
 import { POST as recover } from "../src/app/api/auntpenny/recover/route";
-import PaidReportPage from "../src/app/auntpenny/roastmybooks/paid/page";
+import * as PaidReportPageModule from "../src/app/auntpenny/roastmybooks/paid/page";
+// The Node tsx runner can expose Next page exports through a CJS interop wrapper.
+const pageExport = (PaidReportPageModule as { default?: unknown }).default ?? PaidReportPageModule;
+const PaidReportPage = (typeof pageExport === "function" ? pageExport : (pageExport as { default?: unknown }).default) as (props: { searchParams: Promise<{ session_id: string }> }) => Promise<unknown>;
 import { PRICE_CENTS, PRODUCT_CODE } from "../src/lib/auntpenny/paid";
 
 const email = "synthetic-auntpenny@example.test";
@@ -26,6 +31,15 @@ globalThis.fetch = (async (url: string | URL | Request) => {
   }), { status: 200, headers: { "content-type": "application/json" } });
 }) as typeof fetch;
 
+function renderedText(node: unknown): string {
+  if (node === null || node === undefined || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(renderedText).join(" ");
+  if (typeof node !== "object") return "";
+  // Read React element children only: JSON.stringify traverses circular Next/React metadata.
+  const element = node as { props?: { children?: unknown } };
+  return renderedText(element.props?.children);
+}
 function signed(body: string, signatureOverride?: string) {
   const t = String(Math.floor(Date.now() / 1000));
   const signature = signatureOverride ?? createHmac("sha256", secret).update(t + "." + body).digest("hex");
@@ -45,7 +59,7 @@ test("real isolated database: signed webhook, replay, authorization, recovery fa
   currentOrderId = order.id;
   try {
     const deniedBefore = await PaidReportPage({ searchParams: Promise.resolve({ session_id: sessionId }) });
-    assert.match(JSON.stringify(deniedBefore), /checking the receipt/);
+    assert.match(renderedText(deniedBefore), /checking the receipt/);
     assert.equal((await webhook(signed(payload(), "0".repeat(64)))).status, 400);
     assert.equal((await prisma.auntPennyOrder.findUniqueOrThrow({ where: { id: order.id } })).status, "PENDING");
     syntheticPaid = false;
@@ -59,10 +73,10 @@ test("real isolated database: signed webhook, replay, authorization, recovery fa
     const second = await prisma.auntPennyOrder.findUniqueOrThrow({ where: { id: order.id } });
     assert.equal(second.paidAt?.getTime(), first.paidAt?.getTime());
     const allowed = await PaidReportPage({ searchParams: Promise.resolve({ session_id: sessionId }) });
-    assert.match(JSON.stringify(allowed), /Your Roast My Books Report/);
+    assert.match(renderedText(allowed), /Your Roast My Books Report/);
     syntheticPaid = false;
     const revoked = await PaidReportPage({ searchParams: Promise.resolve({ session_id: sessionId }) });
-    assert.match(JSON.stringify(revoked), /checking the receipt/);
+    assert.match(renderedText(revoked), /checking the receipt/);
     syntheticPaid = true;
     delete process.env.GMAIL_APP_PASSWORD;
     const recovery = await recover(new Request("https://example.test/api/auntpenny/recover", {
@@ -70,6 +84,28 @@ test("real isolated database: signed webhook, replay, authorization, recovery fa
     }));
     assert.equal(recovery.status, 503);
     assert.equal((await prisma.auntPennyOrder.findUniqueOrThrow({ where: { id: order.id } })).accessTokenHash, null);
+    // Exercise the actual mail-send rejection against the isolated database.
+    // No network SMTP request is made.
+    process.env.PK_EMAIL_ENVIRONMENT = "development";
+    process.env.GMAIL_USER = "synthetic-sender@example.test";
+    process.env.GMAIL_APP_PASSWORD = "synthetic-only-not-a-secret";
+    const transportMock = mock.method(nodemailer, "createTransport", () => ({
+      sendMail: async () => { throw new Error("synthetic SMTP delivery failure"); },
+    }));
+    try {
+      const failedDelivery = await recover(new Request("https://example.test/api/auntpenny/recover", {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email }),
+      }));
+      assert.equal(failedDelivery.status, 503);
+      const afterFailure = await prisma.auntPennyOrder.findUniqueOrThrow({ where: { id: order.id } });
+      assert.equal(afterFailure.accessTokenHash, null, "undelivered access token must be revoked");
+      assert.equal(afterFailure.accessExpiresAt, null, "undelivered token expiry must be cleared");
+    } finally {
+      transportMock.mock.restore();
+      delete process.env.PK_EMAIL_ENVIRONMENT;
+      delete process.env.GMAIL_USER;
+      delete process.env.GMAIL_APP_PASSWORD;
+    }
   } finally {
     globalThis.fetch = originalFetch;
     await prisma.auntPennyOrder.delete({ where: { id: order.id } });

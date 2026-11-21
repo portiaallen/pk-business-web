@@ -37,7 +37,17 @@ export async function POST(request: Request) {
     assertResourceEnvironment("EMAIL");
     const transporter = nodemailer.createTransport({ service: "gmail", auth: { user: gmailUser, pass: gmailAppPassword } });
     await prisma.auntPennyOrder.update({ where: { id: order.id }, data: { accessTokenHash: tokenHash(token), accessExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) } });
-    await transporter.sendMail({ from: `PK Business Services <${gmailUser}>`, to: email, subject: "Your private Aunt Penny report link", text: "Your private report link (do not forward): " + link + "\nThis link expires in 24 hours." });
+    try {
+      await transporter.sendMail({ from: `PK Business Services <${gmailUser}>`, to: email, subject: "Your private Aunt Penny report link", text: "Your private report link (do not forward): " + link + "\nThis link expires in 24 hours." });
+    } catch (deliveryError) {
+      // A failed delivery must not leave a newly issued recovery credential active.
+      // The hash condition avoids revoking a newer token issued concurrently.
+      await prisma.auntPennyOrder.updateMany({
+        where: { id: order.id, accessTokenHash: tokenHash(token) },
+        data: { accessTokenHash: null, accessExpiresAt: null },
+      });
+      throw deliveryError;
+    }
     return generic();
   } catch {
     return NextResponse.json({ error: "Recovery temporarily unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
