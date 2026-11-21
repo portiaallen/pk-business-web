@@ -57,6 +57,9 @@
 }
 
 :root {
+  /* Resilient local fallback stacks: no build-time Google font fetch required. */
+  --font-source-sans: "Source Sans 3", "Segoe UI", Arial, sans-serif;
+  --font-cormorant: "Cormorant Garamond", Georgia, "Times New Roman", serif;
   --background: #f5f4f0;
   --foreground: #191c22;
   --card: #faf8f5;
