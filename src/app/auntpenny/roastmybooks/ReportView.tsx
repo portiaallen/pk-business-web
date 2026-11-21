@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ShareCardDownload } from "./ShareCardCanvas";
+import { SandboxPurchase } from "./SandboxPurchase";
 import { ASSESSMENT_URL } from "@/lib/auntpenny/roast-engine";
 import { DISCLAIMER } from "@/lib/auntpenny/report";
 import type { IntakeAnswers, RoastReport } from "@/lib/auntpenny/roast-engine";
@@ -204,6 +205,8 @@ export function ReportView({
         </p>
       </div>
 
+      <SandboxPurchase answers={intake} />
+
       <div className="ap-card mt-10 p-6">
         <p className="ap-eyebrow">Your full PDF</p>
         <p className="mt-2 leading-relaxed">
@@ -225,7 +228,7 @@ export function ReportView({
       <p className="mt-8 text-xs leading-relaxed opacity-70">{DISCLAIMER}</p>
       <p className="mt-4 text-xs opacity-70">
         From the world of Aunt Penny: <Link href="https://pkservices.business">PK Business Services</Link>.
-        The Dear Aunt Penny Podcast arrives with the PK Family Launch, Nov 30. Ask PK is paused and is
+        The Dear Aunt Penny Podcast is on hold through December 2026, with a January 2027 reassessment. Ask PK is paused and is
         not linked here on purpose.
       </p>
     </div>
