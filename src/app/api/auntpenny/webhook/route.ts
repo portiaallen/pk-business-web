@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { emailAuntPennyReport, matchesCompletedCheckout, recordAuntPennyPayment } from "@/lib/auntpenny/fulfillment";
 import { PRODUCT_CODE, requireSandbox, sandboxStripe } from "@/lib/auntpenny/paid";
+import { issueHolidayCredit } from "@/lib/holiday-credit";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -42,6 +43,10 @@ export async function POST(request: Request) {
     }
 
     await emailAuntPennyReport(order, "initial");
+    if (session.metadata?.pkHoliday2026 === "v1" && session.amount_total === 699 && session.payment_status === "paid") {
+      const paidOrder = await prisma.auntPennyOrder.findUnique({ where: { id: order.id } });
+      if (paidOrder?.paidAt) await issueHolidayCredit({ orderId: order.id, buyerEmail: order.email, paidAt: paidOrder.paidAt, verifiedStripeAmountCents: session.amount_total, verifiedStripePaid: true });
+    }
     return NextResponse.json({ received: true });
   } catch {
     console.error("Aunt Penny webhook fulfillment failed");
