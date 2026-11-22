@@ -27,6 +27,7 @@ export async function POST(request: Request) {
         client_reference_id: order.id,
         metadata: { orderId: order.id, productCode: PRODUCT_CODE },
         payment_method_types: ["card"],
+        allow_promotion_codes: true,
       }, { idempotencyKey: "aunt-penny-order-" + order.id });
       await prisma.auntPennyOrder.update({ where: { id: order.id }, data: { stripeSessionId: session.id } });
       if (!session.url) throw new Error("Stripe checkout URL missing");
@@ -36,6 +37,6 @@ export async function POST(request: Request) {
       throw e;
     }
   } catch {
-    return NextResponse.json({ code: "AUNT_PENNY_CHECKOUT_NOT_READY", message: "Secure sandbox checkout is unavailable." }, { status: 503, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ code: "AUNT_PENNY_CHECKOUT_NOT_READY", message: "Secure checkout is temporarily unavailable." }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
 }
