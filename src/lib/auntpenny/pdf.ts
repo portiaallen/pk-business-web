@@ -8,7 +8,7 @@ const money=(n:number)=>"$"+Math.round(n).toLocaleString("en-US");
 type Page={cmd:string[];y:number};
 export function auntPennyPdf(a:IntakeAnswers):Uint8Array {
  const report=buildReport(a),findings=prioritizedFindings(report.findings),plan=personalizedPlan(findings);
- const pages:Page[]=[];let p:Page;
+ const pages:Page[]=[];let p:Page={cmd:[],y:736};
  const rgb=(r:number,g:number,b:number)=>[r,g,b].map(n=>(n/255).toFixed(3)).join(" ");
  const ink=rgb(43,20,49),gold=rgb(179,128,57),muted=rgb(94,75,99),magenta=rgb(132,34,94);
  function page(){p={cmd:[],y:736};pages.push(p);p.cmd.push(`q ${rgb(252,249,246)} rg 0 0 612 792 re f Q`);p.cmd.push(`q ${ink} rg 0 758 612 34 re f Q`);p.cmd.push(`BT /F2 10 Tf 1 1 1 rg 42 770 Td (AUNT PENNY  /  THE PRIVATE BOOKS EDITION) Tj ET`);p.cmd.push(`q ${gold} RG 1 w 42 46 m 570 46 l S Q`);p.cmd.push(`BT /F1 9 Tf ${muted} rg 42 31 Td (PK BUSINESS SERVICES  /  PEOPLE  |  KNOWLEDGE  |  RESULTS) Tj ET`);}
