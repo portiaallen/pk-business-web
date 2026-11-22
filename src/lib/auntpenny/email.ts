@@ -1,6 +1,6 @@
 import { assertResourceEnvironment } from "@/lib/security-environment";
 
-export async function sendAuntPennyLink(to: string, link: string) {
+export async function sendAuntPennyLink(to: string, link: string, holidayCredit = false) {
   assertResourceEnvironment("EMAIL");
   const key = process.env.RESEND_API_KEY?.trim();
   if (!key) throw new Error("Resend is not configured");
