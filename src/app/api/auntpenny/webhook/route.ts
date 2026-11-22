@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import nodemailer from "nodemailer";
-import { assertResourceEnvironment } from "@/lib/security-environment";
+import { sendAuntPennyLink } from "@/lib/auntpenny/email";
+
 import { prisma } from "@/lib/prisma";
 import { PRICE_CENTS, PRODUCT_CODE, requireSandbox, sandboxStripe, issueToken, tokenHash, publicOrigin } from "@/lib/auntpenny/paid";
 export const runtime = "nodejs";
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     if (!orderId) return NextResponse.json({ error: "Missing order" }, { status: 400 });
     const order = await prisma.auntPennyOrder.findUnique({ where: { id: orderId } });
     if (!order || order.stripeSessionId !== session.id || order.amountCents !== PRICE_CENTS || session.client_reference_id !== order.id || session.customer_details?.email?.trim().toLowerCase() !== order.email) return NextResponse.json({ error: "Order mismatch" }, { status: 400 });
-    if (order.status === "PAID" && order.accessTokenHash) return NextResponse.json({ received: true });
+    if (order.status === "PAID" && order.accessTokenHash && order.accessExpiresAt && order.accessExpiresAt > new Date()) return NextResponse.json({ received: true });
     if (order.status !== "PENDING" && order.status !== "PAID") return NextResponse.json({ error: "Order not payable" }, { status: 409 });
 
     // Atomic, idempotent state transition; access is verified against Stripe on report request.
