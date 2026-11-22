@@ -13,7 +13,7 @@ export async function sendAuntPennyLink(to: string, link: string) {
       from: "PK Business Services <" + from + ">",
       to: [to],
       subject: "Your private Aunt Penny Roast My Books report",
-      text: "Your personalized Aunt Penny report is ready. Open your private report link: " + link + "\n\nThis link expires in 24 hours. Do not forward it.\n\nPK Business Services",
+      text: "Your personalized Aunt Penny report is ready. Open your private report link: " + link + "\n\nInside your report, tap Download your private PDF for a real PDF file - no printing required.\n\nThis link expires in 24 hours. Do not forward it.\n\nPK Business Services",
     }),
     signal: AbortSignal.timeout(12000),
     cache: "no-store",
