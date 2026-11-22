@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   try {
     requireSandbox();
-    const secret = process.env.AUNT_PENNY_STRIPE_TEST_WEBHOOK_SECRET;
+    const secret = (process.env.AUNT_PENNY_LIVE_ENABLED === "true" ? process.env.AUNT_PENNY_LIVE_WEBHOOK_SECRET : process.env.AUNT_PENNY_STRIPE_TEST_WEBHOOK_SECRET);
     if (!secret?.startsWith("whsec_")) throw new Error("Sandbox webhook secret missing");
     const signature = request.headers.get("stripe-signature");
     if (!signature) return NextResponse.json({ error: "Signature required" }, { status: 400 });
