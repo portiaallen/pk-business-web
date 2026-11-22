@@ -18,7 +18,7 @@ export default async function PaidReportPage({ searchParams }: { searchParams: P
     const lookupSessionId = recoveredOrder?.stripeSessionId ?? session_id;
     if (!lookupSessionId) throw new Error("Missing session");
     const session = await sandboxStripe().checkout.sessions.retrieve(lookupSessionId);
-    if (session.payment_status !== "paid" || session.mode !== "payment" || session.currency !== "usd" || session.amount_total !== PRICE_CENTS || session.metadata?.productCode !== PRODUCT_CODE) throw new Error("Unpaid");
+    if (session.payment_status !== "paid" || session.mode !== "payment" || session.currency !== "usd" || (session.amount_total !== PRICE_CENTS && !(session.amount_total === 0 && session.total_details?.amount_discount === PRICE_CENTS)) || session.metadata?.productCode !== PRODUCT_CODE) throw new Error("Unpaid");
     const order = await prisma.auntPennyOrder.findUnique({ where: { stripeSessionId: session.id } });
     if (!order || (hasToken && recoveredOrder?.id !== order.id) || order.id !== session.metadata?.orderId || order.amountCents !== PRICE_CENTS || order.status !== "PAID" || session.client_reference_id !== order.id || session.customer_details?.email?.trim().toLowerCase() !== order.email) throw new Error("Not fulfilled");
     answers = JSON.parse(order.intakeJson) as IntakeAnswers;
