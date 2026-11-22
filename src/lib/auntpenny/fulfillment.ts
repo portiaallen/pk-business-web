@@ -21,6 +21,7 @@ export function matchesCompletedCheckout(session: CheckoutSession, order: Order)
   const fullyDiscounted = session.amount_total === 0 && session.total_details?.amount_discount === PRICE_CENTS;
   const holidayDiscounted = session.metadata?.pkHoliday2026 === "v1" &&
     session.amount_total === PK_HOLIDAY_2026.auntPennyHolidayCents &&
+    session.total_details?.amount_discount === PRICE_CENTS - PK_HOLIDAY_2026.auntPennyHolidayCents &&
     isHolidayPurchaseWindow(order.createdAt);
   return session.status === "complete" &&
     (session.payment_status === "paid" || (fullyDiscounted && session.payment_status === "no_payment_required")) &&
