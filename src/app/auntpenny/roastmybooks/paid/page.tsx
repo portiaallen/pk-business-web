@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { pennyOpening, pennyRoastFor } from "@/lib/auntpenny/penny-voice";
 import { caseSummary, personalizedPlan, prioritizedFindings } from "@/lib/auntpenny/case-file";
-import { PrintReportButton } from "./PrintReportButton";
+
 import { prisma } from "@/lib/prisma";
 import { buildReport, nextThreeSteps, DISCLAIMER } from "@/lib/auntpenny/report";
 import { requireSandbox, sandboxStripe } from "@/lib/auntpenny/paid";
@@ -42,6 +42,7 @@ export default async function PaidReportPage({ searchParams }: { searchParams: P
   } catch {
     return <main className="mx-auto max-w-xl px-6 py-20"><h1 className="text-3xl font-bold">Aunt Penny is checking the receipt.</h1><p className="mt-4">Your report is not available until payment is confirmed.</p><Link href="/auntpenny/roastmybooks/recover">Recover your purchased report</Link><p className="mt-4"><Link href="/auntpenny/roastmybooks/start">Return to the free roast</Link></p></main>;
   }
+  const pdfLink = "/api/auntpenny/report.pdf?" + (access_token ? "access_token=" + encodeURIComponent(access_token) : "session_id=" + encodeURIComponent(session_id!));
   const report = buildReport(answers);
   const steps = nextThreeSteps(report.triggered);
   const displayName = answers.firstName?.trim().slice(0, 40) || "friend";
@@ -64,7 +65,7 @@ export default async function PaidReportPage({ searchParams }: { searchParams: P
         <small>Severity score {report.points} · Based on figures you supplied, not a review of your records</small>
       </div>
     </header>
-    <div className="ap-report-content"><div className="ap-no-print mt-6 flex flex-wrap gap-3"><PrintReportButton/><Link href="/auntpenny/roastmybooks/recover">Email me a fresh report link</Link></div><p className="ap-no-print mt-3 text-sm">Use your newest emailed link; it expires after 24 hours. Already purchased? Recover your report instead of checking out again.</p>
+    <div className="ap-report-content"><div className="ap-no-print mt-6 flex flex-wrap gap-3"><a className="ap-report-download" href={pdfLink}>Download your private PDF</a><Link href="/auntpenny/roastmybooks/recover">Email me a fresh report link</Link></div><p className="ap-no-print mt-3 text-sm">Use your newest emailed link; it expires after 24 hours. Already purchased? Recover your report instead of checking out again.</p>
       <section className="ap-report-section">
         <p className="ap-report-chapter">ACT I · THE READ</p>
         <h2>Aunt Penny has some thoughts.</h2>
@@ -103,7 +104,7 @@ export default async function PaidReportPage({ searchParams }: { searchParams: P
       </section>
       <section className="ap-report-section"><p className="ap-report-chapter">ACT IV · BRING THE RECEIPTS</p><h2>Questions to take to your bookkeeper</h2><ul className="list-disc pl-6"><li>Which of these observations can you verify from my actual records?</li><li>What supporting statements or reconciliations do you need?</li><li>Which issue should I address first, and what is the realistic scope?</li></ul></section>
       {report.bridge.show && <aside className="ap-report-bridge"><h2>When the roast needs a real bookkeeper</h2><p>{report.bridge.line}</p><Link href="/readiness/start">Explore the $99 Readiness Assessment</Link></aside>}
-      <footer className="ap-report-footer"><p className="ap-report-signoff">With love, receipts, and absolutely no patience for mystery math — Aunt Penny.</p><p>{DISCLAIMER}</p><p>Private report: keep this link secure. Your private report can be saved using the print option until direct PDF delivery is available.</p><p>PK Business Services · People | Knowledge | Results</p></footer>
+      <footer className="ap-report-footer"><p className="ap-report-signoff">With love, receipts, and absolutely no patience for mystery math — Aunt Penny.</p><p>{DISCLAIMER}</p><p>Private report: keep this link secure. Download the PDF directly using the private button above. Keep this link secure.</p><p>PK Business Services · People | Knowledge | Results</p></footer>
     </div>
   </main>;
 }
