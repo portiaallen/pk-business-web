@@ -104,7 +104,7 @@ export const TIER_NAMES: Record<RoastTier, string> = {
   4: "Financial Chaos With Good Bone Structure",
   5: "Your Books Need Therapy, Not a Spreadsheet",
   // Founder's exact severity wording, preserved verbatim, period included (spec section 4/5).
-  6: "Your QuickBooks Need A Divine Intervention.",
+  6: "Your Books Need A Divine Intervention.",
 };
 
 export type RoastTier = 1 | 2 | 3 | 4 | 5 | 6;
