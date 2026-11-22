@@ -18,6 +18,8 @@ import { PRICE_CENTS, PRODUCT_NAME, preliminaryInput } from "./policy";
 import { audit, session, type Tx } from "./access";
 import { track } from "./analytics";
 import { mailConfigured, sendMail, notify } from "./notifications";
+import { reserveHolidayCredit, releaseHolidayCredit } from "@/lib/holiday-credit";
+import { PK_HOLIDAY_2026 } from "@/lib/pk-holiday-2026";
 import { founderPromotionId, isVerifiedFounderZeroCheckout } from "@/lib/checkout/founder-acceptance";
 
 export const PURCHASE_COOKIE = "pk_readiness_purchase";
@@ -244,6 +246,20 @@ export async function beginCheckout(request: Request) {
       });
     }
   }
+  let verifiedBuyerEmail: string | null = null;
+  if (!founderAuthorized) {
+    try {
+      const buyer = await prisma.$transaction(tx => session(tx, request));
+      const intake = await prisma.intakeSubmission.findUnique({where:{id:a.intakeSubmissionId}});
+      if (intake && buyer.email.trim().toLowerCase() === intake.email.trim().toLowerCase())
+        verifiedBuyerEmail = buyer.email;
+    } catch { /* Anonymous checkout stays full price. */ }
+  }
+  const configuredCreditPromotion = process.env.PK_READINESS_DECEMBER_CREDIT_PROMOTION_ID?.trim();
+  const creditPromotion = configuredCreditPromotion && /^promo_[A-Za-z0-9]+$/.test(configuredCreditPromotion)
+    ? configuredCreditPromotion : null;
+  const holidayCredit = verifiedBuyerEmail && creditPromotion
+    ? await reserveHolidayCredit(verifiedBuyerEmail, a.id) : null;
   const origin = checkoutOrigin(request);
   const form = new URLSearchParams();
   form.set("mode", "payment");
@@ -253,6 +269,10 @@ export async function beginCheckout(request: Request) {
   if (founderAuthorized && promotionId) {
     form.set("discounts[0][promotion_code]", promotionId);
     form.set("metadata[pkFounderAcceptance]", "v1");
+  }
+  if (holidayCredit && creditPromotion) {
+    form.set("discounts[0][promotion_code]", creditPromotion);
+    form.set("metadata[pkHolidayCreditId]", holidayCredit.id);
   }
   form.set("line_items[0][price_data][currency]", "usd");
   form.set("line_items[0][price_data][unit_amount]", String(PRICE_CENTS));
@@ -269,11 +289,12 @@ export async function beginCheckout(request: Request) {
       headers: {
         Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY!.trim()}`,
         "Content-Type": "application/x-www-form-urlencoded",
-        "Idempotency-Key": founderAuthorized ? `pk-readiness-${a.id}-founder` : `pk-readiness-${a.id}`,
+        "Idempotency-Key": founderAuthorized ? `pk-readiness-${a.id}-founder` : `pk-readiness-${a.id}${holidayCredit ? "-holiday-" + holidayCredit.id : ""}`,
       },
       body: form,
     });
   } catch {
+    if (holidayCredit) await releaseHolidayCredit(holidayCredit.id, a.id);
     throw new ApiError(502, "Checkout could not be started; retry safely");
   }
   const data = await response.json().catch(() => null);
@@ -289,7 +310,8 @@ export async function beginCheckout(request: Request) {
     !/^cs_[A-Za-z0-9_]+$/.test(data.id) ||
     data.mode !== "payment" ||
     data.livemode !== (securityEnvironment() === "production") ||
-    data.amount_total !== (founderAuthorized ? 0 : PRICE_CENTS) ||
+    data.amount_total !== (founderAuthorized ? 0 : holidayCredit ? PK_HOLIDAY_2026.readinessCreditPriceCents : PRICE_CENTS) ||
+    (holidayCredit && (data.total_details?.amount_discount !== PK_HOLIDAY_2026.readinessCreditCents || data.metadata?.pkHolidayCreditId !== holidayCredit.id)) ||
     (founderAuthorized && data.total_details?.amount_discount !== PRICE_CENTS) ||
     (founderAuthorized && data.metadata?.pkFounderAcceptance !== "v1") ||
     (!founderAuthorized && data.metadata?.pkFounderAcceptance === "v1") ||
@@ -301,8 +323,10 @@ export async function beginCheckout(request: Request) {
     url.port ||
     url.username ||
     url.password
-  )
+  ) {
+    if (holidayCredit) await releaseHolidayCredit(holidayCredit.id, a.id);
     throw new ApiError(502, "Invalid checkout response");
+  }
   if (data.status === "expired")
     throw ApiError.conflict(
       "Checkout has expired; contact PK before starting another purchase",
@@ -402,6 +426,13 @@ export async function recordPayment(
   if (typeof id !== "string")
     throw ApiError.badRequest("Readiness association is missing");
   const a = await tx.readinessAssessment.findUnique({ where: { id } });
+  const creditId = typeof metadata?.pkHolidayCreditId === "string" ? metadata.pkHolidayCreditId : null;
+  const credit = creditId ? await tx.pkHolidayCredit.findUnique({where:{id:creditId}}) : null;
+  const holidayPaid = !!credit && credit.status === "RESERVED" &&
+    credit.readinessAssessmentId === id && credit.revokedAt === null &&
+    credit.amountCents === PK_HOLIDAY_2026.readinessCreditCents &&
+    sessionData.amount_total === PK_HOLIDAY_2026.readinessCreditPriceCents &&
+    (sessionData.total_details as Record<string, unknown> | undefined)?.amount_discount === PK_HOLIDAY_2026.readinessCreditCents;
   const founderZero = isVerifiedFounderZeroCheckout(sessionData as Parameters<typeof isVerifiedFounderZeroCheckout>[0], { assessmentId: id, sessionId: String(sessionData.id) });
   if (
     !a ||
@@ -409,7 +440,7 @@ export async function recordPayment(
     typeof sessionData.id !== "string" ||
     !/^cs_[A-Za-z0-9_]+$/.test(sessionData.id) ||
     (!a.stripeSessionId || a.stripeSessionId !== sessionData.id) ||
-    (founderZero ? sessionData.amount_total !== 0 : sessionData.amount_total !== PRICE_CENTS) ||
+    (founderZero ? sessionData.amount_total !== 0 : sessionData.amount_total !== (holidayPaid ? PK_HOLIDAY_2026.readinessCreditPriceCents : PRICE_CENTS)) ||
     sessionData.currency !== "usd" ||
     (founderZero && (sessionData.total_details as Record<string, unknown> | undefined)?.amount_discount !== PRICE_CENTS) ||
     (!founderZero && sessionData.payment_status !== "paid") ||
@@ -460,7 +491,7 @@ export async function recordPayment(
       clientId: a.clientId,
       requestId: a.requestId,
       invoiceId: a.invoiceId,
-      amountCents: founderZero ? 0 : PRICE_CENTS,
+      amountCents: founderZero ? 0 : holidayPaid ? PK_HOLIDAY_2026.readinessCreditPriceCents : PRICE_CENTS,
       currency: "USD",
       status: "PAID",
       method: "STRIPE",
@@ -491,6 +522,13 @@ export async function recordPayment(
   });
   await audit(tx, null, a, "PAYMENT_VERIFIED", { amountCents: founderZero ? 0 : PRICE_CENTS, reason: founderZero ? "FOUNDER_ACCEPTANCE" : "PAID_PURCHASE" });
   await notify(tx, a.id, a.ownerUserId, "PAYMENT", `${a.id}:payment`);
+  if (holidayPaid && creditId) {
+    const redemption = await tx.pkHolidayCredit.updateMany({
+      where:{id:creditId,status:"RESERVED",readinessAssessmentId:id,revokedAt:null},
+      data:{status:"REDEEMED",redeemedAt:new Date()},
+    });
+    if (redemption.count !== 1) throw ApiError.conflict("Holiday credit redemption changed");
+  }
   if (!founderZero) await track(tx, "purchase_success", a.id);
   return { duplicate: false };
 }
