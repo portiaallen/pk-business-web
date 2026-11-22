@@ -27,17 +27,59 @@ export default async function PaidReportPage({ searchParams }: { searchParams: P
   }
   const report = buildReport(answers);
   const steps = nextThreeSteps(report.triggered);
-  return <main className="mx-auto max-w-3xl px-6 py-12 ap-print">
-    <p className="ap-eyebrow">PK Business Services Original · Aunt Penny</p>
-    <h1 className="mt-3 text-4xl font-bold">Your Roast My Books Report</h1>
-    <p className="mt-2">Verified purchase · Educational entertainment</p>
-    <section className="ap-card mt-8 p-6"><h2 className="text-2xl font-bold">{report.tierName}</h2><p>{report.tierLine}</p><p>Severity score: {report.points}</p></section>
-    <section className="ap-card mt-6 p-6"><h2 className="text-2xl font-bold">The Roast</h2>{report.triggered.length ? report.triggered.map(t=><div key={t.id} className="mt-3"><h3 className="font-bold">{t.title}</h3>{t.roastLines.map((line,i)=><p key={i}>{line}</p>)}</div>):<p>{report.funniestQuote}</p>}</section>
-    <section className="ap-card mt-6 p-6"><h2 className="text-2xl font-bold">Traceable findings</h2>{report.findings.map(f=><div key={f.id} className="mt-4"><h3 className="font-bold">{f.title}</h3><p>Evidence: {f.evidence}</p><p>Why it matters: {f.matters}</p><p>Check: {f.check}</p><p>Next: {f.next}</p><p>When to get help: {f.help}</p></div>)}</section>
-    <section className="ap-card mt-6 p-6"><h2 className="text-2xl font-bold">Your first three moves</h2><ol>{steps.map((s,i)=><li key={i}>{i+1}. {s}</li>)}</ol></section>
-    <section className="ap-card mt-6 p-6"><h2 className="text-2xl font-bold">7-day rescue plan</h2><p>Days 1–2: Recheck figures against your actual records.</p><p>Days 3–4: {steps[0]}</p><p>Days 5–6: {steps[1]}</p><p>Day 7: Review progress and schedule the next action: {steps[2]}</p></section>
-    <section className="ap-card mt-6 p-6"><h2 className="text-2xl font-bold">30-day improvement plan</h2><p>Week 1: Work through the seven-day checkpoints.</p><p>Week 2: Revisit the first priority and verify progress.</p><p>Week 3: Work through the remaining priorities and seek help when needed.</p><p>Week 4: Recheck figures and establish monthly maintenance.</p></section>
-    <p className="mt-6 text-sm">{DISCLAIMER}</p>
-    <p className="mt-3 text-xs">Keep this private receipt link secure; anyone holding it may be able to view your report. Use your browser Print / Save as PDF command to keep a copy.</p>
+  const displayName = answers.firstName?.trim().slice(0, 40) || "friend";
+  const findings = report.findings;
+  return <main className="ap-premium-report ap-print mx-auto max-w-4xl px-4 py-10 sm:px-8 sm:py-14">
+    <header className="ap-report-cover">
+      <p className="ap-report-kicker">PK BUSINESS SERVICES PRESENTS · AUNT PENNY</p>
+      <p className="ap-report-edition">THE PRIVATE BOOKS EDITION</p>
+      <h1>Roast My Books<span className="ap-report-mark">!</span></h1>
+      <p className="ap-report-subtitle">The receipts have entered the chat.</p>
+      <div className="ap-report-rule" aria-hidden="true" />
+      <p className="ap-report-intro">Well, {displayName}, pull up a chair. I brought the receipts, the side-eye, and a plan.</p>
+      <div className="ap-report-verdict">
+        <p>YOUR OFFICIAL VERDICT</p>
+        <h2>{report.tierName}</h2>
+        <span>{report.tierLine}</span>
+        <small>Severity score {report.points} · Based on figures you supplied, not a review of your records</small>
+      </div>
+    </header>
+    <div className="ap-report-content">
+      <section className="ap-report-section">
+        <p className="ap-report-chapter">ACT I · THE READ</p>
+        <h2>Aunt Penny has some thoughts.</h2>
+        <blockquote className="ap-report-quote">“{report.funniestQuote}”</blockquote>
+        {report.triggered.length ? report.triggered.map((t, index) =>
+          <article className="ap-report-roast" key={t.id}>
+            <span className="ap-report-number">{String(index + 1).padStart(2, "0")}</span>
+            <div><h3>{t.title}</h3>{t.roastLines.map((line, i) => <p key={i}>{line}</p>)}<p className="ap-report-meaning"><strong>Behind the joke:</strong> {t.meaning}</p></div>
+          </article>
+        ) : <p>Your submitted figures did not trigger any of Aunt Penny's warning-sign templates. Keep your books reconciled and review them regularly.</p>}
+      </section>
+      <section className="ap-report-section">
+        <p className="ap-report-chapter">ACT II · THE RECEIPTS</p>
+        <h2>What your numbers actually suggest</h2>
+        <p className="ap-report-note">Each observation below traces back to a figure you entered. An unusual number is a question, not proof of an accounting error.</p>
+        {findings.length ? findings.map(f => <article className="ap-report-finding" key={f.id}>
+          <h3>{f.title}</h3>
+          <p><strong>THE EVIDENCE</strong> {f.evidence}</p>
+          <p><strong>WHY IT MATTERS</strong> {f.matters}</p>
+          <p><strong>CHECK THIS</strong> {f.check}</p>
+          <p><strong>YOUR NEXT MOVE</strong> {f.next}</p>
+          <p><strong>WHEN TO GET HELP</strong> {f.help}</p>
+        </article>) : <p>No threshold-based findings were triggered. That is not a certification that your books are error-free.</p>}
+      </section>
+      <section className="ap-report-section">
+        <p className="ap-report-chapter">ACT III · THE COMEBACK</p>
+        <h2>Three moves. No magical thinking.</h2>
+        <ol className="ap-report-steps">{steps.map((step, i) => <li key={i}><span>{i + 1}</span><p>{step}</p></li>)}</ol>
+        <div className="ap-report-plans">
+          <article><h3>The next 7 days</h3><p><strong>Days 1–2:</strong> Check your submitted figures against actual records.</p><p><strong>Days 3–4:</strong> {steps[0]}</p><p><strong>Days 5–6:</strong> {steps[1]}</p><p><strong>Day 7:</strong> Review progress and decide when to tackle: {steps[2]}</p></article>
+          <article><h3>The next 30 days</h3><p><strong>Week 1:</strong> Work through your seven-day checkpoints.</p><p><strong>Week 2:</strong> Revisit the first priority and verify progress.</p><p><strong>Week 3:</strong> Work through remaining priorities; ask for help where needed.</p><p><strong>Week 4:</strong> Recheck the figures and set a monthly maintenance routine.</p></article>
+        </div>
+      </section>
+      {report.bridge.show && <aside className="ap-report-bridge"><h2>When the roast needs a real bookkeeper</h2><p>{report.bridge.line}</p><Link href="/readiness/start">Explore the $99 Readiness Assessment</Link></aside>}
+      <footer className="ap-report-footer"><p className="ap-report-signoff">With love, receipts, and absolutely no patience for mystery math — Aunt Penny.</p><p>{DISCLAIMER}</p><p>Private report: keep this link secure. Use your browser's Print / Save as PDF command to keep your copy.</p><p>PK Business Services · People | Knowledge | Results</p></footer>
+    </div>
   </main>;
 }
