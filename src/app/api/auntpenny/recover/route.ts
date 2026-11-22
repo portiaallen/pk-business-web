@@ -34,11 +34,9 @@ export async function POST(request: Request) {
     if (session.payment_status !== "paid" || (session.amount_total !== PRICE_CENTS && !(session.amount_total === 0 && session.total_details?.amount_discount === PRICE_CENTS)) || session.currency !== "usd" || session.mode !== "payment" || session.metadata?.productCode !== PRODUCT_CODE || session.metadata?.orderId !== order.id || session.client_reference_id !== order.id || session.id !== order.stripeSessionId || session.customer_details?.email?.trim().toLowerCase() !== email) return generic();
     const token = issueToken();
     const link = publicOrigin() + "/auntpenny/roastmybooks/paid?access_token=" + encodeURIComponent(token);
-    assertResourceEnvironment("EMAIL");
-    const transporter = nodemailer.createTransport({ service: "gmail", auth: { user: gmailUser, pass: gmailAppPassword } });
     await prisma.auntPennyOrder.update({ where: { id: order.id }, data: { accessTokenHash: tokenHash(token), accessExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) } });
     try {
-      await transporter.sendMail({ from: `PK Business Services <${gmailUser}>`, to: email, subject: "Your private Aunt Penny report link", text: "Your private report link (do not forward): " + link + "\nThis link expires in 24 hours." });
+      await sendAuntPennyLink(email, link);
     } catch (deliveryError) {
       // A failed delivery must not leave a newly issued recovery credential active.
       // The hash condition avoids revoking a newer token issued concurrently.
