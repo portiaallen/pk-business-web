@@ -11,8 +11,7 @@ export async function issueHolidayCredit(input: {
  orderId:string; buyerEmail:string; paidAt:Date;
  verifiedStripeAmountCents:number; verifiedStripePaid:boolean;
 }) {
- if (!input.verifiedStripePaid || input.verifiedStripeAmountCents <= 0 ||
-     !isHolidayPurchaseWindow(input.paidAt)) return null;
+ if (!input.verifiedStripePaid || input.verifiedStripeAmountCents !== PK_HOLIDAY_2026.auntPennyHolidayCents) return null;
  const order=await prisma.auntPennyOrder.findUnique({where:{id:input.orderId}});
  if (!order || order.status!=="PAID" || !order.paidAt ||
      order.email.trim().toLowerCase()!==input.buyerEmail.trim().toLowerCase() ||
