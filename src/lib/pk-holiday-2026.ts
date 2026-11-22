@@ -10,7 +10,7 @@ export const PK_HOLIDAY_2026 = Object.freeze({
   readinessCreditCents:1000,
   readinessCreditPriceCents:8900,
   holidayStartsAt:"2026-11-27T06:00:00.000Z",
-  holidayEndsAt:"2026-12-01T06:00:00.000Z",
+  holidayEndsAt:"2026-12-01T05:00:00.000Z",
   creditStartsAt:"2026-12-01T06:00:00.000Z",
   creditEndsAt:"2027-01-01T06:00:00.000Z",
   holidayCode:"PENNYBF30",
