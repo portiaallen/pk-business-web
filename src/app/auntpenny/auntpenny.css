@@ -297,3 +297,12 @@ body:has(.ap) .pk-footer { display: none !important; }
 .ap-report-footer{text-align:center;padding:2rem .5rem;font-size:.83rem;color:#6a5363}
 .ap-report-footer p{margin:.8rem 0}.ap-report-signoff{font:italic 1.4rem Georgia,serif;color:#4a2140}
 @media print{.ap .ap-premium-report{max-width:none;padding:0!important;background:#fff!important}.ap-report-cover{box-shadow:none!important;background:#3b1739!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}.ap-report-section{break-before:auto}.ap-report-finding,.ap-report-plans article,.ap-report-roast{break-inside:avoid}.ap-report-footer{break-inside:avoid}}
+
+
+/* Aunt Penny evidence visualization and print integrity */
+.ap-report-bar-wrap{margin:1.5rem 0;padding:1rem;background:#f7e9ef;border-radius:.8rem;color:#421c39}
+.ap-report-bar{height:1.1rem;background:#e5d3df;border-radius:99px;overflow:hidden;margin-top:.6rem}
+.ap-report-bar span{display:block;height:100%;background:linear-gradient(90deg,#ad4d7b,#d6a354);border-radius:99px}
+.ap-stage-portrait-roast{overflow:visible}
+.ap-stage-portrait-roast .ap-stage-hero-image{object-fit:contain;object-position:center;width:100%;height:auto;max-height:none}
+@media print{.ap-no-print{display:none!important}.ap-report-bar,.ap-report-bar span{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
