@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { PRICE_CENTS, PRODUCT_CODE, publicOrigin, requireSandbox, sandboxStripe } from "@/lib/auntpenny/paid";
+import { isHolidayPurchaseWindow } from "@/lib/pk-holiday-2026";
 import { validateIntake, type IntakeAnswers } from "@/lib/auntpenny/roast-engine";
 export const runtime = "nodejs";
 export async function POST(request: Request) {
@@ -16,6 +17,8 @@ export async function POST(request: Request) {
     const snapshot = JSON.stringify(answers);
     if (snapshot.length > 10000) return NextResponse.json({ error: "Input too large" }, { status: 413 });
     const stripe = sandboxStripe();
+    const holidayPromotion = process.env.PK_AUNT_PENNY_HOLIDAY_PROMOTION_ID?.trim();
+    const holidayActive = isHolidayPurchaseWindow(new Date()) && !!holidayPromotion && /^promo_[A-Za-z0-9]+$/.test(holidayPromotion);
     const order = await prisma.auntPennyOrder.create({ data: { email, intakeJson: snapshot, amountCents: PRICE_CENTS, status: "PENDING" } });
     try {
       const origin = publicOrigin();
@@ -27,7 +30,8 @@ export async function POST(request: Request) {
         client_reference_id: order.id,
         metadata: { orderId: order.id, productCode: PRODUCT_CODE },
         payment_method_types: ["card"],
-        allow_promotion_codes: true,
+        allow_promotion_codes: !holidayActive,
+        ...(holidayActive ? { discounts: [{ promotion_code: holidayPromotion! }] } : {}),
       }, { idempotencyKey: "aunt-penny-order-" + order.id });
       await prisma.auntPennyOrder.update({ where: { id: order.id }, data: { stripeSessionId: session.id } });
       if (!session.url) throw new Error("Stripe checkout URL missing");
