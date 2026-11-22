@@ -1610,6 +1610,25 @@ model CpaPartnerApplication {
 
 
 /** Sandbox-only Aunt Penny payment order. No raw card details or access tokens stored. */
+// One $10 December credit per eligible paid holiday Aunt Penny order.
+// Order/assessment identifiers are unique to prevent duplicate redemption.
+model PkHolidayCredit {
+  id String @id @default(cuid())
+  auntPennyOrderId String @unique
+  buyerEmailHash String
+  status String @default("ISSUED")
+  amountCents Int @default(1000)
+  startsAt DateTime
+  expiresAt DateTime
+  readinessAssessmentId String? @unique
+  redeemedAt DateTime?
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([buyerEmailHash, status])
+  @@index([status, expiresAt])
+}
+
 model AuntPennyOrder {
   id String @id @default(cuid())
   email String
