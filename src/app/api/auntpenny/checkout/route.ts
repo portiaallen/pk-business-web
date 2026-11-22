@@ -28,7 +28,7 @@ export async function POST(request: Request) {
         success_url: origin + "/auntpenny/roastmybooks/paid?session_id={CHECKOUT_SESSION_ID}",
         cancel_url: origin + "/auntpenny/roastmybooks/start",
         client_reference_id: order.id,
-        metadata: { orderId: order.id, productCode: PRODUCT_CODE },
+        metadata: { orderId: order.id, productCode: PRODUCT_CODE, ...(holidayActive ? { pkHoliday2026: "v1" } : {}) },
         payment_method_types: ["card"],
         allow_promotion_codes: !holidayActive,
         ...(holidayActive ? { discounts: [{ promotion_code: holidayPromotion! }] } : {}),
