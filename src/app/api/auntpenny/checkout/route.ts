@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { PRICE_CENTS, PRODUCT_CODE, publicOrigin, requireSandbox, sandboxStripe } from "@/lib/auntpenny/paid";
-import { isHolidayPurchaseWindow } from "@/lib/pk-holiday-2026";
+import { isHolidayPurchaseWindow, PK_HOLIDAY_2026 } from "@/lib/pk-holiday-2026";
 import { validateIntake, type IntakeAnswers } from "@/lib/auntpenny/roast-engine";
 export const runtime = "nodejs";
 export async function POST(request: Request) {
@@ -17,21 +17,20 @@ export async function POST(request: Request) {
     const snapshot = JSON.stringify(answers);
     if (snapshot.length > 10000) return NextResponse.json({ error: "Input too large" }, { status: 413 });
     const stripe = sandboxStripe();
-    const holidayPromotion = process.env.PK_AUNT_PENNY_HOLIDAY_PROMOTION_ID?.trim();
-    const holidayActive = isHolidayPurchaseWindow(new Date()) && !!holidayPromotion && /^promo_[A-Za-z0-9]+$/.test(holidayPromotion);
-    const order = await prisma.auntPennyOrder.create({ data: { email, intakeJson: snapshot, amountCents: PRICE_CENTS, status: "PENDING" } });
+    const holidayActive = isHolidayPurchaseWindow(new Date());
+    const checkoutPriceCents = holidayActive ? PK_HOLIDAY_2026.auntPennyHolidayCents : PRICE_CENTS;
+    const order = await prisma.auntPennyOrder.create({ data: { email, intakeJson: snapshot, amountCents: checkoutPriceCents, status: "PENDING" } });
     try {
       const origin = publicOrigin();
       const session = await stripe.checkout.sessions.create({
         mode: "payment", customer_email: email,
-        line_items: [{ price_data: { currency: "usd", unit_amount: PRICE_CENTS, product_data: { name: "Aunt Penny — Roast My Books personalized report", description: "Digital educational entertainment report" } }, quantity: 1 }],
+        line_items: [{ price_data: { currency: "usd", unit_amount: checkoutPriceCents, product_data: { name: "Aunt Penny — Roast My Books personalized report", description: "Digital educational entertainment report" } }, quantity: 1 }],
         success_url: origin + "/auntpenny/roastmybooks/paid?session_id={CHECKOUT_SESSION_ID}",
         cancel_url: origin + "/auntpenny/roastmybooks/start",
         client_reference_id: order.id,
         metadata: { orderId: order.id, productCode: PRODUCT_CODE, ...(holidayActive ? { pkHoliday2026: "v1" } : {}) },
         payment_method_types: ["card"],
         allow_promotion_codes: !holidayActive,
-        ...(holidayActive ? { discounts: [{ promotion_code: holidayPromotion! }] } : {}),
       }, { idempotencyKey: "aunt-penny-order-" + order.id });
       await prisma.auntPennyOrder.update({ where: { id: order.id }, data: { stripeSessionId: session.id } });
       if (!session.url) throw new Error("Stripe checkout URL missing");
