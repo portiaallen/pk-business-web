@@ -12,21 +12,21 @@ export function pennyOpening(a: IntakeAnswers): string {
   }
   if (a.recordsMethod === "spreadsheet") return "A spreadsheet? Baby, Excel has been promoted to CFO, bookkeeper AND witness protection. Those cells better have receipts behind them.";
   if (a.recordsMethod === "shoebox") return "A shoebox? Baby, your receipts are living in a cardboard condo with no lease and no supervision.";
-  if (a.softwareName.toLowerCase().includes("quickbooks")) return "You told me you're using QuickBooks. Wonderful. Now tell me why the books still need a chaperone.";
+  if ((a.softwareName || "").toLowerCase().includes("quickbooks")) return "You told me you're using QuickBooks. Wonderful. Now tell me why the books still need a chaperone.";
   if (remainder < 0) return "You brought in " + money(revenue) + " and spent " + money(expenses) + ". Baby, that's " + money(Math.abs(remainder)) + " more going out than coming in. Your budget is doing backflips without a safety net.";
   return "You brought in " + money(revenue) + " and spent " + money(expenses) + ". That's " + money(remainder) + " left on these figures. Cute. Now let's make sure the records can back it up.";
 }
 
 export function pennyRoastFor(id: string, a: IntakeAnswers): string {
   switch (id) {
-    case "uncategorized-collection": return a.uncategorizedTransactions + " transactions wandering around without categories? Baby, that's not bookkeeping. That's a lost-and-found department. Start by sorting the oldest entries.";
-    case "reconciliation-never-heard-of-her": return a.monthsSinceReconciliation + " months without reconciling? Your bank statement and your ledger are in a long-distance relationship, and neither one knows it's official. Reconcile the oldest month first.";
-    case "ramen-reserve": return "You have " + money(a.cashOnHand) + " in cash against " + money(a.monthlyExpenses) + " in monthly expenses. Baby, your rainy-day fund is an umbrella with three holes. Start with a realistic cash cushion.";
-    case "subscription-graveyard": return a.softwareSubscriptions + " software subscriptions for " + a.headcount + " people? Baby, the apps have a staff meeting and nobody invited the revenue. Audit usage before canceling anything.";
-    case "overdue-invoice-choir": return money(a.overdueInvoicesTotal) + " in overdue invoices? Your customers are treating your receivables like a free lending library. Check aging and follow up on what is actually owed.";
-    case "owners-draw-ocean": return "Owner draws of " + money(a.ownerDraws3mo) + " against " + money(a.netIncome3mo) + " in three-month net income? Baby, the business is not an ATM with unlimited hugs. Review how those draws are recorded.";
+    case "uncategorized-collection": return a.uncategorizedTransactions + " transactions wandering around without categories? Baby, that's a whole damn missing-persons unit. Your transactions are wandering around with no names, no addresses, and apparently no adult supervision. Start with the oldest receipts.";
+    case "reconciliation-never-heard-of-her": return a.monthsSinceReconciliation + " months without reconciling? Your bank statement and ledger haven't spoken in so long they're legally separated. Somebody call Maury, because we need to establish which balance is the father. Start with the oldest month.";
+    case "ramen-reserve": return "You have " + money(a.cashOnHand) + " in cash against " + money(a.monthlyExpenses) + " in monthly expenses. Baby, that's not a rainy-day fund. That's a cocktail napkin in a hurricane. Before you call it a cushion, check what bills are due and when.";
+    case "subscription-graveyard": return a.softwareSubscriptions + " software subscriptions for " + a.headcount + " people? Those apps have formed a union, elected a president, and demanded dental benefits. Meanwhile, your revenue can't even get a seat at the meeting. Audit usage before canceling anything.";
+    case "overdue-invoice-choir": return money(a.overdueInvoicesTotal) + " in overdue invoices? Your customers have turned your invoices into bedtime stories: everybody reads them, nobody pays the ending. Check the aging report before you start collecting.";
+    case "owners-draw-ocean": return "Owner draws of " + money(a.ownerDraws3mo) + " against " + money(a.netIncome3mo) + " in three-month net income? The business account is not your rich auntie with a bottomless purse. That doesn't automatically make the draws wrong, but somebody needs to reconcile cash and equity before the family reunion.";
     case "shrinkflation-pl": return "Revenue showed up dressed for the gala, but the margin came in wearing a napkin. Review your biggest expense categories before blaming your prices.";
-    case "credit-card-carousel": return a.monthsCarryingCard + " months carrying that card balance? That interest has unpacked its bags and changed the locks. Check the APR and payment terms.";
+    case "credit-card-carousel": return a.monthsCarryingCard + " months carrying that card balance? That interest has moved in, changed the Wi-Fi password, and started calling itself the landlord. Check the APR and payment terms.";
     case "shoebox-archive": return a.recordsMethod === "spreadsheet" ? "Your spreadsheet is doing its best, baby, but a formula isn't a bank reconciliation and a tab isn't an audit trail. Check the supporting records." : "Your receipts are stacked like a reality-show reunion. Somebody needs to bring order to this cardboard courtroom.";
     case "year-old-mystery": return a.monthsWithoutProfessional + " months without a professional review? Baby, that's a cold case. Bring the actual books to somebody qualified.";
     default: return "";
