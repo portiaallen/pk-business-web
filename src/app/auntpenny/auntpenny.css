@@ -306,3 +306,10 @@ body:has(.ap) .pk-footer { display: none !important; }
 .ap-stage-portrait-roast{overflow:visible}
 .ap-stage-portrait-roast .ap-stage-hero-image{object-fit:contain;object-position:center;width:100%;height:auto;max-height:none}
 @media print{.ap-no-print{display:none!important}.ap-report-bar,.ap-report-bar span{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+
+/* Real paid-file download: accessible and prominent on phone and desktop. */
+.ap-report-download{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:.9rem 1.35rem;border:2px solid #a97a39;border-radius:.75rem;background:#3b1739;color:#fff5e7!important;font-weight:850;text-decoration:none!important;box-shadow:0 6px 0 #b78d4b;transition:transform .15s,box-shadow .15s}
+.ap-report-download:hover{transform:translateY(2px);box-shadow:0 4px 0 #b78d4b;background:#62254d}
+.ap-report-download:focus-visible{outline:4px solid #b78d4b;outline-offset:4px}
+@media(max-width:600px){.ap-report-download{width:100%;text-align:center}.ap-report-content{overflow-wrap:anywhere}}
+@media print{.ap-report-download{display:none!important}}
