@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { pennyOpening, pennyToday } from "@/lib/auntpenny/penny-voice";
 import Image from "next/image";
 import { ShareCardDownload } from "./ShareCardCanvas";
 import { SandboxPurchase } from "./SandboxPurchase";
@@ -64,125 +65,18 @@ export function ReportView({
       </div>
 
       <div className="ap-card mt-6 p-6">
-        <p className="ap-eyebrow">The Roast</p>
-        <div className="mt-3 space-y-2 text-lg leading-relaxed">
-          {report.triggered.length === 0 ? (
-            <p>{report.funniestQuote}</p>
-          ) : (
-            report.triggered.map((t) => (
-              <div key={t.id}>
-                <h3 className="font-semibold" style={{ color: "var(--ap-rose)" }}>{t.title}</h3>
-                {t.roastLines.map((line, i) => (
-                  <p key={i}>{line}</p>
-                ))}
-              </div>
-            ))
-          )}
-        </div>
+        <p className="ap-eyebrow">Your free opening roast</p>
+        <blockquote className="ap-report-quote">{pennyOpening(intake)}</blockquote>
+        <p className="mt-3 text-sm">One useful thing to do today: {pennyToday(intake)}</p>
       </div>
-
       <div className="ap-card mt-6 p-6">
-        <p className="ap-eyebrow">What This Actually Means</p>
-        <ul className="mt-3 space-y-3 text-sm leading-relaxed opacity-90">
-          {report.triggered.map((t) => (
-            <li key={t.id}>
-              <strong>{t.title}.</strong> {t.meaning}
-            </li>
-          ))}
-          {report.triggered.length === 0 && (
-            <li>Nothing triggered. That is genuinely rare and genuinely good.</li>
-          )}
-        </ul>
+        <p className="ap-eyebrow">A peek at the receipts</p>
+        {report.findings.slice(0, 2).map(f => <div key={f.id} className="mt-3">
+          <h3 className="font-bold">{f.title}</h3><p className="text-sm">{f.evidence}</p>
+          <p className="text-sm">{f.check}</p>
+        </div>)}
+        {report.findings.length === 0 && <p>No threshold-based findings triggered. This does not certify your records.</p>}
       </div>
-
-      {report.findings.length > 0 && (
-        <div className="ap-card mt-6 p-6">
-          <p className="ap-eyebrow">Every finding, traceable</p>
-          <p className="mt-1 text-xs opacity-70">
-            Educational guidance built only from the figures you submitted. Not professional advice.
-          </p>
-          {report.findings.map((f) => (
-            <div key={f.id} className="mt-4 border-t border-[#e5d8e2] pt-4">
-              <h3 className="font-semibold">{f.title}</h3>
-              <p className="mt-1 text-sm opacity-90">
-                <span className="font-semibold">Evidence:</span> {f.evidence}
-              </p>
-              <p className="mt-1 text-sm opacity-90">
-                <span className="font-semibold">Why it matters:</span> {f.matters}
-              </p>
-              <p className="mt-1 text-sm opacity-90">
-                <span className="font-semibold">What to check first:</span> {f.check}
-              </p>
-              <p className="mt-1 text-sm opacity-90">
-                <span className="font-semibold">A realistic next move:</span> {f.next}
-              </p>
-              <p className="mt-1 text-sm opacity-90">
-                <span className="font-semibold">When to get help:</span> {f.help}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="ap-card mt-6 p-6">
-        <p className="ap-eyebrow">Where to start: your first three moves</p>
-        <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm opacity-90">
-          {steps.map((s, i) => (
-            <li key={i}>{s}</li>
-          ))}
-        </ol>
-        <p className="mt-3 text-xs opacity-70">
-          Use the seven-day and thirty-day checkpoints below to organize your next moves.
-        </p>
-      </div>
-
-      <div className="ap-card mt-6 p-6">
-        <p className="ap-eyebrow">Your 7-day rescue plan</p>
-        <p className="mt-2 text-sm opacity-80">
-          These are checkpoints based on the findings above, not a promise that a backlog can be finished in a week.
-        </p>
-        <ol className="mt-3 list-decimal space-y-3 pl-5 text-sm leading-relaxed">
-          <li><strong>Days 1–2:</strong> Recheck your submitted figures against records you control; investigate any discrepancy before acting.</li>
-          <li><strong>Days 3–4:</strong> Start with your highest-priority action: {steps[0]}</li>
-          <li><strong>Days 5–6:</strong> Continue with your next checkpoint: {steps[1]}</li>
-          <li><strong>Day 7:</strong> Review what changed, document unfinished work, and set the next realistic appointment: {steps[2]}</li>
-        </ol>
-      </div>
-
-      <div className="ap-card mt-6 p-6">
-        <p className="ap-eyebrow">Your 30-day improvement plan</p>
-        <ol className="mt-3 list-decimal space-y-3 pl-5 text-sm leading-relaxed">
-          <li><strong>Week 1:</strong> Complete the seven-day checkpoints as far as the records allow; record anything that needs further investigation.</li>
-          <li><strong>Week 2:</strong> Repeat the first priority in manageable work sessions. Do not force a reconciliation or assume an unexplained amount is an error.</li>
-          <li><strong>Week 3:</strong> Review whether the next two priorities are moving, and identify any work that needs professional help.</li>
-          <li><strong>Week 4:</strong> Recheck the figures and create a monthly maintenance routine. Reassess unresolved items instead of claiming they are fixed.</li>
-        </ol>
-      </div>
-
-      <div className="ap-card mt-6 p-6">
-        <p className="ap-eyebrow">Questions for your bookkeeper or tax professional</p>
-        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed">
-          <li>Which of these observations can be confirmed from my actual records?</li>
-          <li>What documents or reconciliations would you need before recommending a correction?</li>
-          <li>Which unresolved item should I prioritize, and what would a realistic scope of work look like?</li>
-        </ul>
-      </div>
-
-      {report.bridge.show && (
-        <div className="ap-card mt-6 p-6">
-          <div className="ap-leopard-strip mb-4" aria-hidden="true" />
-          <p className="ap-eyebrow">The Bridge</p>
-          <p className="mt-2 leading-relaxed">
-            {report.bridge.line.replace(ASSESSMENT_URL, "").trim()}{" "}
-            <Link href={ASSESSMENT_URL}>Book the assessment</Link>.
-          </p>
-          <p className="mt-2 text-sm opacity-75">
-            The assessment is real PK work: a professional reading actual books. The roast
-            reads a form, and it will never claim otherwise.
-          </p>
-        </div>
-      )}
-
       {/* Share card: ivory certificate with Penny on it, never prints figures, business name, or dates. */}
       <div className="mt-10 flex flex-col items-center">
         <p className="ap-eyebrow">Your share card</p>
@@ -206,24 +100,6 @@ export function ReportView({
       </div>
 
       <SandboxPurchase answers={intake} />
-
-      <div className="ap-card mt-10 p-6">
-        <p className="ap-eyebrow">Keep a copy of your free preview</p>
-        <p className="mt-2 leading-relaxed">
-          Print this preview or choose &ldquo;Save as PDF&rdquo; in your browser&apos;s print dialog.
-          {process.env.NEXT_PUBLIC_AUNT_PENNY_LIVE_ENABLED === "true" && (
-            <> The optional $9.99 upgrade opens a private report after checkout. You can
-              print or save the report as a PDF, and we email you a private link.</>
-          )}
-        </p>
-        <button
-          className="ap-cta ap-no-print mt-4"
-          type="button"
-          onClick={() => window.print()}
-        >
-          Print or save as PDF
-        </button>
-      </div>
 
       <p className="mt-8 text-xs leading-relaxed opacity-70">{DISCLAIMER}</p>
       <p className="mt-4 text-xs opacity-70">
