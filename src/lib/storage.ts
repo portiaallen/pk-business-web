@@ -73,8 +73,8 @@ export function buildStorageKey(
 }
 
 function resolveSafe(storageKey: string): string {
-  const full = path.resolve(STORAGE_ROOT, storageKey);
-  if (!full.startsWith(path.resolve(STORAGE_ROOT) + path.sep)) {
+  const full = path.resolve(/* turbopackIgnore: true */ STORAGE_ROOT, storageKey);
+  if (!full.startsWith(path.resolve(/* turbopackIgnore: true */ STORAGE_ROOT) + path.sep)) {
     throw new Error("INVALID_STORAGE_KEY");
   }
   return full;
@@ -99,7 +99,7 @@ export async function getObject(storageKey: string): Promise<Buffer | null> {
     return r2Get(storageKey);
   }
   try {
-    return await readFile(resolveSafe(storageKey));
+    return await readFile(/* turbopackIgnore: true */ resolveSafe(storageKey));
   } catch {
     return null;
   }
