@@ -1,3 +1,4 @@
+import { isHolidayPurchaseWindow, PK_HOLIDAY_2026 } from "@/lib/pk-holiday-2026";
 import { prisma } from "@/lib/prisma";
 import { sendAuntPennyLink } from "@/lib/auntpenny/email";
 import {
@@ -17,10 +18,14 @@ type Order = {
 
 export function matchesCompletedCheckout(session: CheckoutSession, order: Order) {
   const fullyDiscounted = session.amount_total === 0 && session.total_details?.amount_discount === PRICE_CENTS;
+  const holidayDiscounted = session.metadata?.pkHoliday2026 === "v1" &&
+    session.amount_total === PK_HOLIDAY_2026.auntPennyHolidayCents &&
+    session.total_details?.amount_discount === PRICE_CENTS - PK_HOLIDAY_2026.auntPennyHolidayCents &&
+    isHolidayPurchaseWindow(new Date());
   return session.status === "complete" &&
     (session.payment_status === "paid" || (fullyDiscounted && session.payment_status === "no_payment_required")) &&
     session.mode === "payment" && session.currency === "usd" &&
-    (session.amount_total === PRICE_CENTS || fullyDiscounted) &&
+    (session.amount_total === PRICE_CENTS || fullyDiscounted || holidayDiscounted) &&
     session.metadata?.productCode === PRODUCT_CODE && session.metadata.orderId === order.id &&
     session.client_reference_id === order.id && session.id === order.stripeSessionId &&
     order.amountCents === PRICE_CENTS && session.customer_details?.email?.trim().toLowerCase() === order.email;
