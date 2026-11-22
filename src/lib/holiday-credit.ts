@@ -39,3 +39,36 @@ export async function findAvailableHolidayCredit(verifiedEmail:string,now=new Da
   orderBy:{createdAt:"asc"},
  });
 }
+
+/** Reserve one credit atomically for a Readiness purchase. This must only be
+ * invoked after authenticated email verification, not a public email field.
+ */
+export async function reserveHolidayCredit(verifiedEmail:string,assessmentId:string,now=new Date()){
+ if(!isCreditRedemptionWindow(now))return null;
+ return prisma.$transaction(async tx=>{
+  const credit=await tx.pkHolidayCredit.findFirst({
+   where:{buyerEmailHash:emailHash(verifiedEmail),status:"ISSUED",revokedAt:null,
+    startsAt:{lte:now},expiresAt:{gt:now},readinessAssessmentId:null},
+   orderBy:{createdAt:"asc"},
+  });
+  if(!credit)return null;
+  const claimed=await tx.pkHolidayCredit.updateMany({
+   where:{id:credit.id,status:"ISSUED",readinessAssessmentId:null,revokedAt:null,
+    startsAt:{lte:now},expiresAt:{gt:now}},
+   data:{status:"RESERVED",readinessAssessmentId:assessmentId},
+  });
+  return claimed.count===1?credit:null;
+ });
+}
+export async function releaseHolidayCredit(creditId:string,assessmentId:string){
+ return prisma.pkHolidayCredit.updateMany({
+  where:{id:creditId,status:"RESERVED",readinessAssessmentId:assessmentId},
+  data:{status:"ISSUED",readinessAssessmentId:null},
+ });
+}
+export async function redeemHolidayCredit(creditId:string,assessmentId:string){
+ return prisma.pkHolidayCredit.updateMany({
+  where:{id:creditId,status:"RESERVED",readinessAssessmentId:assessmentId,revokedAt:null},
+  data:{status:"REDEEMED",redeemedAt:new Date()},
+ });
+}
