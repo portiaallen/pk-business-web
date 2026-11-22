@@ -14,21 +14,21 @@ type Order = {
   status: string;
   accessTokenHash: string | null;
   accessExpiresAt: Date | null;
+  createdAt: Date;
 };
 
 export function matchesCompletedCheckout(session: CheckoutSession, order: Order) {
   const fullyDiscounted = session.amount_total === 0 && session.total_details?.amount_discount === PRICE_CENTS;
   const holidayDiscounted = session.metadata?.pkHoliday2026 === "v1" &&
     session.amount_total === PK_HOLIDAY_2026.auntPennyHolidayCents &&
-    session.total_details?.amount_discount === PRICE_CENTS - PK_HOLIDAY_2026.auntPennyHolidayCents &&
-    isHolidayPurchaseWindow(new Date());
+    isHolidayPurchaseWindow(order.createdAt);
   return session.status === "complete" &&
     (session.payment_status === "paid" || (fullyDiscounted && session.payment_status === "no_payment_required")) &&
     session.mode === "payment" && session.currency === "usd" &&
     (session.amount_total === PRICE_CENTS || fullyDiscounted || holidayDiscounted) &&
     session.metadata?.productCode === PRODUCT_CODE && session.metadata.orderId === order.id &&
     session.client_reference_id === order.id && session.id === order.stripeSessionId &&
-    order.amountCents === PRICE_CENTS && session.customer_details?.email?.trim().toLowerCase() === order.email;
+    order.amountCents === (holidayDiscounted ? PK_HOLIDAY_2026.auntPennyHolidayCents : PRICE_CENTS) && session.customer_details?.email?.trim().toLowerCase() === order.email;
 }
 
 export function findActiveAuntPennyOrder(token: string) {
