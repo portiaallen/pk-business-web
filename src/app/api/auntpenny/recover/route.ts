@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import nodemailer from "nodemailer";
+import { sendAuntPennyLink } from "@/lib/auntpenny/email";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
-import { assertResourceEnvironment } from "@/lib/security-environment";
+
 import { issueToken, tokenHash, publicOrigin, requireSandbox, sandboxStripe, PRICE_CENTS, PRODUCT_CODE } from "@/lib/auntpenny/paid";
 
 export const runtime = "nodejs";
