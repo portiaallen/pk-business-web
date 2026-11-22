@@ -73,7 +73,8 @@ export async function emailAuntPennyReport(order: Order, delivery: "initial" | "
   if (claim.count !== 1) return;
 
   try {
-    await sendAuntPennyLink(order.email, link.href);
+    const holidayCredit = order.stripeSessionId ? await prisma.pkHolidayCredit.findUnique({where:{auntPennyOrderId:order.id}}) : null;
+    await sendAuntPennyLink(order.email, link.href, !!holidayCredit && holidayCredit.revokedAt === null);
   } catch (error) {
     await prisma.auntPennyOrder.updateMany({
       where: { id: order.id, accessTokenHash: hash },
