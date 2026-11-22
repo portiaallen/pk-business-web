@@ -175,7 +175,7 @@ body:has(.ap) .pk-footer { display: none !important; }
 .ap-curtain:before{left:0}.ap-curtain:after{right:0}
 .ap-curtain-inner{max-width:1200px;margin:auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:clamp(1rem,4vw,4rem);padding:clamp(2rem,5vw,5rem) clamp(1.2rem,7vw,5rem)}
 .ap-stage-portrait{position:relative;min-width:0;transform:rotate(-2deg)}
-.ap-stage-hero-image{width:100%;height:auto;max-height:610px;object-fit:cover;border:5px solid #d8a34e;border-radius:48% 48% 1rem 1rem;box-shadow:0 0 0 8px rgba(255,220,149,.13),0 25px 80px #0b0215}
+.ap-stage-hero-image{width:100%;height:auto;max-height:none;object-fit:contain;border:5px solid #d8a34e;border-radius:1.25rem;box-shadow:0 0 0 8px rgba(255,220,149,.13),0 25px 80px #0b0215}
 .ap-stage-stamp{position:absolute;bottom:1.3rem;left:-.7rem;background:#efb853;color:#2d1029;padding:.65rem .9rem;font-size:.65rem;font-weight:900;letter-spacing:.08em;transform:rotate(-4deg);box-shadow:4px 5px 0 #3b1430}
 .ap-stage-kicker{font-size:.7rem;letter-spacing:.23em;color:#f1ba69!important;font-weight:900}
 .ap .ap-stage-copy h1{font-size:clamp(2.9rem,6vw,6rem);margin:1rem 0;letter-spacing:-.035em}
@@ -252,3 +252,10 @@ body:has(.ap) .pk-footer { display: none !important; }
 .ap-intake-intro .ap-eyebrow{color:#f6c779}
 @media(max-width:900px){.ap-stage-nav{grid-template-columns:1fr auto;gap:.6rem}.ap-subbrand{grid-column:1/-1;grid-row:2;text-align:left}.ap-journey-nav{grid-column:2;grid-row:1 / span 2;display:flex;flex-direction:column;align-items:flex-end;gap:.1rem}.ap .ap-journey-nav a{font-size:.66rem;padding:.25rem}.ap-parent-copy small{font-size:.49rem}}
 @media(max-width:700px){.ap-stage-nav{padding:.85rem 1rem}.ap-parent-copy{font-size:.6rem}.ap-parent-monogram{font-size:1.35rem}.ap-subbrand span{font-size:.48rem}.ap .ap-subbrand a{font-size:.9rem}.ap-stage-portrait{width:min(100%,390px)}.ap-stage-stamp{font-size:.52rem}.ap-intake-stage{background:linear-gradient(to bottom,#34162f 0,#34162f 32rem,#fbf7f2 32rem)}.ap-intake-intro{padding:1.4rem .1rem 2rem}.ap-intake-brand .pk-brand-name{font-size:.7rem}}
+
+/* Art integrity: consistent natural-ratio presentation on all viewport sizes. */
+.ap .ap-stage-portrait,.ap .ap-stage-portrait-home,.ap .ap-stage-portrait-roast{min-width:0;width:100%;max-width:min(100%,520px);overflow:visible;transform:none}
+.ap .ap-stage-hero-image{display:block;width:100%;height:auto;max-height:none;object-fit:contain;object-position:center center;aspect-ratio:auto;border-radius:1.25rem}
+.ap .ap-stage-closer img,.ap .ap-stage-report img{display:block;max-width:100%;width:auto;height:auto;max-height:none;object-fit:contain;object-position:center}
+.ap .ap-stage-report img{width:100%;height:auto}
+@media(max-width:700px){.ap .ap-stage-portrait{max-width:min(100%,390px)}.ap .ap-stage-closer img{max-width:min(100%,280px)}.ap .ap-stage-report img{max-width:100%}}
