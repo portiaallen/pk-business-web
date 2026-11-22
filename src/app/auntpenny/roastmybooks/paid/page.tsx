@@ -11,7 +11,7 @@ export default async function PaidReportPage({ searchParams }: { searchParams: P
   try {
     requireSandbox();
     const hasToken = typeof access_token === "string" && /^[A-Za-z0-9_-]{43}$/.test(access_token);
-    const hasSession = typeof session_id === "string" && /^cs_test_[a-zA-Z0-9_]+$/.test(session_id) && session_id.length <= 255;
+    const hasSession = typeof session_id === "string" && /^cs_(test_|live_)[a-zA-Z0-9_]+$/.test(session_id) && session_id.length <= 255;
     if (!hasToken && !hasSession) throw new Error("Missing credential");
     const recoveredOrder = hasToken ? await prisma.auntPennyOrder.findUnique({ where: { accessTokenHash: tokenHash(access_token!) } }) : null;
     if (hasToken && (!recoveredOrder || !recoveredOrder.accessExpiresAt || recoveredOrder.accessExpiresAt.getTime() <= Date.now())) throw new Error("Expired recovery");
@@ -23,14 +23,14 @@ export default async function PaidReportPage({ searchParams }: { searchParams: P
     if (!order || (hasToken && recoveredOrder?.id !== order.id) || order.id !== session.metadata?.orderId || order.amountCents !== PRICE_CENTS || order.status !== "PAID" || session.client_reference_id !== order.id || session.customer_details?.email?.trim().toLowerCase() !== order.email) throw new Error("Not fulfilled");
     answers = JSON.parse(order.intakeJson) as IntakeAnswers;
   } catch {
-    return <main className="mx-auto max-w-xl px-6 py-20"><h1 className="text-3xl font-bold">Aunt Penny is checking the receipt.</h1><p className="mt-4">Your sandbox report is not available until payment is confirmed. No real purchases are enabled.</p><Link href="/auntpenny/roastmybooks/recover">Recover your purchased report</Link><p className="mt-4"><Link href="/auntpenny/roastmybooks/start">Return to the free roast</Link></p></main>;
+    return <main className="mx-auto max-w-xl px-6 py-20"><h1 className="text-3xl font-bold">Aunt Penny is checking the receipt.</h1><p className="mt-4">Your report is not available until payment is confirmed.</p><Link href="/auntpenny/roastmybooks/recover">Recover your purchased report</Link><p className="mt-4"><Link href="/auntpenny/roastmybooks/start">Return to the free roast</Link></p></main>;
   }
   const report = buildReport(answers);
   const steps = nextThreeSteps(report.triggered);
   return <main className="mx-auto max-w-3xl px-6 py-12 ap-print">
     <p className="ap-eyebrow">PK Business Services Original · Aunt Penny</p>
     <h1 className="mt-3 text-4xl font-bold">Your Roast My Books Report</h1>
-    <p className="mt-2">Verified sandbox purchase · Educational entertainment</p>
+    <p className="mt-2">Verified purchase · Educational entertainment</p>
     <section className="ap-card mt-8 p-6"><h2 className="text-2xl font-bold">{report.tierName}</h2><p>{report.tierLine}</p><p>Severity score: {report.points}</p></section>
     <section className="ap-card mt-6 p-6"><h2 className="text-2xl font-bold">The Roast</h2>{report.triggered.length ? report.triggered.map(t=><div key={t.id} className="mt-3"><h3 className="font-bold">{t.title}</h3>{t.roastLines.map((line,i)=><p key={i}>{line}</p>)}</div>):<p>{report.funniestQuote}</p>}</section>
     <section className="ap-card mt-6 p-6"><h2 className="text-2xl font-bold">Traceable findings</h2>{report.findings.map(f=><div key={f.id} className="mt-4"><h3 className="font-bold">{f.title}</h3><p>Evidence: {f.evidence}</p><p>Why it matters: {f.matters}</p><p>Check: {f.check}</p><p>Next: {f.next}</p><p>When to get help: {f.help}</p></div>)}</section>
