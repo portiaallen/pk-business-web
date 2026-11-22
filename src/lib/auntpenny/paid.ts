@@ -3,7 +3,7 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypt
 export const PRODUCT_CODE = "aunt-penny-roast-report-v1";
 export const PRICE_CENTS = 999;
 export const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
-type CheckoutSession = { id: string; url?: string | null; payment_status?: string; mode?: string; currency?: string; amount_total?: number; total_details?: { amount_discount?: number }; metadata?: Record<string,string>; client_reference_id?: string; customer_details?: { email?: string | null } };
+export type CheckoutSession = { id: string; url?: string | null; status?: string; payment_status?: string; mode?: string; currency?: string; amount_total?: number; total_details?: { amount_discount?: number }; metadata?: Record<string,string>; client_reference_id?: string; customer_details?: { email?: string | null } };
 type CheckoutInput = { mode: string; customer_email: string; line_items: { price_data: { currency: string; unit_amount: number; product_data: { name: string; description: string } }; quantity: number }[]; success_url: string; cancel_url: string; client_reference_id: string; metadata: Record<string,string>; payment_method_types: string[]; allow_promotion_codes?: boolean };
 export function sandboxStripe() {
   const key = process.env.AUNT_PENNY_LIVE_ENABLED === "true" ? process.env.STRIPE_SECRET_KEY : process.env.AUNT_PENNY_STRIPE_TEST_SECRET_KEY;

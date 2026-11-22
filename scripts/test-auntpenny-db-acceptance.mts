@@ -1,140 +1,138 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
-import { mock } from "node:test";
-import nodemailer from "nodemailer";
+import { NextRequest } from "next/server";
 import { prisma } from "../src/lib/prisma";
+import { proxy } from "../src/proxy";
 import { POST as webhook } from "../src/app/api/auntpenny/webhook/route";
 import { POST as recover } from "../src/app/api/auntpenny/recover/route";
 import * as PaidReportPageModule from "../src/app/auntpenny/roastmybooks/paid/page";
-// The Node tsx runner can expose Next page exports through a CJS interop wrapper.
-const pageExport = (PaidReportPageModule as { default?: unknown }).default ?? PaidReportPageModule;
-const PaidReportPage = (typeof pageExport === "function" ? pageExport : (pageExport as { default?: unknown }).default) as (props: { searchParams: Promise<{ session_id?: string; access_token?: string }> }) => Promise<unknown>;
 import { PRICE_CENTS, PRODUCT_CODE } from "../src/lib/auntpenny/paid";
+
+const pageExport = (PaidReportPageModule as { default?: unknown }).default ?? PaidReportPageModule;
+const paidPage = (typeof pageExport === "function" ? pageExport : (pageExport as { default?: unknown }).default) as
+  (props: { searchParams: Promise<{ session_id?: string; access_token?: string }> }) => Promise<unknown>;
 
 const email = "synthetic-auntpenny@example.test";
 const sessionId = "cs_test_auntpenny_acceptance";
 const secret = "whsec_synthetic_acceptance";
-process.env.AUNT_PENNY_PAID_SANDBOX_ENABLED = "true";
-process.env.AUNT_PENNY_STRIPE_TEST_SECRET_KEY = "sk_test_synthetic_no_network";
-process.env.AUNT_PENNY_STRIPE_TEST_WEBHOOK_SECRET = secret;
-process.env.AUNT_PENNY_TEST_ORIGIN = "https://example.test";
+const origin = "https://example.test";
 const originalFetch = globalThis.fetch;
-let currentOrderId = "";
-let syntheticPaid = true;
-globalThis.fetch = (async (url: string | URL | Request) => {
-  assert.match(String(url), /^https:\/\/api\.stripe\.com\/v1\/checkout\/sessions\//);
-  return new Response(JSON.stringify({
-    id: sessionId, mode: "payment", currency: "usd", amount_total: PRICE_CENTS,
-    payment_status: syntheticPaid ? "paid" : "unpaid", client_reference_id: currentOrderId,
-    customer_details: { email }, metadata: { orderId: currentOrderId, productCode: PRODUCT_CODE }
-  }), { status: 200, headers: { "content-type": "application/json" } });
-}) as typeof fetch;
 
 function renderedText(node: unknown): string {
-  if (node === null || node === undefined || typeof node === "boolean") return "";
   if (typeof node === "string" || typeof node === "number") return String(node);
   if (Array.isArray(node)) return node.map(renderedText).join(" ");
-  if (typeof node !== "object") return "";
-  // Read React element children only: JSON.stringify traverses circular Next/React metadata.
-  const element = node as { props?: { children?: unknown } };
-  return renderedText(element.props?.children);
+  if (!node || typeof node !== "object") return "";
+  return renderedText((node as { props?: { children?: unknown } }).props?.children);
 }
-function signed(body: string, signatureOverride?: string) {
-  const t = String(Math.floor(Date.now() / 1000));
-  const signature = signatureOverride ?? createHmac("sha256", secret).update(t + "." + body).digest("hex");
-  return new Request("https://example.test/api/auntpenny/webhook", { method: "POST", headers: { "stripe-signature": "t=" + t + ",v1=" + signature }, body });
-}
-function payload() {
-  return JSON.stringify({ type: "checkout.session.completed", data: { object: {
-    id: sessionId, mode: "payment", currency: "usd", amount_total: PRICE_CENTS,
-    payment_status: syntheticPaid ? "paid" : "unpaid", client_reference_id: currentOrderId,
-    customer_details: { email }, metadata: { orderId: currentOrderId, productCode: PRODUCT_CODE }
-  } } });
-}
-test("real isolated database: signed webhook, replay, authorization, recovery failure", async () => {
+
+test("signed Stripe completion and Resend recovery for a fully discounted order", async () => {
+  process.env.AUNT_PENNY_PAID_SANDBOX_ENABLED = "true";
+  process.env.AUNT_PENNY_STRIPE_TEST_SECRET_KEY = "sk_test_synthetic_no_network";
+  process.env.AUNT_PENNY_STRIPE_TEST_WEBHOOK_SECRET = secret;
+  process.env.AUNT_PENNY_TEST_ORIGIN = origin;
+  process.env.PK_EMAIL_ENVIRONMENT = "test";
+  process.env.RESEND_API_KEY = "synthetic-resend";
+  process.env.INVOICE_FROM_EMAIL = "synthetic-sender@example.test";
+
+  const webhookUrl = origin + "/api/auntpenny/webhook";
+  const recoveryUrl = origin + "/api/auntpenny/recover";
+  const recoverReport = () => recover(new Request(recoveryUrl, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email }),
+  }));
   const order = await prisma.auntPennyOrder.create({ data: {
-    email, intakeJson: JSON.stringify({"recordsMethod":"software","softwareName":"QuickBooks","monthlyRevenue":10000,"monthlyExpenses":8000,"cashOnHand":5000,"monthsSinceReconciliation":2,"uncategorizedPercent":10,"uncategorizedTransactions":12,"overdueInvoicesTotal":1000,"softwareSubscriptions":4,"headcount":2,"ownerDraws3mo":3000,"netIncome3mo":6000,"cardBalanceCarried":500,"monthsCarryingCard":2,"monthsWithoutProfessional":3,"firstName":"Synthetic"}), amountCents: PRICE_CENTS, status: "PENDING", stripeSessionId: sessionId
+    email, stripeSessionId: sessionId, amountCents: PRICE_CENTS,
+    intakeJson: JSON.stringify({
+      recordsMethod: "spreadsheet", monthlyRevenue: 12000, monthlyExpenses: 10800,
+      cashOnHand: 2700, monthsSinceReconciliation: 5, uncategorizedPercent: 35,
+      uncategorizedTransactions: 70, overdueInvoicesTotal: 4200, softwareSubscriptions: 12,
+      headcount: 2, ownerDraws3mo: 5400, netIncome3mo: 3600, cardBalanceCarried: 6800,
+      monthsCarryingCard: 8, monthsWithoutProfessional: 15,
+    }),
   } });
-  currentOrderId = order.id;
+  const readOrder = () => prisma.auntPennyOrder.findUniqueOrThrow({ where: { id: order.id } });
+  const session = {
+    id: sessionId, mode: "payment", currency: "usd", amount_total: 0,
+    total_details: { amount_discount: PRICE_CENTS }, status: "complete",
+    payment_status: "paid", client_reference_id: order.id, customer_details: { email },
+    metadata: { orderId: order.id, productCode: PRODUCT_CODE },
+  };
+  const mailLinks: URL[] = [];
+  let failDelivery = false;
+  globalThis.fetch = (async (url, options) => {
+    if (String(url) === "https://api.resend.com/emails") {
+      if (failDelivery) return new Response(null, { status: 503 });
+      const message = JSON.parse(String(options?.body));
+      assert.deepEqual(message.to, [email]);
+      const link = message.text.match(/https:\/\/[^\s]+/)?.[0];
+      assert.ok(link);
+      mailLinks.push(new URL(link));
+      return new Response(null, { status: 200 });
+    }
+    assert.equal(String(url), "https://api.stripe.com/v1/checkout/sessions/" + sessionId);
+    return Response.json(session);
+  }) as typeof fetch;
+
+  function signedCheckout(validSignature = true) {
+    const body = JSON.stringify({ type: "checkout.session.completed", data: { object: session } });
+    const timestamp = String(Math.floor(Date.now() / 1000));
+    const signature = validSignature
+      ? createHmac("sha256", secret).update(timestamp + "." + body).digest("hex")
+      : "0".repeat(64);
+    return new NextRequest(webhookUrl, {
+      method: "POST", headers: { "stripe-signature": "t=" + timestamp + ",v1=" + signature }, body,
+    });
+  }
+
   try {
-    const deniedBefore = await PaidReportPage({ searchParams: Promise.resolve({ session_id: sessionId }) });
-    assert.match(renderedText(deniedBefore), /checking the receipt/);
-    assert.equal((await webhook(signed(payload(), "0".repeat(64)))).status, 400);
-    assert.equal((await prisma.auntPennyOrder.findUniqueOrThrow({ where: { id: order.id } })).status, "PENDING");
-    syntheticPaid = false;
-    assert.equal((await webhook(signed(payload()))).status, 400);
-    syntheticPaid = true;
-    assert.equal((await webhook(signed(payload()))).status, 200);
-    const first = await prisma.auntPennyOrder.findUniqueOrThrow({ where: { id: order.id } });
-    assert.equal(first.status, "PAID");
-    assert.ok(first.paidAt);
-    assert.equal((await webhook(signed(payload()))).status, 200);
-    const second = await prisma.auntPennyOrder.findUniqueOrThrow({ where: { id: order.id } });
-    assert.equal(second.paidAt?.getTime(), first.paidAt?.getTime());
-    const allowed = await PaidReportPage({ searchParams: Promise.resolve({ session_id: sessionId }) });
-    assert.match(renderedText(allowed), /Your Roast My Books Report/);
-    syntheticPaid = false;
-    const revoked = await PaidReportPage({ searchParams: Promise.resolve({ session_id: sessionId }) });
-    assert.match(renderedText(revoked), /checking the receipt/);
-    syntheticPaid = true;
-    delete process.env.GMAIL_APP_PASSWORD;
-    const recovery = await recover(new Request("https://example.test/api/auntpenny/recover", {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email })
-    }));
-    assert.equal(recovery.status, 503);
-    assert.equal((await prisma.auntPennyOrder.findUniqueOrThrow({ where: { id: order.id } })).accessTokenHash, null);
-    // Successful synthetic recovery must issue a durable, redeemable token without SMTP traffic.
-    process.env.PK_EMAIL_ENVIRONMENT = "development";
-    process.env.GMAIL_USER = "synthetic-sender@example.test";
-    process.env.GMAIL_APP_PASSWORD = "synthetic-only-not-a-secret";
-    let deliveredLink = "";
-    const successTransport = mock.method(nodemailer, "createTransport", () => ({
-      sendMail: async (message: { text: string }) => {
-        deliveredLink = message.text.match(/https:\/\/[^\s]+/)?.[0] ?? "";
-        return { messageId: "synthetic-success" };
-      },
-    }));
-    try {
-      const successResponse = await recover(new Request("https://example.test/api/auntpenny/recover", {
-        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email })
-      }));
-      assert.equal(successResponse.status, 200);
-      const successOrder = await prisma.auntPennyOrder.findUniqueOrThrow({ where: { id: order.id } });
-      assert.ok(successOrder.accessTokenHash, "successful recovery must persist a token hash");
-      assert.ok(successOrder.accessExpiresAt && successOrder.accessExpiresAt.getTime() > Date.now());
-      const accessToken = new URL(deliveredLink).searchParams.get("access_token");
-      assert.ok(accessToken, "successful recovery must deliver an access token");
-      const recoveredReport = await PaidReportPage({ searchParams: Promise.resolve({ access_token: accessToken }) });
-      assert.match(renderedText(recoveredReport), /Your Roast My Books Report/);
-    } finally {
-      successTransport.mock.restore();
-      delete process.env.PK_EMAIL_ENVIRONMENT;
-      delete process.env.GMAIL_USER;
-      delete process.env.GMAIL_APP_PASSWORD;
-    }
-    // Exercise the actual mail-send rejection against the isolated database.
-    // No network SMTP request is made.
-    process.env.PK_EMAIL_ENVIRONMENT = "development";
-    process.env.GMAIL_USER = "synthetic-sender@example.test";
-    process.env.GMAIL_APP_PASSWORD = "synthetic-only-not-a-secret";
-    const transportMock = mock.method(nodemailer, "createTransport", () => ({
-      sendMail: async () => { throw new Error("synthetic SMTP delivery failure"); },
-    }));
-    try {
-      const failedDelivery = await recover(new Request("https://example.test/api/auntpenny/recover", {
-        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email }),
-      }));
-      assert.equal(failedDelivery.status, 503);
-      const afterFailure = await prisma.auntPennyOrder.findUniqueOrThrow({ where: { id: order.id } });
-      assert.equal(afterFailure.accessTokenHash, null, "undelivered access token must be revoked");
-      assert.equal(afterFailure.accessExpiresAt, null, "undelivered token expiry must be cleared");
-    } finally {
-      transportMock.mock.restore();
-      delete process.env.PK_EMAIL_ENVIRONMENT;
-      delete process.env.GMAIL_USER;
-      delete process.env.GMAIL_APP_PASSWORD;
-    }
+    const verifiedRequest = signedCheckout();
+    assert.equal(proxy(verifiedRequest).status, 200);
+    assert.equal(proxy(new NextRequest(recoveryUrl, { method: "POST" })).status, 403);
+    assert.equal((await webhook(signedCheckout(false))).status, 400);
+    session.payment_status = "unpaid";
+    assert.equal((await webhook(signedCheckout())).status, 400);
+    const denied = await paidPage({ searchParams: Promise.resolve({ session_id: sessionId }) });
+    assert.match(renderedText(denied), /checking the receipt/);
+    assert.equal((await readOrder()).status, "PENDING");
+
+    session.payment_status = "paid";
+    failDelivery = true;
+    assert.equal((await webhook(verifiedRequest)).status, 503);
+    const recorded = await readOrder();
+    assert.equal(recorded.status, "PAID");
+    assert.ok(recorded.paidAt);
+    assert.equal(recorded.accessTokenHash, null);
+
+    failDelivery = false;
+    assert.equal((await webhook(signedCheckout())).status, 200);
+    assert.equal((await webhook(signedCheckout())).status, 200);
+    assert.equal((await readOrder()).paidAt?.getTime(), recorded.paidAt.getTime());
+    assert.equal(mailLinks.length, 1);
+    const direct = await paidPage({ searchParams: Promise.resolve({ session_id: sessionId }) });
+    assert.match(renderedText(direct), /THE PRIVATE BOOKS EDITION/);
+
+    assert.equal((await recoverReport()).status, 200);
+    assert.equal(mailLinks.length, 2);
+    const accessToken = mailLinks[1].searchParams.get("access_token");
+    assert.ok(accessToken);
+    const recovered = await paidPage({ searchParams: Promise.resolve({ access_token: accessToken }) });
+    assert.match(renderedText(recovered), /THE PRIVATE BOOKS EDITION/);
+    const authorized = await readOrder();
+    failDelivery = true;
+    assert.equal((await recoverReport()).status, 503);
+    assert.equal((await readOrder()).accessTokenHash, authorized.accessTokenHash);
+
+    await prisma.auntPennyOrder.update({ where: { id: order.id }, data: {
+      status: "PENDING", paidAt: null, accessTokenHash: null, accessExpiresAt: null,
+    } });
+    failDelivery = false;
+    session.payment_status = "no_payment_required";
+    const browserReturn = await paidPage({ searchParams: Promise.resolve({ session_id: sessionId }) });
+    assert.match(renderedText(browserReturn), /THE PRIVATE BOOKS EDITION/);
+    assert.equal((await readOrder()).status, "PAID");
+    assert.equal(mailLinks.length, 3);
+    assert.equal((await webhook(signedCheckout())).status, 200);
+    assert.equal(mailLinks.length, 3);
   } finally {
     globalThis.fetch = originalFetch;
     await prisma.auntPennyOrder.delete({ where: { id: order.id } });

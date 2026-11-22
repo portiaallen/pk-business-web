@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { buildReport, nextThreeSteps, DISCLAIMER } from "@/lib/auntpenny/report";
-import { PRICE_CENTS, PRODUCT_CODE, requireSandbox, sandboxStripe, tokenHash } from "@/lib/auntpenny/paid";
+import { requireSandbox, sandboxStripe } from "@/lib/auntpenny/paid";
+import { emailAuntPennyReport, findActiveAuntPennyOrder, matchesCompletedCheckout, recordAuntPennyPayment } from "@/lib/auntpenny/fulfillment";
 import type { IntakeAnswers } from "@/lib/auntpenny/roast-engine";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Your purchased Aunt Penny report", robots: { index: false, follow: false } };
@@ -13,14 +14,27 @@ export default async function PaidReportPage({ searchParams }: { searchParams: P
     const hasToken = typeof access_token === "string" && /^[A-Za-z0-9_-]{43}$/.test(access_token);
     const hasSession = typeof session_id === "string" && /^cs_(test_|live_)[a-zA-Z0-9_]+$/.test(session_id) && session_id.length <= 255;
     if (!hasToken && !hasSession) throw new Error("Missing credential");
-    const recoveredOrder = hasToken ? await prisma.auntPennyOrder.findUnique({ where: { accessTokenHash: tokenHash(access_token!) } }) : null;
-    if (hasToken && (!recoveredOrder || !recoveredOrder.accessExpiresAt || recoveredOrder.accessExpiresAt.getTime() <= Date.now())) throw new Error("Expired recovery");
+    const recoveredOrder = hasToken ? await findActiveAuntPennyOrder(access_token) : null;
+    if (hasToken && !recoveredOrder) throw new Error("Expired recovery");
     const lookupSessionId = recoveredOrder?.stripeSessionId ?? session_id;
     if (!lookupSessionId) throw new Error("Missing session");
     const session = await sandboxStripe().checkout.sessions.retrieve(lookupSessionId);
-    if (session.payment_status !== "paid" || session.mode !== "payment" || session.currency !== "usd" || (session.amount_total !== PRICE_CENTS && !(session.amount_total === 0 && session.total_details?.amount_discount === PRICE_CENTS)) || session.metadata?.productCode !== PRODUCT_CODE) throw new Error("Unpaid");
-    const order = await prisma.auntPennyOrder.findUnique({ where: { stripeSessionId: session.id } });
-    if (!order || (hasToken && recoveredOrder?.id !== order.id) || order.id !== session.metadata?.orderId || order.amountCents !== PRICE_CENTS || order.status !== "PAID" || session.client_reference_id !== order.id || session.customer_details?.email?.trim().toLowerCase() !== order.email) throw new Error("Not fulfilled");
+    const order = await prisma.auntPennyOrder.findUnique({ where: { stripeSessionId: lookupSessionId } });
+    if (!order || !matchesCompletedCheckout(session, order)) throw new Error("Checkout mismatch");
+    if (hasToken) {
+      if (recoveredOrder?.id !== order.id || order.status !== "PAID" || recoveredOrder.accessTokenHash !== order.accessTokenHash) {
+        throw new Error("Invalid recovery");
+      }
+    } else if (order.status !== "PAID") {
+      // Stripe can return the buyer before the webhook reaches us. Reconcile only
+      // after the same server-side payment and order checks used by the webhook.
+      if (!await recordAuntPennyPayment(order)) throw new Error("Order not payable");
+      try {
+        await emailAuntPennyReport(order, "initial");
+      } catch {
+        console.error("Aunt Penny initial report email failed after checkout");
+      }
+    }
     answers = JSON.parse(order.intakeJson) as IntakeAnswers;
   } catch {
     return <main className="mx-auto max-w-xl px-6 py-20"><h1 className="text-3xl font-bold">Aunt Penny is checking the receipt.</h1><p className="mt-4">Your report is not available until payment is confirmed.</p><Link href="/auntpenny/roastmybooks/recover">Recover your purchased report</Link><p className="mt-4"><Link href="/auntpenny/roastmybooks/start">Return to the free roast</Link></p></main>;
@@ -54,7 +68,7 @@ export default async function PaidReportPage({ searchParams }: { searchParams: P
             <span className="ap-report-number">{String(index + 1).padStart(2, "0")}</span>
             <div><h3>{t.title}</h3>{t.roastLines.map((line, i) => <p key={i}>{line}</p>)}<p className="ap-report-meaning"><strong>Behind the joke:</strong> {t.meaning}</p></div>
           </article>
-        ) : <p>Your submitted figures did not trigger any of Aunt Penny's warning-sign templates. Keep your books reconciled and review them regularly.</p>}
+        ) : <p>Your submitted figures did not trigger any of Aunt Penny&apos;s warning-sign templates. Keep your books reconciled and review them regularly.</p>}
       </section>
       <section className="ap-report-section">
         <p className="ap-report-chapter">ACT II · THE RECEIPTS</p>
@@ -79,7 +93,7 @@ export default async function PaidReportPage({ searchParams }: { searchParams: P
         </div>
       </section>
       {report.bridge.show && <aside className="ap-report-bridge"><h2>When the roast needs a real bookkeeper</h2><p>{report.bridge.line}</p><Link href="/readiness/start">Explore the $99 Readiness Assessment</Link></aside>}
-      <footer className="ap-report-footer"><p className="ap-report-signoff">With love, receipts, and absolutely no patience for mystery math — Aunt Penny.</p><p>{DISCLAIMER}</p><p>Private report: keep this link secure. Use your browser's Print / Save as PDF command to keep your copy.</p><p>PK Business Services · People | Knowledge | Results</p></footer>
+      <footer className="ap-report-footer"><p className="ap-report-signoff">With love, receipts, and absolutely no patience for mystery math — Aunt Penny.</p><p>{DISCLAIMER}</p><p>Private report: keep this link secure. Use your browser&apos;s Print / Save as PDF command to keep your copy.</p><p>PK Business Services · People | Knowledge | Results</p></footer>
     </div>
   </main>;
 }

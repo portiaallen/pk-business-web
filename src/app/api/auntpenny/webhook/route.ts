@@ -1,39 +1,50 @@
 import { NextResponse } from "next/server";
-import { sendAuntPennyLink } from "@/lib/auntpenny/email";
-
+import { emailAuntPennyReport, matchesCompletedCheckout, recordAuntPennyPayment } from "@/lib/auntpenny/fulfillment";
+import { PRODUCT_CODE, requireSandbox, sandboxStripe } from "@/lib/auntpenny/paid";
 import { prisma } from "@/lib/prisma";
-import { PRICE_CENTS, PRODUCT_CODE, requireSandbox, sandboxStripe, issueToken, tokenHash, publicOrigin } from "@/lib/auntpenny/paid";
+
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const signature = request.headers.get("stripe-signature");
+  if (!signature) return NextResponse.json({ error: "Signature required" }, { status: 400 });
+
   try {
     requireSandbox();
-    const secret = (process.env.AUNT_PENNY_LIVE_ENABLED === "true" ? process.env.AUNT_PENNY_LIVE_WEBHOOK_SECRET : process.env.AUNT_PENNY_STRIPE_TEST_WEBHOOK_SECRET);
-    if (!secret?.startsWith("whsec_")) throw new Error("Sandbox webhook secret missing");
-    const signature = request.headers.get("stripe-signature");
-    if (!signature) return NextResponse.json({ error: "Signature required" }, { status: 400 });
+    const secret = process.env.AUNT_PENNY_LIVE_ENABLED === "true"
+      ? process.env.AUNT_PENNY_LIVE_WEBHOOK_SECRET
+      : process.env.AUNT_PENNY_STRIPE_TEST_WEBHOOK_SECRET;
+    if (!secret?.startsWith("whsec_")) throw new Error("Aunt Penny webhook secret missing");
+
     const stripe = sandboxStripe();
-    const event = stripe.webhooks.constructEvent(await request.text(), signature, secret);
-    if (event.type !== "checkout.session.completed" && event.type !== "checkout.session.async_payment_succeeded") return NextResponse.json({ received: true });
+    const payload = await request.text();
+    let event: ReturnType<typeof stripe.webhooks.constructEvent>;
+    try {
+      event = stripe.webhooks.constructEvent(payload, signature, secret);
+    } catch {
+      return NextResponse.json({ error: "Webhook verification failed" }, { status: 400 });
+    }
+
     const session = event.data.object;
-    if (session.payment_status !== "paid" || session.mode !== "payment" || session.currency !== "usd" || (session.amount_total !== PRICE_CENTS && !(session.amount_total === 0 && session.total_details?.amount_discount === PRICE_CENTS)) || session.metadata?.productCode !== PRODUCT_CODE) return NextResponse.json({ error: "Payment mismatch" }, { status: 400 });
-    const orderId = session.metadata?.orderId;
+    if ((event.type !== "checkout.session.completed" && event.type !== "checkout.session.async_payment_succeeded") ||
+        session.metadata?.productCode !== PRODUCT_CODE) {
+      return NextResponse.json({ received: true });
+    }
+
+    const orderId = session.metadata.orderId;
     if (!orderId) return NextResponse.json({ error: "Missing order" }, { status: 400 });
     const order = await prisma.auntPennyOrder.findUnique({ where: { id: orderId } });
-    if (!order || order.stripeSessionId !== session.id || order.amountCents !== PRICE_CENTS || session.client_reference_id !== order.id || session.customer_details?.email?.trim().toLowerCase() !== order.email) return NextResponse.json({ error: "Order mismatch" }, { status: 400 });
-    if (order.status === "PAID" && order.accessTokenHash && order.accessExpiresAt && order.accessExpiresAt > new Date()) return NextResponse.json({ received: true });
-    if (order.status !== "PENDING" && order.status !== "PAID") return NextResponse.json({ error: "Order not payable" }, { status: 409 });
-
-    // Atomic, idempotent state transition; access is verified against Stripe on report request.
-    const transition = await prisma.auntPennyOrder.updateMany({ where: { id: order.id, status: "PENDING" }, data: { status: "PAID", paidAt: new Date() } });
-    if (transition.count !== 1) {
-      const current = await prisma.auntPennyOrder.findUnique({ where: { id: order.id } });
-      if (current?.status !== "PAID") return NextResponse.json({ error: "Payment state not recorded" }, { status: 409 });
+    if (!order || !matchesCompletedCheckout(session, order)) {
+      return NextResponse.json({ error: "Payment or order mismatch" }, { status: 400 });
     }
-    // The raw access token is deliberately NOT logged, stored, or emailed by this webhook.
-    // Fulfillment email / buyer recovery requires a separate verified secure implementation.
+    if (!await recordAuntPennyPayment(order)) {
+      return NextResponse.json({ error: "Order not payable" }, { status: 409 });
+    }
+
+    await emailAuntPennyReport(order, "initial");
     return NextResponse.json({ received: true });
   } catch {
-    return NextResponse.json({ error: "Webhook verification or processing failed" }, { status: 400 });
+    console.error("Aunt Penny webhook fulfillment failed");
+    return NextResponse.json({ error: "Fulfillment temporarily unavailable" }, { status: 503 });
   }
 }

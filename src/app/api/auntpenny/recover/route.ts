@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { sendAuntPennyLink } from "@/lib/auntpenny/email";
+import { emailAuntPennyReport, matchesCompletedCheckout } from "@/lib/auntpenny/fulfillment";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 
-import { issueToken, tokenHash, publicOrigin, requireSandbox, sandboxStripe, PRICE_CENTS, PRODUCT_CODE } from "@/lib/auntpenny/paid";
+import { requireSandbox, sandboxStripe } from "@/lib/auntpenny/paid";
 
 export const runtime = "nodejs";
 const generic = () => NextResponse.json({ message: "If a verified purchase matches, a private access link will be sent." }, { headers: { "Cache-Control": "no-store" } });
@@ -25,27 +25,11 @@ export async function POST(request: Request) {
     } else {
       await prisma.readinessPublicRateLimit.update({ where: { key: limitKey }, data: { count: { increment: 1 } } });
     }
-    const gmailUser = process.env.GMAIL_USER?.trim();
-    const gmailAppPassword = process.env.GMAIL_APP_PASSWORD?.trim();
-    if (!gmailUser || !gmailAppPassword) return NextResponse.json({ error: "Recovery unavailable" }, { status: 503 });
     const order = await prisma.auntPennyOrder.findFirst({ where: { email, status: "PAID" }, orderBy: { paidAt: "desc" } });
     if (!order?.stripeSessionId) return generic();
     const session = await sandboxStripe().checkout.sessions.retrieve(order.stripeSessionId);
-    if (session.payment_status !== "paid" || (session.amount_total !== PRICE_CENTS && !(session.amount_total === 0 && session.total_details?.amount_discount === PRICE_CENTS)) || session.currency !== "usd" || session.mode !== "payment" || session.metadata?.productCode !== PRODUCT_CODE || session.metadata?.orderId !== order.id || session.client_reference_id !== order.id || session.id !== order.stripeSessionId || session.customer_details?.email?.trim().toLowerCase() !== email) return generic();
-    const token = issueToken();
-    const link = publicOrigin() + "/auntpenny/roastmybooks/paid?access_token=" + encodeURIComponent(token);
-    await prisma.auntPennyOrder.update({ where: { id: order.id }, data: { accessTokenHash: tokenHash(token), accessExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) } });
-    try {
-      await sendAuntPennyLink(email, link);
-    } catch (deliveryError) {
-      // A failed delivery must not leave a newly issued recovery credential active.
-      // The hash condition avoids revoking a newer token issued concurrently.
-      await prisma.auntPennyOrder.updateMany({
-        where: { id: order.id, accessTokenHash: tokenHash(token) },
-        data: { accessTokenHash: null, accessExpiresAt: null },
-      });
-      throw deliveryError;
-    }
+    if (!matchesCompletedCheckout(session, order)) return generic();
+    await emailAuntPennyReport(order, "recovery");
     return generic();
   } catch {
     return NextResponse.json({ error: "Recovery temporarily unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
