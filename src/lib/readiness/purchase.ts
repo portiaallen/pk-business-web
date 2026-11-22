@@ -520,7 +520,7 @@ export async function recordPayment(
   await tx.invoiceActivity.create({
     data: { invoiceId: a.invoiceId, event: founderZero ? "FOUNDER_ZERO_DOLLAR_TEST_VERIFIED" : "READINESS_PAYMENT_VERIFIED" },
   });
-  await audit(tx, null, a, "PAYMENT_VERIFIED", { amountCents: founderZero ? 0 : PRICE_CENTS, reason: founderZero ? "FOUNDER_ACCEPTANCE" : "PAID_PURCHASE" });
+  await audit(tx, null, a, "PAYMENT_VERIFIED", { amountCents: founderZero ? 0 : holidayPaid ? PK_HOLIDAY_2026.readinessCreditPriceCents : PRICE_CENTS, reason: founderZero ? "FOUNDER_ACCEPTANCE" : holidayPaid ? "HOLIDAY_CREDIT" : "PAID_PURCHASE" });
   await notify(tx, a.id, a.ownerUserId, "PAYMENT", `${a.id}:payment`);
   if (holidayPaid && creditId) {
     const redemption = await tx.pkHolidayCredit.updateMany({
