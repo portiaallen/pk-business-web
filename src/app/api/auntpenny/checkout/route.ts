@@ -18,9 +18,6 @@ export async function POST(request: Request) {
     if (snapshot.length > 10000) return NextResponse.json({ error: "Input too large" }, { status: 413 });
     const stripe = sandboxStripe();
     const holidayActive = isHolidayPurchaseWindow(new Date());
-    const holidayPromotion = process.env.PK_AUNT_PENNY_HOLIDAY_PROMOTION_ID?.trim();
-    if (holidayActive && (!holidayPromotion || !/^promo_[A-Za-z0-9]+$/.test(holidayPromotion)))
-      return NextResponse.json({code:"HOLIDAY_COUPON_NOT_CONFIGURED",message:"Holiday checkout is temporarily unavailable."},{status:503});
     const checkoutPriceCents = PRICE_CENTS;
     const order = await prisma.auntPennyOrder.create({ data: { email, intakeJson: snapshot, amountCents: checkoutPriceCents, status: "PENDING" } });
     try {
@@ -33,8 +30,7 @@ export async function POST(request: Request) {
         client_reference_id: order.id,
         metadata: { orderId: order.id, productCode: PRODUCT_CODE, ...(holidayActive ? { pkHoliday2026: "v1" } : {}) },
         payment_method_types: ["card"],
-        allow_promotion_codes: !holidayActive,
-        ...(holidayActive ? { discounts: [{ promotion_code: holidayPromotion! }] } : {}),
+        allow_promotion_codes: true,
       }, { idempotencyKey: "aunt-penny-order-" + order.id });
       await prisma.auntPennyOrder.update({ where: { id: order.id }, data: { stripeSessionId: session.id } });
       if (!session.url) throw new Error("Stripe checkout URL missing");
