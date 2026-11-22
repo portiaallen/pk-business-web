@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     const event = stripe.webhooks.constructEvent(await request.text(), signature, secret);
     if (event.type !== "checkout.session.completed" && event.type !== "checkout.session.async_payment_succeeded") return NextResponse.json({ received: true });
     const session = event.data.object;
-    if (session.payment_status !== "paid" || session.mode !== "payment" || session.currency !== "usd" || session.amount_total !== PRICE_CENTS || session.metadata?.productCode !== PRODUCT_CODE) return NextResponse.json({ error: "Payment mismatch" }, { status: 400 });
+    if (session.payment_status !== "paid" || session.mode !== "payment" || session.currency !== "usd" || (session.amount_total !== PRICE_CENTS && !(session.amount_total === 0 && session.total_details?.amount_discount === PRICE_CENTS)) || session.metadata?.productCode !== PRODUCT_CODE) return NextResponse.json({ error: "Payment mismatch" }, { status: 400 });
     const orderId = session.metadata?.orderId;
     if (!orderId) return NextResponse.json({ error: "Missing order" }, { status: 400 });
     const order = await prisma.auntPennyOrder.findUnique({ where: { id: orderId } });
