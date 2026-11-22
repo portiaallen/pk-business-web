@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { pennyOpening, pennyRoastFor } from "@/lib/auntpenny/penny-voice";
+import { caseSummary, personalizedPlan, prioritizedFindings } from "@/lib/auntpenny/case-file";
 import { PrintReportButton } from "./PrintReportButton";
 import { prisma } from "@/lib/prisma";
 import { buildReport, nextThreeSteps, DISCLAIMER } from "@/lib/auntpenny/report";
@@ -44,7 +45,9 @@ export default async function PaidReportPage({ searchParams }: { searchParams: P
   const report = buildReport(answers);
   const steps = nextThreeSteps(report.triggered);
   const displayName = answers.firstName?.trim().slice(0, 40) || "friend";
-  const findings = report.findings;
+  const findings = prioritizedFindings(report.findings);
+  const numbers = caseSummary(answers);
+  const rescue = personalizedPlan(findings);
   return <main className="ap-premium-report ap-print mx-auto max-w-4xl px-4 py-10 sm:px-8 sm:py-14">
     <header className="ap-report-cover">
       <p className="ap-report-kicker">PK BUSINESS SERVICES PRESENTS · AUNT PENNY</p>
@@ -65,11 +68,11 @@ export default async function PaidReportPage({ searchParams }: { searchParams: P
       <section className="ap-report-section">
         <p className="ap-report-chapter">ACT I · THE READ</p>
         <h2>Aunt Penny has some thoughts.</h2>
-        <blockquote className="ap-report-quote">“{report.funniestQuote}”</blockquote>
+        <blockquote className="ap-report-quote">“{pennyOpening(answers)}”</blockquote>
         {report.triggered.length ? report.triggered.map((t, index) =>
           <article className="ap-report-roast" key={t.id}>
             <span className="ap-report-number">{String(index + 1).padStart(2, "0")}</span>
-            <div><h3>{t.title}</h3><p>{pennyRoastFor(t.id, answers)}</p>{t.roastLines.map((line, i) => <p key={i}>{line}</p>)}<p className="ap-report-meaning"><strong>Behind the joke:</strong> {t.meaning}</p></div>
+            <div><h3>{t.title}</h3><p>{pennyRoastFor(t.id, answers)}</p><p className="ap-report-meaning"><strong>Behind the joke:</strong> {t.meaning}</p></div>
           </article>
         ) : <p>Your submitted figures did not trigger any of Aunt Penny&apos;s warning-sign templates. Keep your books reconciled and review them regularly.</p>}
       </section>
@@ -91,13 +94,16 @@ export default async function PaidReportPage({ searchParams }: { searchParams: P
         <h2>Three moves. No magical thinking.</h2>
         <ol className="ap-report-steps">{steps.map((step, i) => <li key={i}><span>{i + 1}</span><p>{step}</p></li>)}</ol>
         <div className="ap-report-plans">
-          <article><h3>The next 7 days</h3><p><strong>Days 1–2:</strong> Check your submitted figures against actual records.</p><p><strong>Days 3–4:</strong> {steps[0]}</p><p><strong>Days 5–6:</strong> {steps[1]}</p><p><strong>Day 7:</strong> Review progress and decide when to tackle: {steps[2]}</p></article>
-          <article><h3>The next 30 days</h3><p><strong>Week 1:</strong> Work through your seven-day checkpoints.</p><p><strong>Week 2:</strong> Revisit the first priority and verify progress.</p><p><strong>Week 3:</strong> Work through remaining priorities; ask for help where needed.</p><p><strong>Week 4:</strong> Recheck the figures and set a monthly maintenance routine.</p></article>
+          <article><h3>Your 7-day rescue</h3><p><strong>Days 1–2:</strong> Collect the supporting records and verify the submitted figures.</p><p><strong>Days 3–4:</strong> {rescue.actions[0].check}</p><p><strong>Days 5–6:</strong> {rescue.actions[0].action}</p><p><strong>Day 7:</strong> Record what changed, what remains unresolved, and who can help.</p></article>
+          <article><h3>Your 30-day improvement</h3>{rescue.week.map(w=><p key={w.label}><strong>{w.label}:</strong> {w.text}</p>)}</article>
         </div>
+        <h3 className="mt-8 text-2xl">Your evidence locker · priority order</h3>
+        <p className="ap-report-note">This is a practical review order, not a diagnosis. An immediate cash, payroll or tax deadline may change priorities.</p>
+        {rescue.actions.map((item,i)=><article className="ap-report-finding" key={item.title}><h4><strong>Priority {i+1}: {item.title}</strong></h4><p><strong>CHECK THE RECORDS</strong> {item.check}</p><p><strong>TAKE ACTION</strong> {item.action}</p><p><strong>DONE WHEN</strong> {item.done}</p></article>)}
       </section>
       <section className="ap-report-section"><p className="ap-report-chapter">ACT IV · BRING THE RECEIPTS</p><h2>Questions to take to your bookkeeper</h2><ul className="list-disc pl-6"><li>Which of these observations can you verify from my actual records?</li><li>What supporting statements or reconciliations do you need?</li><li>Which issue should I address first, and what is the realistic scope?</li></ul></section>
       {report.bridge.show && <aside className="ap-report-bridge"><h2>When the roast needs a real bookkeeper</h2><p>{report.bridge.line}</p><Link href="/readiness/start">Explore the $99 Readiness Assessment</Link></aside>}
-      <footer className="ap-report-footer"><p className="ap-report-signoff">With love, receipts, and absolutely no patience for mystery math — Aunt Penny.</p><p>{DISCLAIMER}</p><p>Private report: keep this link secure. Use your browser&apos;s Print / Save as PDF command to keep your copy.</p><p>PK Business Services · People | Knowledge | Results</p></footer>
+      <footer className="ap-report-footer"><p className="ap-report-signoff">With love, receipts, and absolutely no patience for mystery math — Aunt Penny.</p><p>{DISCLAIMER}</p><p>Private report: keep this link secure. Your private report can be saved using the print option until direct PDF delivery is available.</p><p>PK Business Services · People | Knowledge | Results</p></footer>
     </div>
   </main>;
 }
