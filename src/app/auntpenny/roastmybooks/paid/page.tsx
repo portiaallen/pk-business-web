@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { pennyOpening, pennyRoastFor } from "@/lib/auntpenny/penny-voice";
+import { PrintReportButton } from "./PrintReportButton";
 import { prisma } from "@/lib/prisma";
 import { buildReport, nextThreeSteps, DISCLAIMER } from "@/lib/auntpenny/report";
 import { requireSandbox, sandboxStripe } from "@/lib/auntpenny/paid";
@@ -50,6 +52,7 @@ export default async function PaidReportPage({ searchParams }: { searchParams: P
       <h1>Roast My Books<span className="ap-report-mark">!</span></h1>
       <p className="ap-report-subtitle">The receipts have entered the chat.</p>
       <div className="ap-report-rule" aria-hidden="true" />
+      <p className="ap-report-intro">{pennyOpening(answers)}</p>
       <p className="ap-report-intro">Well, {displayName}, pull up a chair. I brought the receipts, the side-eye, and a plan.</p>
       <div className="ap-report-verdict">
         <p>YOUR OFFICIAL VERDICT</p>
@@ -58,7 +61,7 @@ export default async function PaidReportPage({ searchParams }: { searchParams: P
         <small>Severity score {report.points} · Based on figures you supplied, not a review of your records</small>
       </div>
     </header>
-    <div className="ap-report-content">
+    <div className="ap-report-content"><div className="ap-no-print mt-6 flex flex-wrap gap-3"><PrintReportButton/><Link href="/auntpenny/roastmybooks/recover">Email me a fresh report link</Link></div><p className="ap-no-print mt-3 text-sm">Use your newest emailed link; it expires after 24 hours. Already purchased? Recover your report instead of checking out again.</p>
       <section className="ap-report-section">
         <p className="ap-report-chapter">ACT I · THE READ</p>
         <h2>Aunt Penny has some thoughts.</h2>
@@ -66,7 +69,7 @@ export default async function PaidReportPage({ searchParams }: { searchParams: P
         {report.triggered.length ? report.triggered.map((t, index) =>
           <article className="ap-report-roast" key={t.id}>
             <span className="ap-report-number">{String(index + 1).padStart(2, "0")}</span>
-            <div><h3>{t.title}</h3>{t.roastLines.map((line, i) => <p key={i}>{line}</p>)}<p className="ap-report-meaning"><strong>Behind the joke:</strong> {t.meaning}</p></div>
+            <div><h3>{t.title}</h3><p>{pennyRoastFor(t.id, answers)}</p>{t.roastLines.map((line, i) => <p key={i}>{line}</p>)}<p className="ap-report-meaning"><strong>Behind the joke:</strong> {t.meaning}</p></div>
           </article>
         ) : <p>Your submitted figures did not trigger any of Aunt Penny&apos;s warning-sign templates. Keep your books reconciled and review them regularly.</p>}
       </section>
@@ -92,6 +95,7 @@ export default async function PaidReportPage({ searchParams }: { searchParams: P
           <article><h3>The next 30 days</h3><p><strong>Week 1:</strong> Work through your seven-day checkpoints.</p><p><strong>Week 2:</strong> Revisit the first priority and verify progress.</p><p><strong>Week 3:</strong> Work through remaining priorities; ask for help where needed.</p><p><strong>Week 4:</strong> Recheck the figures and set a monthly maintenance routine.</p></article>
         </div>
       </section>
+      <section className="ap-report-section"><p className="ap-report-chapter">ACT IV · BRING THE RECEIPTS</p><h2>Questions to take to your bookkeeper</h2><ul className="list-disc pl-6"><li>Which of these observations can you verify from my actual records?</li><li>What supporting statements or reconciliations do you need?</li><li>Which issue should I address first, and what is the realistic scope?</li></ul></section>
       {report.bridge.show && <aside className="ap-report-bridge"><h2>When the roast needs a real bookkeeper</h2><p>{report.bridge.line}</p><Link href="/readiness/start">Explore the $99 Readiness Assessment</Link></aside>}
       <footer className="ap-report-footer"><p className="ap-report-signoff">With love, receipts, and absolutely no patience for mystery math — Aunt Penny.</p><p>{DISCLAIMER}</p><p>Private report: keep this link secure. Use your browser&apos;s Print / Save as PDF command to keep your copy.</p><p>PK Business Services · People | Knowledge | Results</p></footer>
     </div>
