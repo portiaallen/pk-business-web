@@ -259,3 +259,41 @@ body:has(.ap) .pk-footer { display: none !important; }
 .ap .ap-stage-closer img,.ap .ap-stage-report img{display:block;max-width:100%;width:auto;height:auto;max-height:none;object-fit:contain;object-position:center}
 .ap .ap-stage-report img{width:100%;height:auto}
 @media(max-width:700px){.ap .ap-stage-portrait{max-width:min(100%,390px)}.ap .ap-stage-closer img{max-width:min(100%,280px)}.ap .ap-stage-report img{max-width:100%}}
+
+
+/* Premium Aunt Penny paid report: theatrical, readable, and print-ready. */
+.ap .ap-premium-report{max-width:950px;color:#351b32;background:#fffaf4;font-size:1rem}
+.ap-report-cover{text-align:center;padding:clamp(2rem,5vw,4rem) clamp(1.2rem,4vw,3rem);background:radial-gradient(ellipse at 50% 0,#753453 0,#3b1739 60%,#230d28 100%);color:#fff2df;border:5px double #d6a75c;border-radius:1.3rem;box-shadow:0 18px 55px #2a102a24}
+.ap .ap-report-cover h1{font-size:clamp(3rem,9vw,6rem);line-height:1.02;color:#fff5e7;margin:.55rem 0;font-family:Georgia,serif}
+.ap-report-kicker,.ap-report-edition,.ap-report-chapter{font-size:.73rem;font-weight:800;letter-spacing:.17em;text-transform:uppercase}
+.ap-report-kicker{color:#efcb91}.ap-report-edition{margin-top:1.2rem;color:#f4d6e4}
+.ap-report-mark{color:#e9b45b}.ap-report-subtitle{font:italic clamp(1.3rem,3vw,2rem) Georgia,serif;color:#f4d6e4}
+.ap-report-rule{height:2px;max-width:220px;margin:1.6rem auto;background:linear-gradient(90deg,transparent,#d6a75c,transparent)}
+.ap-report-intro{max-width:570px;margin:0 auto 1.6rem;line-height:1.7}
+.ap-report-verdict{border:1px solid #cfa35e;background:#fff8ee0d;border-radius:1rem;padding:1.5rem}
+.ap-report-verdict>p{font-size:.72rem;letter-spacing:.2em;color:#f2c98e;font-weight:800}
+.ap .ap-report-verdict h2{font-size:clamp(2rem,5vw,3.3rem);color:#fff1db;margin:.5rem 0}
+.ap-report-verdict span,.ap-report-verdict small{display:block}.ap-report-verdict small{margin-top:.8rem;font-size:.72rem;color:#f5dce7}
+.ap-report-content{padding:0 clamp(.2rem,2vw,1.5rem)}
+.ap-report-section{padding:2.5rem 0;border-bottom:1px solid #dfc9aa}
+.ap-report-chapter{color:#a13c72;margin-bottom:.65rem}
+.ap .ap-report-section h2{font-size:clamp(2rem,5vw,3rem);line-height:1.1;margin-bottom:1.4rem}
+.ap-report-quote{border-left:5px solid #c69348;background:#f6e5ed;padding:1.2rem 1.5rem;font:italic clamp(1.3rem,3vw,1.8rem) Georgia,serif;margin:1.5rem 0;color:#4a2140}
+.ap-report-roast{display:grid;grid-template-columns:2.5rem minmax(0,1fr);gap:1rem;padding:1.2rem 0;border-bottom:1px solid #eadbc7}
+.ap-report-number{font:700 1.2rem Georgia,serif;color:#a13c72}
+.ap .ap-report-roast h3,.ap .ap-report-finding h3{font-size:1.55rem;margin-bottom:.45rem}
+.ap-report-meaning{margin-top:.65rem;color:#53364b;background:#f8edf1;border-radius:.55rem;padding:.8rem}
+.ap-report-note{max-width:680px;color:#62475a}
+.ap-report-finding{background:white;border:1px solid #e0c49c;border-radius:1rem;padding:1.4rem;margin:1.2rem 0;break-inside:avoid}
+.ap-report-finding p{margin-top:.7rem}.ap-report-finding p strong{display:block;color:#90335f;font-size:.7rem;letter-spacing:.11em}
+.ap-report-steps{list-style:none;padding:0;margin:1rem 0}
+.ap-report-steps li{display:flex;gap:1rem;align-items:flex-start;margin:1rem 0}
+.ap-report-steps li span{background:#4a2140;color:#fff3e5;width:2.2rem;height:2.2rem;flex:none;display:grid;place-items:center;border-radius:50%;font-weight:800}
+.ap-report-plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(245px,1fr));gap:1rem;margin-top:2rem}
+.ap-report-plans article{padding:1.35rem;border:1px solid #dfc39b;border-radius:.9rem;background:#fff}
+.ap .ap-report-plans h3{font-size:1.6rem;margin-bottom:.8rem}.ap-report-plans p{margin:.65rem 0}
+.ap-report-bridge{margin:2rem 0;background:#3d1c36;color:#fff4e8;padding:2rem;border-radius:1rem}
+.ap .ap-report-bridge h2{color:#fff4e8;font-size:2rem}.ap-report-bridge a{color:#f7d397;font-weight:800}
+.ap-report-footer{text-align:center;padding:2rem .5rem;font-size:.83rem;color:#6a5363}
+.ap-report-footer p{margin:.8rem 0}.ap-report-signoff{font:italic 1.4rem Georgia,serif;color:#4a2140}
+@media print{.ap .ap-premium-report{max-width:none;padding:0!important;background:#fff!important}.ap-report-cover{box-shadow:none!important;background:#3b1739!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}.ap-report-section{break-before:auto}.ap-report-finding,.ap-report-plans article,.ap-report-roast{break-inside:avoid}.ap-report-footer{break-inside:avoid}}
