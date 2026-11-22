@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { PRICE_CENTS, PRODUCT_CODE, publicOrigin, requireSandbox, sandboxStripe } from "@/lib/auntpenny/paid";
-import { isHolidayPurchaseWindow, PK_HOLIDAY_2026 } from "@/lib/pk-holiday-2026";
+import { isHolidayPurchaseWindow } from "@/lib/pk-holiday-2026";
 import { validateIntake, type IntakeAnswers } from "@/lib/auntpenny/roast-engine";
 export const runtime = "nodejs";
 export async function POST(request: Request) {
@@ -18,7 +18,10 @@ export async function POST(request: Request) {
     if (snapshot.length > 10000) return NextResponse.json({ error: "Input too large" }, { status: 413 });
     const stripe = sandboxStripe();
     const holidayActive = isHolidayPurchaseWindow(new Date());
-    const checkoutPriceCents = holidayActive ? PK_HOLIDAY_2026.auntPennyHolidayCents : PRICE_CENTS;
+    const holidayPromotion = process.env.PK_AUNT_PENNY_HOLIDAY_PROMOTION_ID?.trim();
+    if (holidayActive && (!holidayPromotion || !/^promo_[A-Za-z0-9]+$/.test(holidayPromotion)))
+      return NextResponse.json({code:"HOLIDAY_COUPON_NOT_CONFIGURED",message:"Holiday checkout is temporarily unavailable."},{status:503});
+    const checkoutPriceCents = PRICE_CENTS;
     const order = await prisma.auntPennyOrder.create({ data: { email, intakeJson: snapshot, amountCents: checkoutPriceCents, status: "PENDING" } });
     try {
       const origin = publicOrigin();
@@ -31,6 +34,7 @@ export async function POST(request: Request) {
         metadata: { orderId: order.id, productCode: PRODUCT_CODE, ...(holidayActive ? { pkHoliday2026: "v1" } : {}) },
         payment_method_types: ["card"],
         allow_promotion_codes: !holidayActive,
+        ...(holidayActive ? { discounts: [{ promotion_code: holidayPromotion! }] } : {}),
       }, { idempotencyKey: "aunt-penny-order-" + order.id });
       await prisma.auntPennyOrder.update({ where: { id: order.id }, data: { stripeSessionId: session.id } });
       if (!session.url) throw new Error("Stripe checkout URL missing");
