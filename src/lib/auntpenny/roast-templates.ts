@@ -125,17 +125,17 @@ export const ROAST_TEMPLATES: TriggeredTemplate[] = [
   template(
     "owners-draw-ocean",
     "The Owner's Draw Ocean",
-    ["The business paid you more than it earned, which is adorable until you need it."],
-    "Over-drawing converts a cash-flow question into a solvency question.",
+    ["Your owner draws deserve a cash-flow conversation, not a courtroom conviction."],
+    "Draws and net income measure different things. The comparison calls for a cash-flow and entity-type review, not an automatic conclusion.",
     [
-      "Set a draw formula tied to real net income, and revisit it quarterly rather than on craving.",
+      "Review cash flow and obligations before deciding whether another draw is sustainable.",
       "Before year end, have the draw record reviewed by a tax professional; treatment depends on your entity type.",
     ],
     "You are your own best customer and your own worst vendor.",
     {
-      matters: "Draws above income are spending the business's future cash, and mislabeled draws distort both net income and taxes.",
+      matters: "Owner draws generally are not operating expenses; compare distributions with available cash and verify classification for your entity type.",
       check: "Check how the draws are actually recorded in the books, and against which accounts.",
-      next: "Pick a draw rule you can defend (for example, a fixed share of realized net income) and write it down before the next draw.",
+      next: "Review available cash, obligations and entity-specific treatment before setting an owner distribution policy.",
       help: "A tax professional should review draw treatment for your entity before year end; this is not a do-it-yourself area.",
     }
   ),
@@ -178,17 +178,17 @@ export const ROAST_TEMPLATES: TriggeredTemplate[] = [
     "shoebox-archive",
     "The Shoebox Archive",
     ["Your accounting system is a shoebox with a dream."],
-    "Without a double-entry system, nothing in the system itself can catch an error. That is a structural fact, not an insult.",
+    "The quality of controls and reconciliation matters more than the label on the bookkeeping tool.",
     [
-      "Adopt real bookkeeping software, starting with the current quarter rather than the backlog.",
+      "Evaluate the controls and records you already have before choosing a different bookkeeping tool.",
       "Decide the backlog later, deliberately; if the volume is large, a bookkeeper's catch-up project is usually cheaper in time than doing it alone.",
     ],
     "Historians will call this 'the primitive era.'",
     {
-      matters: "A shoebox cannot catch errors, and neither can memory; the structure has to do it.",
+      matters: "Spreadsheets can be useful records, but they require deliberate controls, reconciliation and supporting documentation.",
       check: "Check what your tax preparer will actually need this season; that defines the minimum catch-up.",
-      next: "Set up software and enter the current quarter first; make the backlog its own scheduled project instead of a guilt pile.",
-      help: "If the backlog is more than about a year, hand the catch-up to a bookkeeper; the fee is usually less than the hours it would take you.",
+      next: "Check whether your current records support reconciliation and reporting; consider software only if it solves a real gap.",
+      help: "If the records are incomplete or reconciliation is unmanageable, ask a bookkeeper to scope the work and quote the cost.",
     }
   ),
   template(
