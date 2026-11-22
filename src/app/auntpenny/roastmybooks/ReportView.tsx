@@ -208,13 +208,13 @@ export function ReportView({
       <SandboxPurchase answers={intake} />
 
       <div className="ap-card mt-10 p-6">
-        <p className="ap-eyebrow">Your full PDF</p>
+        <p className="ap-eyebrow">Keep a copy of your free preview</p>
         <p className="mt-2 leading-relaxed">
-          In this preview you can save the full branded report yourself, free: the button
-          below opens your browser&apos;s print dialog, where &ldquo;Save as PDF&rdquo; files it away.
-          At launch, the paid version ($9.99 planned price. Not on sale yet.) delivers the
-          polished PDF and share card by email automatically. Nothing is charged in this
-          preview and no payment method is requested.
+          Print this preview or choose &ldquo;Save as PDF&rdquo; in your browser&apos;s print dialog.
+          {process.env.NEXT_PUBLIC_AUNT_PENNY_LIVE_ENABLED === "true" && (
+            <> The optional $9.99 upgrade opens a private report after checkout. You can
+              print or save the report as a PDF, and we email you a private link.</>
+          )}
         </p>
         <button
           className="ap-cta ap-no-print mt-4"
