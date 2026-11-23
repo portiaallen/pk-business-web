@@ -29,7 +29,7 @@ export function matchesCompletedCheckout(session: CheckoutSession, order: Order)
     (session.amount_total === PRICE_CENTS || fullyDiscounted || holidayDiscounted) &&
     session.metadata?.productCode === PRODUCT_CODE && session.metadata.orderId === order.id &&
     session.client_reference_id === order.id && session.id === order.stripeSessionId &&
-    order.amountCents === (holidayDiscounted ? PK_HOLIDAY_2026.auntPennyHolidayCents : PRICE_CENTS) && session.customer_details?.email?.trim().toLowerCase() === order.email;
+    order.amountCents === PRICE_CENTS && session.customer_details?.email?.trim().toLowerCase() === order.email;
 }
 
 export function findActiveAuntPennyOrder(token: string) {
