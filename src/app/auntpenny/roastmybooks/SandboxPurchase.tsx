@@ -1,10 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PK_HOLIDAY_2026, isHolidayPurchaseWindow } from "@/lib/pk-holiday-2026";
 import type { IntakeAnswers } from "@/lib/auntpenny/roast-engine";
 export function SandboxPurchase({ answers }: { answers: IntakeAnswers }) {
   const [email, setEmail] = useState("");
-  const holidayActive = isHolidayPurchaseWindow(new Date());
+  const [holidayActive, setHolidayActive] = useState(false);
+  useEffect(() => { setHolidayActive(isHolidayPurchaseWindow(new Date())); }, []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   if (process.env.NEXT_PUBLIC_AUNT_PENNY_SANDBOX_ENABLED !== "true" && process.env.NEXT_PUBLIC_AUNT_PENNY_LIVE_ENABLED !== "true") return null;
@@ -21,7 +22,7 @@ export function SandboxPurchase({ answers }: { answers: IntakeAnswers }) {
   return <div className="ap-card mt-6 p-6 ap-no-print">
     <h3 className="text-xl font-bold">{process.env.NEXT_PUBLIC_AUNT_PENNY_LIVE_ENABLED === "true" ? "Get your personalized report — $9.99" : "Sandbox purchase test — $9.99"}</h3>
     {holidayActive && <div className="mt-3 rounded-lg border border-[#b38039] p-3"><p className="font-bold">BLACK FRIDAY + CYBER MONDAY · SAVE $3</p><p><s>$9.99</s> <strong>$6.99 with code {PK_HOLIDAY_2026.holidayCode}</strong></p><p className="text-sm">Enter {PK_HOLIDAY_2026.holidayCode} in Stripe checkout to claim the discount. Ends November 30 at 11:59 p.m. Eastern.</p></div>}
-    <p className="mt-2 text-sm">Unlock every roast, every evidence-backed finding, your priorities, full 7-day and 30-day plans, bookkeeper questions, a private emailed report link, and Print / Save as PDF. The free verdict, opening joke, two findings, and share card are yours to keep.</p>
+    <p className="mt-2 text-sm">Unlock every roast, every evidence-backed finding, your priorities, full 7-day and 30-day plans, bookkeeper questions, a private emailed report link, and a downloadable private PDF. The free verdict, opening joke, two findings, and share card are yours to keep.</p>
     <p className="mt-2 text-sm">{process.env.NEXT_PUBLIC_AUNT_PENNY_LIVE_ENABLED === "true" ? "Secure one-time payment through Stripe." : "Test mode only. Do not enter real payment card details."}</p>
     <label className="mt-3 block">Email for your report<input type="email" required value={email} onChange={e=>setEmail(e.target.value)} className="mt-1 block w-full rounded-md border p-2 text-black" /></label>
     <button className="ap-cta mt-3" type="button" disabled={busy || !email.includes("@")} onClick={start}>{busy ? "Connecting..." : "Continue to secure checkout"}</button>
