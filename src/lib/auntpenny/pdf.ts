@@ -16,6 +16,7 @@ export function auntPennyPdf(a:IntakeAnswers):Uint8Array {
  function write(s:string,size=11,bold=false,color=ink,space=7){const lines=wrap(s,size);const leading=size*1.48;if(p.y-lines.length*leading<76)page();p.cmd.push(`BT /${bold?"F2":"F1"} ${size} Tf ${color} rg 44 ${p.y.toFixed(1)} Td ${lines.map((line,i)=>`${i?"0 -"+leading.toFixed(1)+" Td ":""}(${line}) Tj`).join(" ")} ET`);p.y-=lines.length*leading+space;}
  function title(t:string){if(p.y<190)page();write(t,20,true,magenta,15);}
  function section(t:string){if(p.y<175)page();write(t.toUpperCase(),10,true,gold,9);}
+ function reserve(height:number){if(p.y-height<76)page();}
  page();p.y=700;write("ROAST MY BOOKS!",34,true,magenta,14);write("THE RECEIPTS HAVE ENTERED THE CHAT.",13,true,gold,24);
  write("Prepared privately for "+(a.firstName?.trim().slice(0,40)||"a business owner"),12,false,muted,18);
  title("THE OFFICIAL VERDICT");write(report.tierName,19,true,ink,12);write(report.tierLine,12,false,muted,14);
@@ -38,21 +39,21 @@ export function auntPennyPdf(a:IntakeAnswers):Uint8Array {
  page();title("ACT I  /  THE ROAST");
  write("Aunt Penny read your answers. Now the books must answer for themselves.",11,false,muted,16);
  if(!report.triggered.length)write("Your figures did not trigger Aunt Penny's warning signs. Do not mistake that for a professional audit.",12);
- report.triggered.forEach((f,i)=>{section(String(i+1).padStart(2,"0")+"  /  "+f.title);write(pennyRoastFor(f.id,a),12,true,magenta,8);write("Behind the joke: "+f.meaning,10,false,muted,15);});
+ report.triggered.forEach((f,i)=>{reserve(125);section(String(i+1).padStart(2,"0")+"  /  "+f.title);write(pennyRoastFor(f.id,a),12,true,magenta,8);write("Behind the joke: "+f.meaning,10,false,muted,15);});
  page();title("ACT II  /  THE EVIDENCE LOCKER");
  write("Every observation below is based on your submitted answers. Suspicious numbers are questions, not proof of errors.",10,false,muted,18);
- for(const f of findings){section(f.title);write("THE RECEIPT  "+f.evidence,10,true);write("WHY IT MATTERS  "+f.matters,10);write("CHECK  "+f.check,10);write("NEXT MOVE  "+f.next,10);write("GET HELP WHEN  "+f.help,10,false,muted,16);}
+ for(const f of findings){reserve(155);section(f.title);write("THE RECEIPT  "+f.evidence,10,true);write("WHY IT MATTERS  "+f.matters,10);write("CHECK  "+f.check,10);write("NEXT MOVE  "+f.next,10);write("GET HELP WHEN  "+f.help,10,false,muted,16);}
  page();title("ACT III  /  THE COMEBACK");
  section("Your first seven days");write("Days 1-2: Gather statements, invoices and supporting records. Verify the submitted numbers.",11);
  write("Days 3-4: "+plan.actions[0].check,11);write("Days 5-6: "+plan.actions[0].action,11);
  write("Day 7: Document what changed, what remains unresolved and what requires professional review.",11,false,ink,20);
  section("Your 30-day rescue");for(const w of plan.week){write(w.label+": "+w.text,11,false,ink,12);}
- title("PRIORITY CHECKLIST");for(let i=0;i<plan.actions.length;i++){const x=plan.actions[i];section((i+1)+". "+x.title);write("CHECK: "+x.check,10);write("DO: "+x.action,10);write("FINISHED WHEN: "+x.done,10,false,muted,12);}
+ title("PRIORITY CHECKLIST");for(let i=0;i<plan.actions.length;i++){const x=plan.actions[i];reserve(115);section((i+1)+". "+x.title);write("CHECK: "+x.check,10);write("DO: "+x.action,10);write("FINISHED WHEN: "+x.done,10,false,muted,12);}
  page();title("THE RECEIPT WORKSHEET");
  write("Aunt Penny cannot fix what nobody wrote down. Use this page when you open the actual statements.",11,false,muted,18);
  for(const label of ["Bank statement month / account:","Starting balance:","Ending statement balance:","Uncategorized transactions checked:","Invoices verified and follow-ups sent:","Subscriptions reviewed and decisions:","Biggest open question:","Professional follow-up / due date:"]){
+  reserve(85);
   section(label);
-  if(p.y<115)page();
   p.cmd.push(`q ${rgb(205,184,190)} RG 0.6 w 44 ${p.y.toFixed(1)} m 560 ${p.y.toFixed(1)} l S Q`);
   p.y-=26;
  }
