@@ -15,7 +15,7 @@ export async function issueHolidayCredit(input: {
  const order=await prisma.auntPennyOrder.findUnique({where:{id:input.orderId}});
  if (!order || order.status!=="PAID" || !order.paidAt ||
      order.email.trim().toLowerCase()!==input.buyerEmail.trim().toLowerCase() ||
-     !isHolidayPurchaseWindow(order.paidAt)) return null;
+     !isHolidayPurchaseWindow(order.createdAt)) return null;
  return prisma.pkHolidayCredit.upsert({
   where:{auntPennyOrderId:order.id},
   create:{
