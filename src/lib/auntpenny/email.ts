@@ -13,7 +13,7 @@ export async function sendAuntPennyLink(to: string, link: string, holidayCredit 
       from: "PK Business Services <" + from + ">",
       to: [to],
       subject: "Your private Aunt Penny Roast My Books report",
-      text: "Your personalized Aunt Penny report is ready. Open your private report link: " + link + "\n\nInside your report, tap Download your private PDF for a real PDF file - no printing required.\n\nThis link expires in 24 hours. Do not forward it.\n\nPK Business Services",
+      text: "Your personalized Aunt Penny report is ready. Open your private report link: " + link + "\n\nInside your report, tap Download your private PDF for a real PDF file - no printing required.\n\n" + (holidayCredit ? "BLACK FRIDAY BONUS: Your qualifying purchase earned a $10 credit toward PK Business Services’ $99 Readiness Assessment, redeemable December 1–31, 2026. Use the same verified buyer email at Readiness checkout. One use per eligible purchase; not combinable with other offers.\n\n" : "") + "This link expires in 24 hours. Do not forward it.\n\nPK Business Services",
     }),
     signal: AbortSignal.timeout(12000),
     cache: "no-store",
