@@ -14,8 +14,8 @@ export function auntPennyPdf(a:IntakeAnswers):Uint8Array {
  function page(){p={cmd:[],y:736};pages.push(p);p.cmd.push(`q ${rgb(252,249,246)} rg 0 0 612 792 re f Q`);p.cmd.push(`q ${ink} rg 0 758 612 34 re f Q`);p.cmd.push(`BT /F2 10 Tf 1 1 1 rg 42 770 Td (AUNT PENNY  /  THE PRIVATE BOOKS EDITION) Tj ET`);p.cmd.push(`q ${gold} RG 1 w 42 46 m 570 46 l S Q`);p.cmd.push(`BT /F1 9 Tf ${muted} rg 42 31 Td (PK BUSINESS SERVICES  /  PEOPLE  |  KNOWLEDGE  |  RESULTS) Tj ET`);}
  function wrap(s:string,size:number,maxWidth=525){const max=Math.max(18,Math.floor(maxWidth/(size*.53)));const words=esc(s).split(/\s+/);const lines:string[]=[];let line="";for(const word of words){if((line+" "+word).trim().length>max&&line){lines.push(line);line=word;}else line=(line+" "+word).trim();}if(line)lines.push(line);return lines;}
  function write(s:string,size=11,bold=false,color=ink,space=7){const lines=wrap(s,size);const leading=size*1.48;if(p.y-lines.length*leading<76)page();p.cmd.push(`BT /${bold?"F2":"F1"} ${size} Tf ${color} rg 44 ${p.y.toFixed(1)} Td ${lines.map((line,i)=>`${i?"0 -"+leading.toFixed(1)+" Td ":""}(${line}) Tj`).join(" ")} ET`);p.y-=lines.length*leading+space;}
- function title(t:string){if(p.y<190)page();write(t,20,true,magenta,15);}
- function section(t:string){if(p.y<175)page();write(t.toUpperCase(),10,true,gold,9);}
+ function title(t:string){if(p.y<220)page();write(t,20,true,magenta,15);}
+ function section(t:string){if(p.y<200)page();write(t.toUpperCase(),10,true,gold,9);}
  function reserve(height:number){if(p.y-height<76)page();}
  page();p.y=700;write("ROAST MY BOOKS!",34,true,magenta,14);write("THE RECEIPTS HAVE ENTERED THE CHAT.",13,true,gold,24);
  write("Prepared privately for "+(a.firstName?.trim().slice(0,40)||"a business owner"),12,false,muted,18);
@@ -28,19 +28,19 @@ export function auntPennyPdf(a:IntakeAnswers):Uint8Array {
  section("Your numbers, your business");write("Monthly revenue: "+money(a.monthlyRevenue)+"     Monthly expenses: "+money(a.monthlyExpenses),12,true);
  write("Difference: "+money(a.monthlyRevenue-a.monthlyExpenses)+"     Cash on hand: "+money(a.cashOnHand),12,true);
  write("These are customer-supplied figures, not verified accounting records.",10,false,muted,16);
- if(p.y<245)page();
+ if(p.y<340)page();
  section("Where the money went");
  const scale=Math.max(1,a.monthlyRevenue,a.monthlyExpenses);
  const revenueWidth=Math.max(0,Math.min(490,490*a.monthlyRevenue/scale));
  const expenseWidth=Math.max(0,Math.min(490,490*a.monthlyExpenses/scale));
  p.cmd.push(`q ${rgb(230,214,226)} rg 44 ${(p.y-20).toFixed(1)} 490 19 re f Q`);
  p.cmd.push(`q ${magenta} rg 44 ${(p.y-20).toFixed(1)} ${revenueWidth.toFixed(1)} 19 re f Q`);
- p.y-=27;write("REVENUE  "+money(a.monthlyRevenue),10,true,ink,13);
+ p.y-=32;write("REVENUE  "+money(a.monthlyRevenue),10,true,ink,13);
  p.cmd.push(`q ${rgb(230,214,226)} rg 44 ${(p.y-20).toFixed(1)} 490 19 re f Q`);
  p.cmd.push(`q ${gold} rg 44 ${(p.y-20).toFixed(1)} ${expenseWidth.toFixed(1)} 19 re f Q`);
- p.y-=27;write("EXPENSES  "+money(a.monthlyExpenses),10,true,ink,18);
+ p.y-=32;write("EXPENSES  "+money(a.monthlyExpenses),10,true,ink,18);
  write("The bars compare two figures you supplied. They do not establish verified profit or cash flow.",9,false,muted,14);
- page();title("ACT I  /  THE ROAST");
+ title("ACT I  /  THE ROAST");
  write("Aunt Penny read your answers. Now the books must answer for themselves.",11,false,muted,16);
  write("THE COURT OF FINANCIAL SIDE-EYE IS NOW IN SESSION. All allegations below come from the numbers YOU submitted. We do not convict a ledger without receipts.",12,true,magenta,15);
  if(!report.triggered.length)write("Your figures did not trigger Aunt Penny's warning signs. Do not mistake that for a professional audit.",12);
@@ -62,7 +62,7 @@ export function auntPennyPdf(a:IntakeAnswers):Uint8Array {
   p.cmd.push(`q ${rgb(205,184,190)} RG 0.6 w 44 ${p.y.toFixed(1)} m 560 ${p.y.toFixed(1)} l S Q`);
   p.y-=26;
  }
- page();title("ACT IV  /  TAKE THESE RECEIPTS");
+ title("ACT IV  /  TAKE THESE RECEIPTS");
  section("Questions for your bookkeeper");write("1. Which observations can be confirmed against my actual records?",12);write("2. Which statements, receipts and reconciliations should I bring?",12);write("3. What is the first realistic fix, and how will we know it worked?",12,false,ink,24);
  title("AUNT PENNY'S LAST WORD");write("Baby, the numbers do not need a motivational speech. They need receipts, a plan, and somebody willing to open the statements.",14,true,magenta,22);
  if(report.bridge.show){section("When you need real bookkeeping help");write(report.bridge.line,11);}
