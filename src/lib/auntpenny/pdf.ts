@@ -1,5 +1,5 @@
 import { buildReport, DISCLAIMER } from "@/lib/auntpenny/report";
-import { pennyOpening, pennyRoastFor } from "@/lib/auntpenny/penny-voice";
+import { pennyOpening, pennyRoastFor, pennyToday } from "@/lib/auntpenny/penny-voice";
 import { prioritizedFindings, personalizedPlan } from "@/lib/auntpenny/case-file";
 import type { IntakeAnswers } from "@/lib/auntpenny/roast-engine";
 
@@ -21,6 +21,10 @@ export function auntPennyPdf(a:IntakeAnswers):Uint8Array {
  write("Prepared privately for "+(a.firstName?.trim().slice(0,40)||"a business owner"),12,false,muted,18);
  title("THE OFFICIAL VERDICT");write(report.tierName,19,true,ink,12);write(report.tierLine,12,false,muted,14);
  write(pennyOpening(a),15,true,magenta,18);
+ section("Aunt Penny's emergency assignment");
+ write("Before you close this report, do this one thing: "+pennyToday(a),12,true,ink,13);
+ write("No imaginary numbers, no mystery receipts, no pretending a pretty dashboard is a reconciled set of books.",11,false,magenta,17);
+ if(report.figureCheck.note){section("Two numbers are arguing");write("Baby, your monthly picture and your three-month net income are telling different stories. That does not prove a mistake, but somebody needs to put the statements on the table.",12,true,magenta,9);write(report.figureCheck.note,10,false,muted,17);}
  section("Your numbers, your business");write("Monthly revenue: "+money(a.monthlyRevenue)+"     Monthly expenses: "+money(a.monthlyExpenses),12,true);
  write("Difference: "+money(a.monthlyRevenue-a.monthlyExpenses)+"     Cash on hand: "+money(a.cashOnHand),12,true);
  write("These are customer-supplied figures, not verified accounting records.",10,false,muted,16);
@@ -38,6 +42,7 @@ export function auntPennyPdf(a:IntakeAnswers):Uint8Array {
  write("The bars compare two figures you supplied. They do not establish verified profit or cash flow.",9,false,muted,14);
  page();title("ACT I  /  THE ROAST");
  write("Aunt Penny read your answers. Now the books must answer for themselves.",11,false,muted,16);
+ write("THE COURT OF FINANCIAL SIDE-EYE IS NOW IN SESSION. All allegations below come from the numbers YOU submitted. We do not convict a ledger without receipts.",12,true,magenta,15);
  if(!report.triggered.length)write("Your figures did not trigger Aunt Penny's warning signs. Do not mistake that for a professional audit.",12);
  report.triggered.forEach((f,i)=>{reserve(125);section(String(i+1).padStart(2,"0")+"  /  "+f.title);write(pennyRoastFor(f.id,a),12,true,magenta,8);write("Behind the joke: "+f.meaning,10,false,muted,15);});
  page();title("ACT II  /  THE EVIDENCE LOCKER");
